@@ -17,7 +17,7 @@ create table if not exists public.admins (
 );
 
 create table if not exists public.products (
-  id          text primary key check (id ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'),
+  id          text primary key,
   name        text not null check (char_length(name) between 1 and 120),
   cat         text not null default 'men' check (cat in ('men', 'women', 'unisex')),
   price       numeric(10,2) not null default 430 check (price >= 0),
@@ -41,6 +41,11 @@ create table if not exists public.products (
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now()
 );
+
+-- Product IDs: letters, numbers, spaces, - _ . (matches IDs like "Clinique Happy" from the old sheet)
+alter table public.products drop constraint if exists products_id_check;
+alter table public.products add constraint products_id_check
+  check (id ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$' and id = trim(id));
 
 create table if not exists public.promotions (
   id          text primary key default gen_random_uuid()::text,

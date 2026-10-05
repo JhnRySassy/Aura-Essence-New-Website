@@ -107,7 +107,7 @@ select
   pg_temp.txt("Application"),
   coalesce(pg_temp.to_num("Sort Order"), 0)::int
 from public.import_products
-where pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'
+where pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$'
   and pg_temp.txt("Name") <> ''
 on conflict (id) do update set
   name = excluded.name, cat = excluded.cat, descr = excluded.descr, img = excluded.img,
@@ -153,7 +153,9 @@ insert into public.orders (order_id, fullname, contact, items, scent, quantity, 
 select
   pg_temp.txt("Order ID"),
   coalesce(nullif(pg_temp.txt("Full Name"), ''), 'Customer'),
-  pg_temp.txt("Contact Number"),
+  -- Sheets drops the leading 0 of numbers like 09171234567; put it back
+  case when pg_temp.txt("Contact Number") ~ '^9[0-9]{9}$' then '0' || pg_temp.txt("Contact Number")
+       else pg_temp.txt("Contact Number") end,
   pg_temp.to_items("Items JSON", "Scent", "Scent ID", "Quantity"),
   pg_temp.txt("Scent"),
   coalesce(pg_temp.to_num("Quantity"), 1)::int,
@@ -200,7 +202,7 @@ union all select 'Audit log entries', count(*)::text from public.audit_log
 union all select 'SKIPPED product rows (bad or missing ID/Name): ' || coalesce(string_agg(coalesce("ID", '(blank)'), ', '), 'none'),
                  count(*)::text
   from public.import_products
- where not (pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$' and pg_temp.txt("Name") <> '');
+ where not (pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$' and pg_temp.txt("Name") <> '');
 
 -- ---------- clean up ----------
 drop table if exists public.import_orders, public.import_products, public.import_promotions,
