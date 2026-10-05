@@ -60,7 +60,7 @@ create or replace function pg_temp.photo(v text) returns text language sql immut
   end;
 $$;
 
--- Orders: use "Items JSON" when present; older rows fall back to Scent / Scent ID / Quantity.
+-- Orders: use items_json when present; older rows fall back to Scent / Scent ID / Quantity.
 create or replace function pg_temp.to_items(items text, scent text, scent_id text, qty text)
 returns jsonb language plpgsql immutable as $$
 declare
@@ -84,31 +84,31 @@ insert into public.products (id, name, cat, descr, img, price, stock, badges, ac
   longevity, projection, strength, time, occasion, desc_long, top_notes, heart_notes, base_notes,
   application, sort_order)
 select
-  pg_temp.txt("ID"),
-  pg_temp.txt("Name"),
-  case when lower(pg_temp.txt("Category")) in ('men', 'women', 'unisex') then lower(pg_temp.txt("Category")) else 'men' end,
-  pg_temp.txt("Description"),
-  pg_temp.txt("Image URL"),
-  coalesce(pg_temp.to_num("Price"), 430),
-  case when pg_temp.to_num("Stock") is null then null    -- blank = unlimited (same as before)
-       else greatest(0, pg_temp.to_num("Stock"))::int end,
-  array(select upper(b) from unnest(pg_temp.to_list("Badges")) b),
-  not pg_temp.is_false("Active"),
-  pg_temp.to_list("Profiles"),
-  least(10, greatest(1, coalesce(pg_temp.to_num("Longevity"), 7)))::int,
-  least(10, greatest(1, coalesce(pg_temp.to_num("Projection"), 7)))::int,
-  case lower(pg_temp.txt("Strength"))
+  pg_temp.txt(id),
+  pg_temp.txt(name),
+  case when lower(pg_temp.txt(category)) in ('men', 'women', 'unisex') then lower(pg_temp.txt(category)) else 'men' end,
+  pg_temp.txt(description),
+  pg_temp.txt(image_url),
+  coalesce(pg_temp.to_num(price), 430),
+  case when pg_temp.to_num(stock) is null then null    -- blank = unlimited (same as before)
+       else greatest(0, pg_temp.to_num(stock))::int end,
+  array(select upper(b) from unnest(pg_temp.to_list(badges)) b),
+  not pg_temp.is_false(active),
+  pg_temp.to_list(profiles),
+  least(10, greatest(1, coalesce(pg_temp.to_num(longevity), 7)))::int,
+  least(10, greatest(1, coalesce(pg_temp.to_num(projection), 7)))::int,
+  case lower(pg_temp.txt(strength))
     when 'light' then 'subtle' when 'subtle' then 'subtle'
     when 'strong' then 'bold' when 'bold' then 'bold' else 'moderate' end,
-  pg_temp.to_list("Time"),
-  pg_temp.txt("Occasion"),
-  pg_temp.txt("Long Description"),
-  pg_temp.to_list("Top Notes"), pg_temp.to_list("Heart Notes"), pg_temp.to_list("Base Notes"),
-  pg_temp.txt("Application"),
-  coalesce(pg_temp.to_num("Sort Order"), 0)::int
+  pg_temp.to_list(time),
+  pg_temp.txt(occasion),
+  pg_temp.txt(long_description),
+  pg_temp.to_list(top_notes), pg_temp.to_list(heart_notes), pg_temp.to_list(base_notes),
+  pg_temp.txt(application),
+  coalesce(pg_temp.to_num(sort_order), 0)::int
 from public.import_products
-where pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$'
-  and pg_temp.txt("Name") <> ''
+where pg_temp.txt(id) ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$'
+  and pg_temp.txt(name) <> ''
 on conflict (id) do update set
   name = excluded.name, cat = excluded.cat, descr = excluded.descr, img = excluded.img,
   price = excluded.price, stock = excluded.stock, badges = excluded.badges, active = excluded.active,
@@ -120,15 +120,15 @@ on conflict (id) do update set
 -- ---------- promotions (sheet "Promotions") ----------
 insert into public.promotions (id, name, type, min_qty, fixed_total, percent_off, active)
 select
-  coalesce(nullif(pg_temp.txt("ID"), ''), gen_random_uuid()::text),
-  coalesce(nullif(pg_temp.txt("Name"), ''), pg_temp.txt("ID")),
-  case when lower(pg_temp.txt("Type")) = 'percent' then 'percent' else 'fixed_total' end,
-  greatest(1, coalesce(pg_temp.to_num("Min Qty"), 2))::int,
-  greatest(0, coalesce(pg_temp.to_num("Fixed Total"), 0)),
-  least(100, greatest(0, coalesce(pg_temp.to_num("Percent Off"), 0))),
-  not pg_temp.is_false("Active")
+  coalesce(nullif(pg_temp.txt(id), ''), gen_random_uuid()::text),
+  coalesce(nullif(pg_temp.txt(name), ''), pg_temp.txt(id)),
+  case when lower(pg_temp.txt(type)) = 'percent' then 'percent' else 'fixed_total' end,
+  greatest(1, coalesce(pg_temp.to_num(min_qty), 2))::int,
+  greatest(0, coalesce(pg_temp.to_num(fixed_total), 0)),
+  least(100, greatest(0, coalesce(pg_temp.to_num(percent_off), 0))),
+  not pg_temp.is_false(active)
 from public.import_promotions
-where coalesce(nullif(pg_temp.txt("Name"), ''), pg_temp.txt("ID")) <> ''
+where coalesce(nullif(pg_temp.txt(name), ''), pg_temp.txt(id)) <> ''
 on conflict (id) do update set
   name = excluded.name, type = excluded.type, min_qty = excluded.min_qty,
   fixed_total = excluded.fixed_total, percent_off = excluded.percent_off, active = excluded.active;
@@ -137,61 +137,61 @@ on conflict (id) do update set
 update public.site_settings s
    set data = s.data || coalesce((
      select jsonb_object_agg(
-              pg_temp.txt("Key"),
+              pg_temp.txt(key),
               case
-                when lower(pg_temp.txt("Value")) in ('true', 'false') then to_jsonb(lower(pg_temp.txt("Value")) = 'true')
-                when pg_temp.txt("Value") ~ '^-?[0-9]+$' then to_jsonb(pg_temp.txt("Value")::int)
-                else to_jsonb(pg_temp.txt("Value"))
+                when lower(pg_temp.txt(value)) in ('true', 'false') then to_jsonb(lower(pg_temp.txt(value)) = 'true')
+                when pg_temp.txt(value) ~ '^-?[0-9]+$' then to_jsonb(pg_temp.txt(value)::int)
+                else to_jsonb(pg_temp.txt(value))
               end)
        from public.import_site_settings
-      where pg_temp.txt("Key") <> ''), '{}'::jsonb)
+      where pg_temp.txt(key) <> ''), '{}'::jsonb)
  where s.id = 1;
 
 -- ---------- orders (sheet "Orders") ----------
 insert into public.orders (order_id, fullname, contact, items, scent, quantity, address, payment,
   notes, subtotal, total, status, created_at)
 select
-  pg_temp.txt("Order ID"),
-  coalesce(nullif(pg_temp.txt("Full Name"), ''), 'Customer'),
+  pg_temp.txt(order_id),
+  coalesce(nullif(pg_temp.txt(full_name), ''), 'Customer'),
   -- Sheets drops the leading 0 of numbers like 09171234567; put it back
-  case when pg_temp.txt("Contact Number") ~ '^9[0-9]{9}$' then '0' || pg_temp.txt("Contact Number")
-       else pg_temp.txt("Contact Number") end,
-  pg_temp.to_items("Items JSON", "Scent", "Scent ID", "Quantity"),
-  pg_temp.txt("Scent"),
-  coalesce(pg_temp.to_num("Quantity"), 1)::int,
-  pg_temp.txt("Delivery / Meetup Location"),
-  pg_temp.txt("Payment Method"),
-  pg_temp.txt("Notes"),
-  coalesce(pg_temp.to_num("Estimated Total"), 0),
-  coalesce(pg_temp.to_num("Estimated Total"), 0),
-  case when pg_temp.txt("Status") in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled')
-       then pg_temp.txt("Status") else 'New' end,
-  pg_temp.to_ts("Timestamp")
+  case when pg_temp.txt(contact_number) ~ '^9[0-9]{9}$' then '0' || pg_temp.txt(contact_number)
+       else pg_temp.txt(contact_number) end,
+  pg_temp.to_items(items_json, scent, scent_id, quantity),
+  pg_temp.txt(scent),
+  coalesce(pg_temp.to_num(quantity), 1)::int,
+  pg_temp.txt(delivery_meetup_location),
+  pg_temp.txt(payment_method),
+  pg_temp.txt(notes),
+  coalesce(pg_temp.to_num(estimated_total), 0),
+  coalesce(pg_temp.to_num(estimated_total), 0),
+  case when pg_temp.txt(status) in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled')
+       then pg_temp.txt(status) else 'New' end,
+  pg_temp.to_ts(timestamp)
 from public.import_orders
-where pg_temp.txt("Order ID") <> ''
+where pg_temp.txt(order_id) <> ''
 on conflict (order_id) do nothing;
 
 -- ---------- reviews (Reviews spreadsheet; only "Approved" ones are shown) ----------
 insert into public.reviews (id, name, scent, scent_id, rating, review, photo_url, approved, created_at)
 select
-  coalesce(nullif(pg_temp.txt("Review ID"), ''), 'REV-IMPORT-' || md5(coalesce("Timestamp", '') || coalesce("Review", ''))),
-  coalesce(nullif(pg_temp.txt("Customer Name"), ''), 'Customer'),
-  pg_temp.txt("Scent"),
-  nullif(pg_temp.txt("Scent ID"), ''),
-  least(5, greatest(1, coalesce(pg_temp.to_num("Rating"), 5)))::int,
-  pg_temp.txt("Review"),
-  pg_temp.photo("Photo URL"),
-  lower(pg_temp.txt("Status")) = 'approved',
-  pg_temp.to_ts("Timestamp")
+  coalesce(nullif(pg_temp.txt(review_id), ''), 'REV-IMPORT-' || md5(coalesce(timestamp, '') || coalesce(review, ''))),
+  coalesce(nullif(pg_temp.txt(customer_name), ''), 'Customer'),
+  pg_temp.txt(scent),
+  nullif(pg_temp.txt(scent_id), ''),
+  least(5, greatest(1, coalesce(pg_temp.to_num(rating), 5)))::int,
+  pg_temp.txt(review),
+  pg_temp.photo(photo_url),
+  lower(pg_temp.txt(status)) = 'approved',
+  pg_temp.to_ts(timestamp)
 from public.import_reviews
-where pg_temp.txt("Review") <> ''
+where pg_temp.txt(review) <> ''
 on conflict (id) do nothing;
 
 -- ---------- admin audit (sheet "Admin Audit") ----------
 insert into public.audit_log (actor, action, created_at)
-select coalesce(nullif(pg_temp.txt("Actor"), ''), 'admin'), pg_temp.txt("Action"), pg_temp.to_ts("Timestamp")
+select coalesce(nullif(pg_temp.txt(actor), ''), 'admin'), pg_temp.txt(action), pg_temp.to_ts(timestamp)
 from public.import_admin_audit
-where pg_temp.txt("Action") <> '';
+where pg_temp.txt(action) <> '';
 
 -- ---------- results ----------
 select 'Products in database' as item, count(*)::text as result from public.products
@@ -199,10 +199,10 @@ union all select 'Promotions in database', count(*)::text from public.promotions
 union all select 'Orders in database', count(*)::text from public.orders
 union all select 'Reviews in database (approved)', count(*) || ' (' || count(*) filter (where approved) || ')' from public.reviews
 union all select 'Audit log entries', count(*)::text from public.audit_log
-union all select 'SKIPPED product rows (bad or missing ID/Name): ' || coalesce(string_agg(coalesce("ID", '(blank)'), ', '), 'none'),
+union all select 'SKIPPED product rows (bad or missing ID/Name): ' || coalesce(string_agg(coalesce(id, '(blank)'), ', '), 'none'),
                  count(*)::text
   from public.import_products
- where not (pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$' and pg_temp.txt("Name") <> '');
+ where not (pg_temp.txt(id) ~ '^[A-Za-z0-9][A-Za-z0-9 _.-]{0,63}$' and pg_temp.txt(name) <> '');
 
 -- ---------- clean up ----------
 drop table if exists public.import_orders, public.import_products, public.import_promotions,
