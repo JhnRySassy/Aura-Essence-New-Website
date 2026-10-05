@@ -1,0 +1,3724 @@
+From f3d136ecc14462174ec9705db07bf67823e4c276 Mon Sep 17 00:00:00 2001
+From: Jobert Visto <jobert.visto@itresources.ph>
+Date: Mon, 5 Oct 2026 16:37:57 +0800
+Subject: [PATCH 1/2] Move backend from Google Apps Script to Supabase
+
+- Supabase schema with RLS, server-side order pricing, stock control, audit log
+- Supabase Auth admin login (removes hardcoded password/admin key)
+- Realtime order updates and review moderation in admin
+- Google Sheets CSV import scripts and setup guide
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018C5CBuXsy3SVMLE81AaYjQ
+---
+ README.md                         | 124 ++++--
+ admin.html                        |  11 +-
+ assets/js/admin-api.js            |  57 +--
+ assets/js/admin.js                | 459 +++++++++++++---------
+ assets/js/app.js                  | 319 ++-------------
+ assets/js/profile-sync.js         |   2 +-
+ assets/js/supabase-api.js         | 537 +++++++++++++++++++++++++
+ assets/js/supabase-config.js      |  18 +
+ supabase/import-step1-staging.sql |  39 ++
+ supabase/import-step2-convert.sql | 136 +++++++
+ supabase/schema.sql               | 632 ++++++++++++++++++++++++++++++
+ 11 files changed, 1794 insertions(+), 540 deletions(-)
+ create mode 100644 assets/js/supabase-api.js
+ create mode 100644 assets/js/supabase-config.js
+ create mode 100644 supabase/import-step1-staging.sql
+ create mode 100644 supabase/import-step2-convert.sql
+ create mode 100644 supabase/schema.sql
+
+diff --git a/README.md b/README.md
+index 38ce0b3..f9d8e92 100644
+--- a/README.md
++++ b/README.md
+@@ -1,36 +1,112 @@
+ # AURA & ESSENCE
+ 
+-## GitHub structure
+-`index.html` and `admin.html` are both at the repository root. Do not put them inside an `Aura Site` folder.
++Perfume storefront and admin panel. Static HTML/JS (no build step), with **Supabase** as the database, login, and photo storage.
++
++## Project structure
++`index.html` and `admin.html` must stay at the repository root.
+ 
+ ```text
+ aura-essence/
+-├── index.html
+-├── admin.html
++├── index.html                  ← customer site
++├── admin.html                  ← admin panel
+ ├── assets/
+ │   ├── css/
+-│   │   ├── styles.css
+-│   │   └── admin.css
+-│   ├── js/
+-│   │   ├── products.js
+-│   │   ├── app.js
+-│   │   ├── admin.js
+-│   │   └── admin-api.js
+-│   └── images/
+-└── Aura_Essence_Google_Apps_Script_ADMIN.gs
++│   ├── images/
++│   └── js/
++│       ├── supabase-config.js  ← paste your Supabase URL + key here
++│       ├── supabase-api.js     ← all database calls
++│       ├── app.js              ← storefront
++│       ├── admin.js            ← admin panel
++│       ├── admin-api.js
++│       ├── products.js         ← built-in catalog (used to seed the database)
++│       └── profile-sync.js
++└── supabase/
++    ├── schema.sql              ← run once to create the database
++    ├── import-step1-staging.sql
++    └── import-step2-convert.sql
+ ```
+ 
+-## Admin login
+-1. In Google Apps Script, change `ADMIN_USERNAME`, `ADMIN_LOGIN_EMAIL`, `ADMIN_PASSWORD`, and `ADMIN_KEY`.
+-2. Deploy the Apps Script as a Web App: Execute as **Me**, access **Anyone**.
+-3. In `assets/js/admin.js`, replace `PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE` with the `/exec` URL.
+-4. Open `/admin.html` on your Vercel/GitHub Pages domain.
+-5. Enter username/email + password, then the admin key.
++---
++
++## 1. Create the Supabase project
++1. Sign in at [supabase.com](https://supabase.com) → **New project**. Pick the **Southeast Asia (Singapore)** region for speed in the Philippines.
++2. Open **SQL Editor → New query**, paste the whole of `supabase/schema.sql`, and click **Run**.
++   This creates the tables, security rules, order/review functions, the review-photo bucket, and realtime for orders.
++
++## 2. Create your admin account
++1. **Authentication → Users → Add user → Create new user**. Enter your email and a strong password, and tick **Auto Confirm User**.
++2. In **SQL Editor**, run (with your email):
++   ```sql
++   insert into public.admins (user_id, email)
++   select id, email from auth.users where email = 'you@example.com';
++   ```
++   Only accounts listed in `admins` can open the admin panel. Repeat for each staff member.
++3. Recommended: **Authentication → Sign In / Providers → Email**, turn **off** "Allow new users to sign up" so nobody else can create accounts.
++
++## 3. Connect the website
++1. **Project Settings → API** (or **API Keys**). Copy the **Project URL** and the **anon / publishable** key.
++2. Paste both into `assets/js/supabase-config.js`.
++   These two values are meant to be public. **Never** put the `service_role` / secret key in the website.
++3. Commit and push. Vercel/GitHub Pages will redeploy automatically.
++
++## 4. First admin login
++Open `/admin.html` and sign in with the email and password from step 2. If the products table is empty, the catalog from `products.js` is added automatically.
++
++---
++
++## Moving your data from Google Sheets
++Do this once, after step 1.
++
++1. In **SQL Editor**, run `supabase/import-step1-staging.sql`.
++2. In Google Sheets, export each tab with **File → Download → Comma-separated values (.csv)**.
++3. Open each CSV (in Sheets or Excel) and **rename the header row** to the names below. Delete any columns that aren't listed.
++
++   | Sheet tab | Import into table | Header names to use |
++   |---|---|---|
++   | Products | `import_products` | `id, name, cat, price, stock, sort_order, img, desc, desc_long, top_notes, heart_notes, base_notes, application, profiles, longevity, projection, strength, time, occasion, badges, active` |
++   | Promotions | `import_promotions` | `name, type, min_qty, fixed_total, percent_off, active` |
++   | Orders | `import_orders` | `timestamp, order_id, fullname, contact, items, scent, qty, address, payment, notes, total, status` |
++   | Reviews | `import_reviews` | `timestamp, name, scent, scent_id, rating, review, photo_url, approved` |
++
++   - You only need the columns you actually have.
++   - Lists (notes, profiles, badges) can be `Fresh, Woody` or `["Fresh","Woody"]`.
++   - Reviews with a blank `approved` column are imported as **visible**. Use `FALSE` to keep one hidden.
++4. **Table Editor →** open each `import_*` table **→ Insert → Import data from CSV** and upload the matching file.
++5. In **SQL Editor**, run `supabase/import-step2-convert.sql`. It copies everything into the real tables, shows row counts, and deletes the `import_*` tables.
++   Existing rows are never overwritten, so it's safe to run again.
++
++Review photos stored in Google Drive keep working as long as their links stay public.
++
++---
++
++## What changed from Google Apps Script
++
++**Security**
++- Admin login uses Supabase Auth. The hardcoded password and admin key are gone, and no password is stored in the browser.
++- Row Level Security: customers can only read products, active promotions, approved reviews, and settings. Orders, the audit log, and all edits are admin-only.
++- **Order totals are calculated by the database.** It uses the real product prices and promotions, so a total can't be changed in the browser.
++- Order tracking needs the Order ID **and** the matching contact number, and only shows the customer's first name.
++- Basic spam limits: at most 5 orders per phone number per 10 minutes. Review photos must be JPEGs under 2 MB.
++
++**Inventory**
++- Stock is checked and reduced when an order is placed, and an order is refused if there isn't enough stock.
++- Setting an order to **Cancelled** puts the bottles back in stock.
++
++**Admin panel**
++- New orders appear instantly (Supabase Realtime), with no 15-second polling.
++- New **Reviews** tab to approve, hide, or delete customer reviews.
++- The audit log is written by the database itself, so every admin change is recorded.
++- Order IDs look like `AE-261005-7KQ2M`.
+ 
+-## Vercel
+-Root Directory must be blank. No build command or output directory is required.
++**Speed and reliability**
++- No more Apps Script cold starts, 404 retries, or JSONP.
+ 
+-## Notes
+-The admin backend creates/uses these sheets in the order spreadsheet: Products, Promotions, Site Settings, Admin Audit, and Orders. Existing Reviews remain in the configured review spreadsheet.
++## Day-to-day
++- **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
++- **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`
++- **Reset an admin password:** Authentication → Users → … → Send password recovery, or set a new one there.
++- **Backups:** Supabase → Database → Backups. On the Free plan, you can also download CSVs from the Table Editor.
++- **Free plan note:** Supabase pauses free projects after about a week with no activity. Normal site traffic keeps it awake. If it does pause, open the dashboard and click **Restore**.
+ 
+-Admin features include dashboard analytics, order status management, CSV export, product CRUD, inventory, badges, sort order, promotions, homepage controls, low-stock threshold, customer count, top-product sales, and audit log.
++## Hosting (Vercel)
++Leave Root Directory blank. No build command or output directory is needed.
+diff --git a/admin.html b/admin.html
+index a51a5e3..e2cbefb 100644
+--- a/admin.html
++++ b/admin.html
+@@ -14,14 +14,9 @@
+     <h1>Admin Portal</h1>
+     <p class="muted">Sign in to manage products, orders, inventory, promotions and site settings.</p>
+     <form id="credentialsForm">
+-      <label>Username or Email<input id="loginIdentifier" required autocomplete="username"></label>
++      <label>Admin Email<input id="loginIdentifier" type="email" required autocomplete="username"></label>
+       <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
+-      <button class="btn primary" type="submit">Continue</button>
+-    </form>
+-    <form id="keyForm" class="hidden">
+-      <label>Admin Key<input id="loginKey" type="password" required autocomplete="one-time-code"></label>
+-      <button class="btn primary" type="submit">Verify Admin Key</button>
+-      <button class="btn ghost" type="button" id="backLogin">Back</button>
++      <button class="btn primary" type="submit">Sign In</button>
+     </form>
+     <p id="loginStatus" class="status"></p>
+   </div>
+@@ -35,6 +30,7 @@
+       <button data-view="products" class="nav-item">Products</button>
+       <button data-view="promotions" class="nav-item">Promotions</button>
+       <button data-view="homepage" class="nav-item">Homepage</button>
++      <button data-view="reviews" class="nav-item">Reviews</button>
+       <button data-view="audit" class="nav-item">Audit Log</button>
+     </nav>
+     <div class="side-bottom"><a href="index.html">← Customer Site</a><button id="logoutBtn">Log out</button></div>
+@@ -50,6 +46,7 @@
+       <input type="hidden" id="pOriginalId"><label>ID<input id="pId" required></label><label>Name<input id="pName" required></label><label>Category<select id="pCat"><option value="men">For Him</option><option value="women">For Her</option></select></label><label>Price<input id="pPrice" type="number" min="0" value="430"></label><label>Stock<input id="pStock" type="number" min="0" value="10"></label><label>Sort Order<input id="pSort" type="number" value="0"></label><label class="full">Image URL<input id="pImg"></label><label class="full">Short Description<input id="pDesc"></label><label class="full">Long Description<textarea id="pDescLong"></textarea></label><label class="full">Top / First Notes<input id="pTop"></label><label class="full">Heart Notes<input id="pHeart"></label><label class="full">Base Notes<input id="pBase"></label><label class="full">How to Apply<textarea id="pApplication"></textarea></label><label class="full">Profiles (comma separated)<input id="pProfiles" placeholder="Fresh, Woody"></label><label>Longevity<input id="pLongevity" type="number" min="1" max="10" value="7"></label><label>Projection<input id="pProjection" type="number" min="1" max="10" value="7"></label><label>Strength<select id="pStrength"><option value="subtle">Subtle</option><option value="moderate" selected>Moderate</option><option value="bold">Bold</option></select></label><label>Best Time<input id="pTime" placeholder="Day, Night"></label><label class="full">Occasion<input id="pOccasion"></label><fieldset class="full"><legend>Badges</legend><div class="checks"><label><input class="badge" value="BEST SELLER" type="checkbox"> Best Seller</label><label><input class="badge" value="FEATURED" type="checkbox"> Featured</label><label><input class="badge" value="NEW" type="checkbox"> New</label><label><input class="badge" value="LIMITED" type="checkbox"> Limited</label><label><input class="badge" value="SIGNATURE" type="checkbox"> Signature</label></div></fieldset><label class="full inline-check"><input id="pActive" type="checkbox" checked> Active / visible on website</label><div class="form-actions full"><button class="btn primary" type="submit">Save Product</button><button class="btn danger" type="button" id="deleteProduct">Delete</button></div></form></div></section>
+     <section id="promotionsView" class="view hidden"><div class="toolbar"><button class="btn primary" id="newPromo">+ Add Promotion</button></div><div id="promosList" class="list"></div><div id="promoEditor" class="editor hidden"><div class="panel-head"><h3>Promotion</h3><button class="btn ghost" id="closePromo">Close</button></div><form id="promoForm" class="form-grid"><input type="hidden" id="promoId"><label>Name<input id="promoName" required></label><label>Type<select id="promoType"><option value="fixed_total">Fixed Total</option><option value="percent">Percent Off</option></select></label><label>Minimum Quantity<input id="promoQty" type="number" min="1" value="2"></label><label>Fixed Total<input id="promoFixed" type="number" min="0" value="840"></label><label>Percent Off<input id="promoPercent" type="number" min="0" max="100" value="0"></label><label class="inline-check"><input id="promoActive" type="checkbox" checked> Active</label><div class="form-actions full"><button class="btn primary">Save Promotion</button></div></form></div></section>
+     <section id="homepageView" class="view hidden"><div class="panel"><div class="panel-head"><h3>Homepage Controls</h3><span>Control what customers see</span></div><form id="settingsForm" class="form-grid"><label>Low Stock Threshold<input id="setLowStock" type="number" min="0" value="5"></label><label class="inline-check"><input id="setBest" type="checkbox" checked> Show Best Sellers</label><label class="inline-check"><input id="setFeatured" type="checkbox" checked> Show Featured</label><label class="inline-check"><input id="setNew" type="checkbox" checked> Show New Arrivals</label><label class="inline-check"><input id="setSignature" type="checkbox" checked> Show Signature Collection</label><div class="form-actions full"><button class="btn primary">Save Settings</button></div></form></div></section>
++    <section id="reviewsView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div><div class="table-wrap"><table><thead><tr><th>Photo</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead><tbody id="reviewsRows"></tbody></table></div></section>
+     <section id="auditView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshAudit">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th></tr></thead><tbody id="auditRows"></tbody></table></div></section>
+   </main>
+ </div>
+diff --git a/assets/js/admin-api.js b/assets/js/admin-api.js
+index 6bf3b14..080dcba 100644
+--- a/assets/js/admin-api.js
++++ b/assets/js/admin-api.js
+@@ -1,51 +1,6 @@
+-export class ApiClient {
+-  constructor(baseUrl){this.baseUrl=String(baseUrl||"").trim();}
+-  assertConfigured(){
+-    if(!this.baseUrl || this.baseUrl.includes("PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE")){
+-      throw new Error("Admin API URL is not configured. Open assets/js/admin.js and replace PASTE_YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE with your Google Apps Script /exec URL.");
+-    }
+-    if(!/^https:\/\/script\.google\.com\/macros\/s\/[^\s]+\/exec(?:\?.*)?$/.test(this.baseUrl)){
+-      throw new Error("Invalid Admin API URL. Use the deployed Google Apps Script Web App URL ending in /exec.");
+-    }
+-  }
+-  async parse(r){
+-    const text=await r.text();
+-    if(!r.ok) throw new Error(`Admin API HTTP ${r.status}. Check the Google Apps Script deployment.`);
+-    try{return JSON.parse(text);}catch(_){
+-      const preview=text.replace(/\s+/g," ").slice(0,180);
+-      throw new Error(`Admin API returned non-JSON content. Check that the Web App URL is the /exec URL and access is set to Anyone. Response: ${preview}`);
+-    }
+-  }
+-  async get(params={}){
+-    this.assertConfigured();
+-    const maxAttempts=5;
+-    const delays=[500,900,1500,2500];
+-    let lastError=null;
+-    for(let attempt=0;attempt<maxAttempts;attempt++){
+-      try{
+-        const url=new URL(this.baseUrl);
+-        Object.entries(params).forEach(([k,v])=>url.searchParams.set(k,v));
+-        url.searchParams.set("_ts",Date.now().toString());
+-        const controller=new AbortController();
+-        const timer=setTimeout(()=>controller.abort(),12000);
+-        try{
+-          const response=await fetch(url,{cache:"no-store",redirect:"follow",signal:controller.signal});
+-          if(response.status===404 && attempt<maxAttempts-1) throw new Error("Temporary Google Apps Script 404.");
+-          return await this.parse(response);
+-        } finally { clearTimeout(timer); }
+-      }catch(error){
+-        lastError=error;
+-        if(attempt<maxAttempts-1) await new Promise(resolve=>setTimeout(resolve,delays[attempt]));
+-      }
+-    }
+-    throw new Error(`Admin API temporarily unavailable after ${maxAttempts} attempts. ${lastError?.message||""}`);
+-  }
+-  async post(params={}){
+-    this.assertConfigured();
+-    const controller=new AbortController();
+-    const timer=setTimeout(()=>controller.abort(),20000);
+-    try{
+-      return await this.parse(await fetch(this.baseUrl,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded;charset=UTF-8"},body:new URLSearchParams(params).toString(),redirect:"follow",cache:"no-store",signal:controller.signal}));
+-    } finally { clearTimeout(timer); }
+-  }
+-}
++/* =========================================================
++   AURA & ESSENCE — Admin API
++   The admin panel now talks to Supabase. See supabase-api.js.
++========================================================= */
++
++export { SupabaseApi as ApiClient, SupabaseApi, isSupabaseConfigured } from "./supabase-api.js";
+diff --git a/assets/js/admin.js b/assets/js/admin.js
+index 47a874e..7729814 100644
+--- a/assets/js/admin.js
++++ b/assets/js/admin.js
+@@ -1,12 +1,11 @@
+-import { ApiClient } from "./admin-api.js";
++import { ApiClient, isSupabaseConfigured } from "./admin-api.js";
+ import { PRODUCTS } from "./products.js";
+ 
+ /* =========================================================
+    CONSTANTS
+ ========================================================= */
+ 
+-const API_URL =
+-  "https://script.google.com/macros/s/AKfycby2010iiEHQGK7oIaM96MSTMiVt_a-5Dy8qWdnofO1vUtZInhunaR8UxC61r_KIex7g1w/exec";
++
+ 
+ const CACHE_PREFIX = "aeAdminCache_";
+ 
+@@ -75,36 +74,18 @@ function escapeHTML(value) {
+ 
+ class AdminSession {
+ 
+-  constructor() {
+-    const saved = safeJSONParse(
+-      sessionStorage.getItem("aeAdminSession"),
+-      {}
+-    );
++  /*
++   * The real session (a secure token) is stored and refreshed by
++   * Supabase Auth. No password or admin key is kept in the browser.
++   */
+ 
+-    this.data =
+-      saved &&
+-      typeof saved === "object" &&
+-      !Array.isArray(saved)
+-        ? saved
+-        : {};
++  constructor() {
++    this.data = {};
+   }
+ 
+ 
+-  save(identifier, password, key) {
+-    this.data = {
+-      identifier,
+-      password,
+-      key
+-    };
+-
+-    try {
+-      sessionStorage.setItem(
+-        "aeAdminSession",
+-        JSON.stringify(this.data)
+-      );
+-    } catch {
+-      // Ignore storage errors.
+-    }
++  save(email) {
++    this.data = { email };
+   }
+ 
+ 
+@@ -112,9 +93,9 @@ class AdminSession {
+     this.data = {};
+ 
+     try {
+-      sessionStorage.removeItem(
+-        "aeAdminSession"
+-      );
++      Object.keys(sessionStorage)
++        .filter(key => key.startsWith(CACHE_PREFIX))
++        .forEach(key => sessionStorage.removeItem(key));
+     } catch {
+       // Ignore storage errors.
+     }
+@@ -127,11 +108,7 @@ class AdminSession {
+ 
+ 
+   valid() {
+-    return Boolean(
+-      this.data.identifier &&
+-      this.data.password &&
+-      this.data.key
+-    );
++    return Boolean(this.data.email);
+   }
+ }
+ 
+@@ -144,16 +121,16 @@ class AdminApp {
+ 
+   constructor() {
+ 
+-    this.api = new ApiClient(API_URL);
++    this.api = new ApiClient();
+ 
+     this.session = new AdminSession();
+ 
+     this.products = [];
+     this.orders = [];
+     this.promotions = [];
++    this.reviews = [];
+     this.settings = {};
+ 
+-    this.pending = null;
+ 
+     /* -----------------------------------------------
+        PERFORMANCE / REALTIME STATE
+@@ -161,6 +138,8 @@ class AdminApp {
+ 
+     this.cachePrefix = CACHE_PREFIX;
+ 
++    this.unsubscribeOrders = null;
++
+     this.pollers = {
+       orders: null,
+       dashboard: null
+@@ -195,6 +174,7 @@ class AdminApp {
+       "products",
+       "promotions",
+       "homepage",
++      "reviews",
+       "audit"
+     ];
+ 
+@@ -221,13 +201,10 @@ class AdminApp {
+       "loginStatus",
+ 
+       "credentialsForm",
+-      "keyForm",
+-      "backLogin",
+       "logoutBtn",
+ 
+       "loginIdentifier",
+       "loginPassword",
+-      "loginKey",
+ 
+       "loginView",
+       "appView",
+@@ -290,6 +267,9 @@ class AdminApp {
+       "setNew",
+       "setSignature",
+ 
++      "refreshReviews",
++      "reviewsRows",
++
+       "refreshAudit",
+       "auditRows",
+ 
+@@ -387,33 +367,24 @@ class AdminApp {
+     );
+ 
+ 
+-    this.dom.keyForm?.addEventListener(
+-      "submit",
+-      e => this.verifyKey(e)
+-    );
+-
++    
+ 
+-    this.dom.backLogin?.addEventListener(
+-      "click",
+-      () => {
+ 
+-        this.dom.keyForm?.classList.add("hidden");
+-
+-        this.dom.credentialsForm?.classList.remove(
+-          "hidden"
+-        );
+-      }
+-    );
++    
+ 
+ 
+     this.dom.logoutBtn?.addEventListener(
+       "click",
+-      () => {
++      async () => {
+ 
+         this.stopRealtime();
+ 
+         this.session.clear();
+ 
++        await this.api.post({
++          action: "adminLogout"
++        });
++
+         location.reload();
+       }
+     );
+@@ -653,138 +624,105 @@ class AdminApp {
+        SESSION
+     ------------------------------------------------ */
+ 
+-    if (this.session.valid()) {
+-      this.openApp();
+-    }
+-  }
+-
+-
+-  /* =====================================================
+-     LOGIN
+-  ===================================================== */
+-
+-  async credentials(e) {
++    /* -----------------------------------------------
++       REVIEWS
++    ------------------------------------------------ */
+ 
+-    e.preventDefault();
++    this.dom.refreshReviews?.addEventListener(
++      "click",
++      () => this.loadReviews()
++    );
+ 
+-    const identifier =
+-      this.dom.loginIdentifier?.value.trim();
+ 
+-    const password =
+-      this.dom.loginPassword?.value || "";
++    this.dom.reviewsRows?.addEventListener(
++      "click",
++      e => {
+ 
++        const button =
++          e.target.closest("[data-review]");
+ 
+-    if (!identifier || !password) {
+-      return;
+-    }
++        if (!button) return;
+ 
++        const id = button.dataset.review;
++        const op = button.dataset.op;
+ 
+-    this.loginStatus(
+-      "Checking credentials…"
++        if (op === "delete") {
++          this.deleteReview(id);
++        } else {
++          this.setReviewApproved(id, op === "approve");
++        }
++      }
+     );
+ 
+ 
+-    try {
+-
+-      const response =
+-        await this.api.post({
+-          action: "adminLogin",
+-          identifier,
+-          password
+-        });
++    this.restoreSession();
++  }
+ 
+ 
+-      if (!response?.success) {
++  /* =====================================================
++     RESTORE SESSION (already signed in?)
++  ===================================================== */
+ 
+-        throw new Error(
+-          response?.message ||
+-          "Invalid credentials."
+-        );
+-      }
++  async restoreSession() {
+ 
++    if (!isSupabaseConfigured()) {
+ 
+-      this.pending = {
+-        identifier,
+-        password
+-      };
++      this.loginStatus(
++        "Supabase is not connected yet. Paste your Project URL and anon key in assets/js/supabase-config.js.",
++        true
++      );
+ 
++      return;
++    }
+ 
+-      this.dom.credentialsForm?.classList.add(
+-        "hidden"
+-      );
+ 
+-      this.dom.keyForm?.classList.remove(
+-        "hidden"
+-      );
++    const response =
++      await this.api.get({
++        action: "adminSession"
++      });
+ 
+ 
+-      this.loginStatus(
+-        "Credentials accepted. Enter your admin key."
+-      );
++    if (response?.success) {
+ 
+-    } catch (error) {
++      this.session.save(response.email);
+ 
+-      this.loginStatus(
+-        error.message,
+-        true
+-      );
++      this.openApp();
+     }
+   }
+ 
+ 
+   /* =====================================================
+-     VERIFY ADMIN KEY
++     LOGIN
+   ===================================================== */
+ 
+-  async verifyKey(e) {
++  async credentials(e) {
+ 
+     e.preventDefault();
+ 
++    const identifier =
++      this.dom.loginIdentifier?.value.trim();
+ 
+-    const key =
+-      this.dom.loginKey?.value.trim();
+-
+-
+-    if (!key) {
++    const password =
++      this.dom.loginPassword?.value || "";
+ 
+-      this.loginStatus(
+-        "Please enter your admin key.",
+-        true
+-      );
+ 
++    if (!identifier || !password) {
+       return;
+     }
+ 
+ 
+-    if (!this.pending) {
+-
+-      this.loginStatus(
+-        "Your login session expired. Please try again.",
+-        true
+-      );
+-
+-      return;
+-    }
++    this.loginStatus(
++      "Signing in…"
++    );
+ 
+ 
+     try {
+ 
+       const response =
+         await this.api.post({
+-
+-          action:
+-            "adminVerifyKey",
+-
+-          identifier:
+-            this.pending.identifier,
+-
+-          password:
+-            this.pending.password,
+-
+-          /*
+-           * Backend expects adminKey.
+-           */
+-          adminKey: key
++          action: "adminLogin",
++          identifier,
++          password
+         });
+ 
+ 
+@@ -792,18 +730,20 @@ class AdminApp {
+ 
+         throw new Error(
+           response?.message ||
+-          "Invalid admin key."
++          "Invalid credentials."
+         );
+       }
+ 
+ 
+-      this.session.save(
+-        this.pending.identifier,
+-        this.pending.password,
+-        key
+-      );
++      if (this.dom.loginPassword) {
++        this.dom.loginPassword.value = "";
++      }
+ 
+ 
++      this.session.save(identifier);
++
++      this.loginStatus("");
++
+       this.openApp();
+ 
+     } catch (error) {
+@@ -905,7 +845,7 @@ class AdminApp {
+           }
+ 
+         },
+-        15000
++        60000
+       );
+ 
+ 
+@@ -923,7 +863,7 @@ class AdminApp {
+           }
+ 
+         },
+-        30000
++        120000
+       );
+ 
+ 
+@@ -946,6 +886,23 @@ class AdminApp {
+     );
+ 
+ 
++    /*
++     * Instant updates: Supabase Realtime tells us
++     * whenever an order is created or changed.
++     */
++    const onOrderChange =
++      debounce(
++        () => {
++          this.loadOrders(true).catch(() => {});
++          this.loadDashboard(true).catch(() => {});
++        },
++        400
++      );
++
++    this.unsubscribeOrders =
++      this.api.onOrdersChange(onOrderChange);
++
++
+     /*
+      * Initial realtime refresh.
+      */
+@@ -977,6 +934,14 @@ class AdminApp {
+     this.pollers.dashboard = null;
+ 
+ 
++    if (this.unsubscribeOrders) {
++
++      this.unsubscribeOrders();
++
++      this.unsubscribeOrders = null;
++    }
++
++
+     if (this._visibilityHandler) {
+ 
+       document.removeEventListener(
+@@ -1177,29 +1142,11 @@ class AdminApp {
+ 
+   params(extra = {}) {
+ 
+-    const auth =
+-      this.auth();
+-
+-
+-    return {
+-
+-      identifier:
+-        auth.identifier,
+-
+-      password:
+-        auth.password,
+-
+-      adminKey:
+-        auth.key,
+-
+-      /*
+-       * Compatibility with older backend code.
+-       */
+-      key:
+-        auth.key,
+-
+-      ...extra
+-    };
++    /*
++     * Authentication is handled by the Supabase
++     * session token, so no credentials are sent.
++     */
++    return { ...extra };
+   }
+ 
+ 
+@@ -1253,6 +1200,12 @@ class AdminApp {
+ 
+       this.loadAudit();
+     }
++
++
++    if (view === "reviews") {
++
++      this.loadReviews();
++    }
+   }
+ 
+ 
+@@ -1878,7 +1831,7 @@ class AdminApp {
+ 
+ 
+     /*
+-     * If Products sheet is empty,
++     * If the products table is empty,
+      * automatically seed existing
+      * products from products.js.
+      */
+@@ -2419,7 +2372,10 @@ class AdminApp {
+       this.params({
+ 
+         action:
+-          "adminSaveProduct",
++            "adminSaveProduct",
++
++          originalId:
++            value("pOriginalId"),
+ 
+         id:
+           value("pId"),
+@@ -3116,6 +3072,153 @@ class AdminApp {
+ }
+ 
+ 
++/* =========================================================
++   REVIEWS (moderation)
++========================================================= */
++
++Object.assign(AdminApp.prototype, {
++
++  async loadReviews() {
++
++    try {
++
++      const response =
++        await this.request(
++          "GET",
++          this.params({
++            action: "adminReviews"
++          })
++        );
++
++      this.reviews =
++        Array.isArray(response?.reviews)
++          ? response.reviews
++          : [];
++
++      this.renderReviews();
++
++    } catch (error) {
++
++      this.setStatus(
++        error.message,
++        true
++      );
++    }
++  },
++
++
++  renderReviews() {
++
++    const table =
++      this.dom.reviewsRows;
++
++    if (!table) return;
++
++    if (!this.reviews.length) {
++
++      table.innerHTML =
++        `<tr><td colspan="6" class="muted">No reviews yet.</td></tr>`;
++
++      return;
++    }
++
++    table.innerHTML =
++      this.reviews
++        .map(
++          review => `
++            <tr>
++              <td>
++                ${
++                  review.photoUrl
++                    ? `<a href="${escapeHTML(review.photoUrl)}" target="_blank" rel="noopener">
++                         <img src="${escapeHTML(review.photoUrl)}" alt="" loading="lazy"
++                              style="width:56px;height:56px;object-fit:cover;border-radius:8px">
++                       </a>`
++                    : "—"
++                }
++              </td>
++              <td>
++                <b>${escapeHTML(review.name)}</b>
++                <small>${escapeHTML(review.scent || "")}</small>
++              </td>
++              <td>${"★".repeat(Number(review.rating) || 0)}</td>
++              <td style="max-width:360px;white-space:normal">${escapeHTML(review.review)}</td>
++              <td>${review.approved ? "Visible" : "<b>Pending</b>"}</td>
++              <td>
++                ${
++                  review.approved
++                    ? `<button class="btn" data-review="${escapeHTML(review.id)}" data-op="hide">Hide</button>`
++                    : `<button class="btn primary" data-review="${escapeHTML(review.id)}" data-op="approve">Approve</button>`
++                }
++                <button class="btn danger" data-review="${escapeHTML(review.id)}" data-op="delete">Delete</button>
++              </td>
++            </tr>
++          `
++        )
++        .join("");
++  },
++
++
++  async setReviewApproved(id, approved) {
++
++    try {
++
++      await this.request(
++        "POST",
++        this.params({
++          action: "adminSetReviewApproved",
++          id,
++          approved
++        })
++      );
++
++      this.setStatus(
++        approved ? "Review approved" : "Review hidden"
++      );
++
++      await this.loadReviews();
++
++    } catch (error) {
++
++      this.setStatus(
++        error.message,
++        true
++      );
++    }
++  },
++
++
++  async deleteReview(id) {
++
++    if (!confirm("Delete this review and its photo?")) {
++      return;
++    }
++
++    try {
++
++      await this.request(
++        "POST",
++        this.params({
++          action: "adminDeleteReview",
++          id
++        })
++      );
++
++      this.setStatus("Review deleted");
++
++      await this.loadReviews();
++
++    } catch (error) {
++
++      this.setStatus(
++        error.message,
++        true
++      );
++    }
++  }
++});
++
++
+ /* =========================================================
+    START ADMIN APP
+ ========================================================= */
+diff --git a/assets/js/app.js b/assets/js/app.js
+index f3ce38c..43b57e5 100644
+--- a/assets/js/app.js
++++ b/assets/js/app.js
+@@ -5,6 +5,11 @@ import {
+   PRODUCT_META,
+ } from "./products.js";
+ 
++import {
++  SupabaseApi,
++  isSupabaseConfigured,
++} from "./supabase-api.js";
++
+ // ============================================================
+ // AURA & ESSENCE FRONTEND
+ // SAFE PERFORMANCE OPTIMIZED VERSION
+@@ -259,132 +264,7 @@ class WishlistManager {
+ // API CLIENT
+ // ============================================================
+ 
+-class ApiClient {
+-  constructor(baseUrl) {
+-    this.baseUrl = baseUrl;
+-  }
+-
+-  async get(params = {}) {
+-    const maxAttempts = 3;
+-
+-    for (
+-      let attempt = 1;
+-      attempt <= maxAttempts;
+-      attempt++
+-    ) {
+-      const controller =
+-        new AbortController();
+-
+-      const timeout = setTimeout(
+-        () => controller.abort(),
+-        10000,
+-      );
+-
+-      try {
+-        const url = new URL(
+-          this.baseUrl,
+-        );
+-
+-        Object.entries(params).forEach(
+-          ([key, value]) => {
+-            url.searchParams.set(
+-              key,
+-              value,
+-            );
+-          },
+-        );
+-
+-        // Prevent stale Apps Script responses.
+-        url.searchParams.set(
+-          "_ts",
+-          Date.now().toString(),
+-        );
+-
+-        const response = await fetch(
+-          url,
+-          {
+-            cache: "no-store",
+-            redirect: "follow",
+-            signal: controller.signal,
+-          },
+-        );
+-
+-        clearTimeout(timeout);
+-
+-        if (!response.ok) {
+-          throw new Error(
+-            `HTTP ${response.status}`,
+-          );
+-        }
+-
+-        return await response.json();
+-      } catch (error) {
+-        clearTimeout(timeout);
+-
+-        if (
+-          attempt ===
+-          maxAttempts
+-        ) {
+-          throw error;
+-        }
+-
+-        await new Promise((resolve) =>
+-          setTimeout(
+-            resolve,
+-            attempt * 400,
+-          ),
+-        );
+-      }
+-    }
+-  }
+-
+-  async post(params = {}) {
+-    const controller =
+-      new AbortController();
+-
+-    const timeout = setTimeout(
+-      () => controller.abort(),
+-      15000,
+-    );
+-
+-    try {
+-      const response = await fetch(
+-        this.baseUrl,
+-        {
+-          method: "POST",
+-
+-          headers: {
+-            "Content-Type":
+-              "application/x-www-form-urlencoded;charset=UTF-8",
+-          },
+-
+-          redirect: "follow",
+-
+-          signal:
+-            controller.signal,
+-
+-          body: new URLSearchParams(
+-            params,
+-          ).toString(),
+-        },
+-      );
+-
+-      clearTimeout(timeout);
+-
+-      if (!response.ok) {
+-        throw new Error(
+-          `HTTP ${response.status}`,
+-        );
+-      }
+-
+-      return await response.json();
+-    } catch (error) {
+-      clearTimeout(timeout);
+-
+-      throw error;
+-    }
+-  }
+-}
++// The backend client now lives in supabase-api.js.
+ 
+ // ============================================================
+ // GLOBAL SERVICES
+@@ -616,9 +496,7 @@ function getCartTotal() {
+ 
+ async function loadActivePromotions() {
+   if (
+-    GOOGLE_SHEETS_WEB_APP_URL.includes(
+-      "PASTE_YOUR_",
+-    )
++    !isSupabaseConfigured()
+   ) {
+     return;
+   }
+@@ -2168,16 +2046,11 @@ requestAnimationFrame(
+ );
+ 
+ // ============================================================
+-// GOOGLE SHEETS DATABASE
++// SUPABASE DATABASE
+ // ============================================================
+ 
+-const GOOGLE_SHEETS_WEB_APP_URL =
+-  "https://script.google.com/macros/s/AKfycby2010iiEHQGK7oIaM96MSTMiVt_a-5Dy8qWdnofO1vUtZInhunaR8UxC61r_KIex7g1w/exec";
+-
+ apiClient =
+-  new ApiClient(
+-    GOOGLE_SHEETS_WEB_APP_URL,
+-  );
++  new SupabaseApi();
+ 
+ // ============================================================
+ // PRODUCT CATALOG SYNC
+@@ -2185,9 +2058,7 @@ apiClient =
+ 
+ async function loadManagedProducts() {
+   if (
+-    GOOGLE_SHEETS_WEB_APP_URL.includes(
+-      "PASTE_YOUR_",
+-    )
++    !isSupabaseConfigured()
+   ) {
+     return;
+   }
+@@ -2736,45 +2607,19 @@ function renderReviews(
+ 
+ function loadReviews() {
+   if (
+-    GOOGLE_SHEETS_WEB_APP_URL.includes(
+-      "PASTE_YOUR_",
+-    )
++    !isSupabaseConfigured()
+   ) {
+     reviewsLoading.textContent =
+-      "Connect the Google Apps Script URL to load customer reviews.";
++      "Connect Supabase (assets/js/supabase-config.js) to load customer reviews.";
+ 
+     return;
+   }
+ 
+-  const callbackName =
+-    "__auraReviews_" +
+-    Date.now();
+-
+-  let finished = false;
+-
+-  const script =
+-    document.createElement(
+-      "script",
+-    );
+-
+-  const cleanup = () => {
+-    if (finished) {
+-      return;
+-    }
+-
+-    finished = true;
+-
+-    delete window[
+-      callbackName
+-    ];
+-
+-    script.remove();
+-  };
+-
+-  window[
+-    callbackName
+-  ] = function (data) {
+-    try {
++  apiClient
++    .get({
++      action: "reviews",
++    })
++    .then((data) => {
+       if (
+         !data ||
+         !data.success
+@@ -2788,36 +2633,11 @@ function loadReviews() {
+       renderReviews(
+         data.reviews || [],
+       );
+-    } catch (err) {
++    })
++    .catch(() => {
+       reviewsLoading.textContent =
+         "Customer reviews are temporarily unavailable.";
+-    } finally {
+-      cleanup();
+-    }
+-  };
+-
+-  script.src =
+-    GOOGLE_SHEETS_WEB_APP_URL +
+-    (GOOGLE_SHEETS_WEB_APP_URL.includes(
+-      "?",
+-    )
+-      ? "&"
+-      : "?") +
+-    "action=reviews&callback=" +
+-    encodeURIComponent(
+-      callbackName,
+-    );
+-
+-  script.onerror = () => {
+-    reviewsLoading.textContent =
+-      "Customer reviews are temporarily unavailable.";
+-
+-    cleanup();
+-  };
+-
+-  document.body.appendChild(
+-    script,
+-  );
++    });
+ }
+ 
+ // ============================================================
+@@ -2929,12 +2749,10 @@ reviewForm?.addEventListener(
+     e.preventDefault();
+ 
+     if (
+-      GOOGLE_SHEETS_WEB_APP_URL.includes(
+-        "PASTE_YOUR_",
+-      )
++      !isSupabaseConfigured()
+     ) {
+       showReviewStatus(
+-        "Add your Google Apps Script Web App URL first.",
++        "The review service is not connected yet.",
+         "error",
+       );
+ 
+@@ -4127,12 +3945,10 @@ ${p.name} × ${item.qty} — ₱${(
+       "flex";
+ 
+     if (
+-      GOOGLE_SHEETS_WEB_APP_URL.includes(
+-        "PASTE_YOUR_",
+-      )
++      !isSupabaseConfigured()
+     ) {
+       showSubmitStatus(
+-        "Order summary created, but the Google Sheets database is not connected yet. Add your Apps Script Web App URL in the code.",
++        "Order summary created, but the database is not connected yet. Please send us the summary below directly.",
+         "error",
+       );
+ 
+@@ -4262,7 +4078,11 @@ ${p.name} × ${item.qty} — ₱${(
+           data.get(
+             "fullname",
+           ) || "customer"
+-        }. Your order has been received. We will contact you regarding confirmation and delivery or meetup details.`;
++        }. Your order has been received${
++          response.total != null
++            ? ` (total ₱${Number(response.total).toLocaleString()})`
++            : ""
++        }. We will contact you regarding confirmation and delivery or meetup details.`;
+ 
+       document
+         .getElementById(
+@@ -4563,36 +4383,13 @@ document
+         return;
+       }
+ 
+-      const callbackName =
+-        "__aeTrack_" +
+-        Date.now();
+-
+-      const script =
+-        document.createElement(
+-          "script",
+-        );
+-
+-      let finished = false;
+-
+-      const cleanup =
+-        () => {
+-          if (finished) {
+-            return;
+-          }
+-
+-          finished = true;
+-
+-          delete window[
+-            callbackName
+-          ];
+-
+-          script.remove();
+-        };
+-
+-      window[
+-        callbackName
+-      ] = (data) => {
+-        try {
++      apiClient
++        .get({
++          action: "trackOrder",
++          orderId,
++          contact,
++        })
++        .then((data) => {
+           if (
+             !data?.success
+           ) {
+@@ -4605,49 +4402,13 @@ document
+           renderTracking(
+             data,
+           );
+-        } catch (e) {
++        })
++        .catch((e) => {
+           showTrackingError(
+             e.message ||
+-              "Order not found.",
++              "The tracking service is temporarily unavailable.",
+           );
+-        } finally {
+-          cleanup();
+-        }
+-      };
+-
+-      script.src =
+-        GOOGLE_SHEETS_WEB_APP_URL +
+-        (GOOGLE_SHEETS_WEB_APP_URL.includes(
+-          "?",
+-        )
+-          ? "&"
+-          : "?") +
+-        "action=trackOrder" +
+-        "&orderId=" +
+-        encodeURIComponent(
+-          orderId,
+-        ) +
+-        "&contact=" +
+-        encodeURIComponent(
+-          contact,
+-        ) +
+-        "&callback=" +
+-        encodeURIComponent(
+-          callbackName,
+-        );
+-
+-      script.onerror =
+-        () => {
+-          showTrackingError(
+-            "The tracking service is temporarily unavailable.",
+-          );
+-
+-          cleanup();
+-        };
+-
+-      document.body.appendChild(
+-        script,
+-      );
++        });
+     },
+   );
+ 
+diff --git a/assets/js/profile-sync.js b/assets/js/profile-sync.js
+index cfade25..e04802d 100644
+--- a/assets/js/profile-sync.js
++++ b/assets/js/profile-sync.js
+@@ -99,7 +99,7 @@
+     /*
+       Profiles can come from:
+ 
+-      1. Google Sheets
++      1. Supabase
+       2. Admin
+       3. products.js
+ 
+diff --git a/assets/js/supabase-api.js b/assets/js/supabase-api.js
+new file mode 100644
+index 0000000..741f9af
+--- /dev/null
++++ b/assets/js/supabase-api.js
+@@ -0,0 +1,537 @@
++/* =========================================================
++   AURA & ESSENCE — Supabase backend client
++   ---------------------------------------------------------
++   Replaces the old Google Apps Script backend.
++
++   The site still calls   api.get({ action: "products" })
++   and                    api.post({ action: "adminSaveProduct", ... })
++   exactly like before, and gets back the same response shape
++   ({ success: true, ... } or { success: false, message }).
++   This file translates those calls into Supabase queries.
++========================================================= */
++
++import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/+esm";
++import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase-config.js";
++
++const REVIEW_BUCKET = "review-photos";
++
++/* ---------------------------------------------------------
++   CONNECTION
++--------------------------------------------------------- */
++
++export function isSupabaseConfigured() {
++  return (
++    /^https:\/\/.+/.test(String(SUPABASE_URL || "")) &&
++    !String(SUPABASE_URL).includes("PASTE_YOUR_") &&
++    Boolean(SUPABASE_ANON_KEY) &&
++    !String(SUPABASE_ANON_KEY).includes("PASTE_YOUR_")
++  );
++}
++
++let client = null;
++
++export function getSupabase() {
++  if (!isSupabaseConfigured()) {
++    throw new Error(
++      "Supabase is not connected yet. Open assets/js/supabase-config.js and paste your Project URL and anon key."
++    );
++  }
++  if (!client) {
++    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
++      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
++    });
++  }
++  return client;
++}
++
++/* ---------------------------------------------------------
++   SMALL HELPERS
++--------------------------------------------------------- */
++
++function toList(value) {
++  if (Array.isArray(value)) {
++    return value.map(v => String(v).trim()).filter(Boolean);
++  }
++  const text = String(value ?? "").trim();
++  if (!text) return [];
++  if (text.startsWith("[")) {
++    try { return toList(JSON.parse(text)); } catch { /* fall through */ }
++  }
++  return text.split(",").map(v => v.trim()).filter(Boolean);
++}
++
++function toBool(value, fallback = true) {
++  if (value === true || value === false) return value;
++  const text = String(value ?? "").trim().toLowerCase();
++  if (!text) return fallback;
++  return !["false", "0", "no", "off"].includes(text);
++}
++
++function toInt(value, fallback) {
++  const n = parseInt(value, 10);
++  return Number.isFinite(n) ? n : fallback;
++}
++
++function toNum(value, fallback) {
++  const n = Number(value);
++  return Number.isFinite(n) ? n : fallback;
++}
++
++function clamp(n, min, max) {
++  return Math.min(max, Math.max(min, n));
++}
++
++function parseJSON(value, fallback) {
++  if (value && typeof value === "object") return value;
++  try { return JSON.parse(value); } catch { return fallback; }
++}
++
++function normalizeStrength(value) {
++  const s = String(value || "").trim().toLowerCase();
++  if (s === "light") return "subtle";
++  if (s === "strong") return "bold";
++  return ["subtle", "moderate", "bold"].includes(s) ? s : "moderate";
++}
++
++function friendlyError(error) {
++  const code = error?.code || "";
++  const msg = String(error?.message || error || "Something went wrong.");
++
++  if (code === "42501" || code === "PGRST301" || /jwt|not authorized|permission denied/i.test(msg)) {
++    return "You don't have permission for this. Please sign in again as an admin.";
++  }
++  if (code === "23505") return "That ID is already used. Please choose a different one.";
++  if (code === "23514" && /products_id_check/.test(msg)) {
++    return "Product ID must use lowercase letters, numbers, - or _ only (e.g. sauvage-edp).";
++  }
++  if (code === "23514") return "Some fields have invalid values. Please check numbers and ranges.";
++  if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
++    return "Can't reach the database right now. Check your internet connection and try again.";
++  }
++  return msg;
++}
++
++/* ---------------------------------------------------------
++   ROW ⇄ APP OBJECT MAPPING
++   (database uses snake_case, the site uses camelCase)
++--------------------------------------------------------- */
++
++function productFromRow(r) {
++  return {
++    id: r.id,
++    name: r.name,
++    cat: r.cat,
++    price: Number(r.price),
++    stock: r.stock,
++    sortOrder: r.sort_order,
++    img: r.img,
++    desc: r.descr,
++    descLong: r.desc_long,
++    topNotes: r.top_notes || [],
++    heartNotes: r.heart_notes || [],
++    baseNotes: r.base_notes || [],
++    application: r.application,
++    profiles: r.profiles || [],
++    longevity: r.longevity,
++    projection: r.projection,
++    strength: r.strength,
++    time: r.time || [],
++    occasion: r.occasion,
++    badges: r.badges || [],
++    active: r.active
++  };
++}
++
++function productToRow(p) {
++  const stockText = String(p.stock ?? "").trim();
++  return {
++    id: String(p.id || "").trim().toLowerCase(),
++    name: String(p.name || "").trim(),
++    cat: ["men", "women", "unisex"].includes(p.cat) ? p.cat : "men",
++    price: Math.max(0, toNum(p.price, 430)),
++    stock: stockText === "" ? null : Math.max(0, toInt(stockText, 0)),
++    sort_order: toInt(p.sortOrder, 0),
++    img: String(p.img || "").trim(),
++    descr: String(p.desc || ""),
++    desc_long: String(p.descLong || ""),
++    top_notes: toList(p.topNotes),
++    heart_notes: toList(p.heartNotes),
++    base_notes: toList(p.baseNotes),
++    application: String(p.application || ""),
++    profiles: toList(p.profiles),
++    longevity: clamp(toInt(p.longevity, 7), 1, 10),
++    projection: clamp(toInt(p.projection, 7), 1, 10),
++    strength: normalizeStrength(p.strength),
++    time: toList(p.time),
++    occasion: String(p.occasion || ""),
++    badges: toList(p.badges).map(b => b.toUpperCase()),
++    active: toBool(p.active, true)
++  };
++}
++
++function promotionFromRow(r) {
++  return {
++    id: r.id,
++    name: r.name,
++    type: r.type,
++    minQty: r.min_qty,
++    fixedTotal: Number(r.fixed_total),
++    percentOff: Number(r.percent_off),
++    active: r.active
++  };
++}
++
++function orderFromRow(r) {
++  return {
++    orderId: r.order_id,
++    fullname: r.fullname,
++    contact: r.contact,
++    items: Array.isArray(r.items) ? r.items : [],
++    scent: r.scent,
++    qty: r.quantity,
++    address: r.address,
++    payment: r.payment,
++    notes: r.notes,
++    subtotal: Number(r.subtotal),
++    discount: Number(r.discount),
++    total: Number(r.total),
++    promotion: r.promotion_name,
++    status: r.status,
++    timestamp: r.created_at
++  };
++}
++
++function reviewFromRow(r) {
++  return {
++    id: r.id,
++    name: r.name,
++    customerName: r.name,
++    scent: r.scent,
++    scentId: r.scent_id,
++    rating: r.rating,
++    review: r.review,
++    photoUrl: r.photo_url,
++    approved: r.approved,
++    timestamp: r.created_at
++  };
++}
++
++// The admin form expects settings values as strings ("true"/"false").
++function settingsOut(data = {}) {
++  const out = {};
++  Object.entries(data || {}).forEach(([k, v]) => { out[k] = String(v); });
++  return out;
++}
++
++function settingsIn(data = {}) {
++  return {
++    lowStockThreshold: Math.max(0, toInt(data.lowStockThreshold, 5)),
++    showBestSellers: toBool(data.showBestSellers),
++    showFeatured: toBool(data.showFeatured),
++    showNewArrivals: toBool(data.showNewArrivals),
++    showSignature: toBool(data.showSignature)
++  };
++}
++
++// Works on plain http too (crypto.randomUUID needs https).
++function randomId() {
++  const bytes = crypto.getRandomValues(new Uint8Array(16));
++  return Array.from(bytes, b => b.toString(16).padStart(2, "0")).join("");
++}
++
++async function dataUrlToBlob(dataUrl) {
++  const res = await fetch(dataUrl);
++  return res.blob();
++}
++
++function ok(extra = {}) {
++  return { success: true, ...extra };
++}
++
++function must({ data, error }) {
++  if (error) throw error;
++  return data;
++}
++
++/* ---------------------------------------------------------
++   ACTIONS
++--------------------------------------------------------- */
++
++const actions = {
++
++  /* ===== Storefront (public) ===== */
++
++  async products(db) {
++    const rows = must(await db.from("products").select("*")
++      .order("sort_order").order("name"));
++    return ok({ products: rows.map(productFromRow) });
++  },
++
++  async promotions(db) {
++    const rows = must(await db.from("promotions").select("*")
++      .eq("active", true).order("min_qty"));
++    return ok({ promotions: rows.map(promotionFromRow) });
++  },
++
++  async settings(db) {
++    const row = must(await db.from("site_settings").select("data").eq("id", 1).maybeSingle());
++    return ok({ settings: settingsOut(row?.data) });
++  },
++
++  async reviews(db) {
++    const rows = must(await db.from("reviews").select("*")
++      .eq("approved", true).order("created_at", { ascending: false }).limit(60));
++    return ok({ reviews: rows.map(reviewFromRow) });
++  },
++
++  async trackOrder(db, p) {
++    return must(await db.rpc("track_order", {
++      p_order_id: String(p.orderId || ""),
++      p_contact: String(p.contact || "")
++    }));
++  },
++
++  // Called with no "action" — the checkout form.
++  async placeOrder(db, p) {
++    const items = parseJSON(p.items, [])
++      .map(i => ({ id: String(i.id || ""), qty: toInt(i.qty, 0) }))
++      .filter(i => i.id && i.qty > 0);
++
++    return must(await db.rpc("place_order", {
++      p_fullname: String(p.fullname || ""),
++      p_contact: String(p.contact || ""),
++      p_items: items,
++      p_address: String(p.address || ""),
++      p_payment: String(p.payment || ""),
++      p_notes: String(p.notes || "")
++    }));
++  },
++
++  async submitReview(db, p) {
++    let photoUrl = null;
++
++    if (p.photo) {
++      const blob = await dataUrlToBlob(p.photo);
++      const path = `pending/${randomId()}.jpg`;
++      must(await db.storage.from(REVIEW_BUCKET).upload(path, blob, {
++        contentType: "image/jpeg",
++        upsert: false
++      }));
++      photoUrl = db.storage.from(REVIEW_BUCKET).getPublicUrl(path).data.publicUrl;
++    }
++
++    return must(await db.rpc("submit_review", {
++      p_name: String(p.name || ""),
++      p_scent: String(p.scent || ""),
++      p_scent_id: String(p.scentId || ""),
++      p_rating: toInt(p.rating, 5),
++      p_review: String(p.review || ""),
++      p_photo_url: photoUrl
++    }));
++  },
++
++  /* ===== Admin (requires a signed-in admin) ===== */
++
++  async adminLogin(db, p) {
++    const email = String(p.identifier || p.email || "").trim();
++    const { error } = await db.auth.signInWithPassword({ email, password: String(p.password || "") });
++    if (error) {
++      return { success: false, message: /invalid/i.test(error.message) ? "Incorrect email or password." : error.message };
++    }
++    const isAdmin = must(await db.rpc("is_admin"));
++    if (!isAdmin) {
++      await db.auth.signOut();
++      return { success: false, message: "This account is not an admin." };
++    }
++    return ok();
++  },
++
++  async adminLogout(db) {
++    await db.auth.signOut();
++    return ok();
++  },
++
++  async adminSession(db) {
++    const { data } = await db.auth.getSession();
++    if (!data?.session) return { success: false, message: "Not signed in." };
++    const isAdmin = must(await db.rpc("is_admin"));
++    return isAdmin
++      ? ok({ email: data.session.user?.email || "" })
++      : { success: false, message: "This account is not an admin." };
++  },
++
++  async adminDashboard(db) {
++    const data = must(await db.rpc("admin_dashboard"));
++    return ok({ ...data, settings: settingsOut(data?.settings) });
++  },
++
++  async adminOrders(db) {
++    const rows = must(await db.from("orders").select("*")
++      .order("created_at", { ascending: false }).limit(2000));
++    return ok({ orders: rows.map(orderFromRow) });
++  },
++
++  async adminUpdateOrderStatus(db, p) {
++    const rows = must(await db.from("orders")
++      .update({ status: String(p.status) })
++      .eq("order_id", String(p.orderId))
++      .select("order_id"));
++    if (!rows.length) return { success: false, message: "Order not found." };
++    return ok();
++  },
++
++  async adminProducts(db) {
++    return actions.products(db);
++  },
++
++  async adminSeedProducts(db, p) {
++    const rows = parseJSON(p.products, []).map(productToRow).filter(r => r.id && r.name);
++    if (!rows.length) return ok({ inserted: 0 });
++    // Only adds products that don't exist yet — never overwrites your edits.
++    must(await db.from("products").upsert(rows, { onConflict: "id", ignoreDuplicates: true }));
++    return ok({ inserted: rows.length });
++  },
++
++  async adminSaveProduct(db, p) {
++    const row = productToRow(p);
++    if (!row.id || !row.name) return { success: false, message: "Product ID and name are required." };
++
++    const originalId = String(p.originalId || "").trim();
++
++    if (originalId && originalId !== row.id) {
++      // Renaming an existing product's ID
++      const rows = must(await db.from("products").update(row).eq("id", originalId).select("id"));
++      if (!rows.length) return { success: false, message: "Original product not found." };
++    } else {
++      must(await db.from("products").upsert(row, { onConflict: "id" }));
++    }
++    return ok();
++  },
++
++  async adminDeleteProduct(db, p) {
++    must(await db.from("products").delete().eq("id", String(p.id)));
++    return ok();
++  },
++
++  async adminPromotions(db) {
++    const rows = must(await db.from("promotions").select("*").order("min_qty").order("name"));
++    return ok({ promotions: rows.map(promotionFromRow) });
++  },
++
++  async adminSavePromotion(db, p) {
++    const row = {
++      name: String(p.name || "").trim(),
++      type: p.type === "percent" ? "percent" : "fixed_total",
++      min_qty: Math.max(1, toInt(p.minQty, 2)),
++      fixed_total: Math.max(0, toNum(p.fixedTotal, 0)),
++      percent_off: clamp(toNum(p.percentOff, 0), 0, 100),
++      active: toBool(p.active, true)
++    };
++    if (!row.name) return { success: false, message: "Promotion name is required." };
++
++    if (p.id) {
++      must(await db.from("promotions").update(row).eq("id", String(p.id)));
++    } else {
++      must(await db.from("promotions").insert(row));
++    }
++    return ok();
++  },
++
++  async adminDeletePromotion(db, p) {
++    must(await db.from("promotions").delete().eq("id", String(p.id)));
++    return ok();
++  },
++
++  async adminSettings(db) {
++    return actions.settings(db);
++  },
++
++  async adminSaveSettings(db, p) {
++    const data = settingsIn(parseJSON(p.settings, {}));
++    const rows = must(await db.from("site_settings").update({ data }).eq("id", 1).select("id"));
++    if (!rows.length) return { success: false, message: "Settings row is missing. Re-run supabase/schema.sql." };
++    return ok({ settings: settingsOut(data) });
++  },
++
++  async adminAudit(db) {
++    const rows = must(await db.from("audit_log").select("*")
++      .order("id", { ascending: false }).limit(300));
++    return ok({
++      logs: rows.map(r => ({ timestamp: r.created_at, actor: r.actor, action: r.action, details: r.details }))
++    });
++  },
++
++  async adminReviews(db) {
++    const rows = must(await db.from("reviews").select("*")
++      .order("approved").order("created_at", { ascending: false }).limit(500));
++    return ok({ reviews: rows.map(reviewFromRow) });
++  },
++
++  async adminSetReviewApproved(db, p) {
++    must(await db.from("reviews").update({ approved: toBool(p.approved, false) }).eq("id", String(p.id)));
++    return ok();
++  },
++
++  async adminDeleteReview(db, p) {
++    const row = must(await db.from("reviews").delete().eq("id", String(p.id)).select("photo_url").maybeSingle());
++    const marker = `/object/public/${REVIEW_BUCKET}/`;
++    const url = row?.photo_url || "";
++    if (url.includes(marker)) {
++      // Best effort: also remove the photo file.
++      await db.storage.from(REVIEW_BUCKET).remove([url.split(marker)[1]]);
++    }
++    return ok();
++  }
++};
++
++/* ---------------------------------------------------------
++   PUBLIC CLIENT
++   Same get()/post() interface as the old ApiClient.
++--------------------------------------------------------- */
++
++export class SupabaseApi {
++
++  async call(params = {}) {
++    const action = params.action || "placeOrder";
++    const handler = actions[action];
++
++    if (!handler) {
++      return { success: false, message: `Unknown action: ${action}` };
++    }
++
++    try {
++      const db = getSupabase();
++      const result = await handler(db, params);
++      return result && typeof result === "object" ? result : ok();
++    } catch (error) {
++      console.error(`[Supabase] ${action} failed:`, error);
++      return { success: false, message: friendlyError(error) };
++    }
++  }
++
++  get(params = {}) {
++    return this.call(params);
++  }
++
++  post(params = {}) {
++    return this.call(params);
++  }
++
++  // Calls `callback` whenever an order is created or changed (admins only).
++  // Returns a function that stops listening.
++  onOrdersChange(callback) {
++    try {
++      const db = getSupabase();
++      const channel = db
++        .channel("admin-orders")
++        .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => callback())
++        .subscribe();
++      return () => db.removeChannel(channel);
++    } catch {
++      return () => {};
++    }
++  }
++}
++
++// Backwards-compatible name used by admin.js
++export { SupabaseApi as ApiClient };
+diff --git a/assets/js/supabase-config.js b/assets/js/supabase-config.js
+new file mode 100644
+index 0000000..f95982c
+--- /dev/null
++++ b/assets/js/supabase-config.js
+@@ -0,0 +1,18 @@
++/* =========================================================
++   AURA & ESSENCE — Supabase connection
++   ---------------------------------------------------------
++   Paste your values from Supabase → Project Settings → API.
++
++   SUPABASE_URL       "Project URL", e.g. https://abcd1234.supabase.co
++   SUPABASE_ANON_KEY  The "anon public" key (or "publishable" key,
++                      starts with sb_publishable_).
++
++   Both values are SAFE to publish on a public website — the
++   database rules (Row Level Security) protect your data.
++
++   NEVER paste the "service_role" / "secret" key here.
++========================================================= */
++
++export const SUPABASE_URL = "PASTE_YOUR_SUPABASE_PROJECT_URL_HERE";
++
++export const SUPABASE_ANON_KEY = "PASTE_YOUR_SUPABASE_ANON_KEY_HERE";
+diff --git a/supabase/import-step1-staging.sql b/supabase/import-step1-staging.sql
+new file mode 100644
+index 0000000..8e28175
+--- /dev/null
++++ b/supabase/import-step1-staging.sql
+@@ -0,0 +1,39 @@
++-- =====================================================================
++-- IMPORT FROM GOOGLE SHEETS — STEP 1 of 2
++-- Creates temporary "import_*" tables that accept your CSV files as-is
++-- (every column is plain text, so nothing gets rejected).
++--
++-- Run this in Supabase → SQL Editor, then upload each CSV into the
++-- matching import_* table (Table Editor → table → Insert → Import CSV).
++-- The FIRST ROW of each CSV must use the column names below.
++-- Columns you don't have can be left out; extra columns are not allowed.
++-- =====================================================================
++
++create table if not exists public.import_products (
++  id text, name text, cat text, price text, stock text, sort_order text, img text,
++  "desc" text, desc_long text, top_notes text, heart_notes text, base_notes text,
++  application text, profiles text, longevity text, projection text, strength text,
++  time text, occasion text, badges text, active text
++);
++
++create table if not exists public.import_promotions (
++  name text, type text, min_qty text, fixed_total text, percent_off text, active text
++);
++
++create table if not exists public.import_orders (
++  timestamp text, order_id text, fullname text, contact text, items text, scent text,
++  qty text, address text, payment text, notes text, total text, status text
++);
++
++create table if not exists public.import_reviews (
++  timestamp text, name text, scent text, scent_id text, rating text, review text,
++  photo_url text, approved text
++);
++
++-- Lock these tables so the public website can't read them while they exist.
++alter table public.import_products   enable row level security;
++alter table public.import_promotions enable row level security;
++alter table public.import_orders     enable row level security;
++alter table public.import_reviews    enable row level security;
++revoke all on public.import_products, public.import_promotions,
++              public.import_orders, public.import_reviews from anon, authenticated;
+diff --git a/supabase/import-step2-convert.sql b/supabase/import-step2-convert.sql
+new file mode 100644
+index 0000000..f581b95
+--- /dev/null
++++ b/supabase/import-step2-convert.sql
+@@ -0,0 +1,136 @@
++-- =====================================================================
++-- IMPORT FROM GOOGLE SHEETS — STEP 2 of 2
++-- Run AFTER you have uploaded your CSVs into the import_* tables.
++-- Copies the rows into the real tables, then deletes the import tables.
++-- Existing rows are never overwritten (safe to run more than once).
++-- =====================================================================
++
++-- Google Sheets exports dates like 10/3/2026 9:34:11 (month/day/year)
++set datestyle = 'ISO, MDY';
++set timezone = 'Asia/Manila';
++
++-- ---------- temporary helpers ----------
++create or replace function pg_temp.to_list(v text) returns text[] language plpgsql immutable as $$
++begin
++  v := nullif(trim(coalesce(v, '')), '');
++  if v is null then return '{}'; end if;
++  if left(v, 1) = '[' then
++    begin
++      return array(select trim(x) from jsonb_array_elements_text(v::jsonb) x where trim(x) <> '');
++    exception when others then null;
++    end;
++  end if;
++  return array(select trim(x) from unnest(string_to_array(v, ',')) x where trim(x) <> '');
++end $$;
++
++create or replace function pg_temp.to_num(v text) returns numeric language plpgsql immutable as $$
++begin
++  return nullif(regexp_replace(coalesce(v, ''), '[^0-9.\-]', '', 'g'), '')::numeric;
++exception when others then return null;
++end $$;
++
++create or replace function pg_temp.to_bool(v text, fallback boolean) returns boolean language sql immutable as $$
++  select case
++    when nullif(trim(coalesce(v, '')), '') is null then fallback
++    when lower(trim(v)) in ('false', '0', 'no', 'off', 'n', 'hidden', 'pending', 'rejected') then false
++    else true end;
++$$;
++
++create or replace function pg_temp.to_items(v text, scent text, qty text) returns jsonb language plpgsql immutable as $$
++begin
++  if left(trim(coalesce(v, '')), 1) = '[' then
++    return v::jsonb;
++  end if;
++  raise exception 'not json';
++exception when others then
++  return jsonb_build_array(jsonb_build_object('id', null, 'name', coalesce(scent, ''),
++                                              'qty', coalesce(pg_temp.to_num(qty), 1)::int));
++end $$;
++
++create or replace function pg_temp.to_ts(v text) returns timestamptz language plpgsql stable as $$
++begin
++  return coalesce(nullif(trim(v), '')::timestamptz, now());
++exception when others then return now();
++end $$;
++
++-- ---------- products ----------
++insert into public.products (id, name, cat, price, stock, sort_order, img, descr, desc_long,
++  top_notes, heart_notes, base_notes, application, profiles, longevity, projection, strength,
++  time, occasion, badges, active)
++select
++  lower(trim(id)),
++  coalesce(nullif(trim(name), ''), trim(id)),
++  case when lower(trim(cat)) in ('men', 'women', 'unisex') then lower(trim(cat)) else 'men' end,
++  coalesce(pg_temp.to_num(price), 430),
++  greatest(0, pg_temp.to_num(stock))::int,
++  coalesce(pg_temp.to_num(sort_order), 0)::int,
++  coalesce(img, ''), coalesce("desc", ''), coalesce(desc_long, ''),
++  pg_temp.to_list(top_notes), pg_temp.to_list(heart_notes), pg_temp.to_list(base_notes),
++  coalesce(application, ''), pg_temp.to_list(profiles),
++  least(10, greatest(1, coalesce(pg_temp.to_num(longevity), 7)))::int,
++  least(10, greatest(1, coalesce(pg_temp.to_num(projection), 7)))::int,
++  case lower(trim(coalesce(strength, '')))
++    when 'light' then 'subtle' when 'subtle' then 'subtle'
++    when 'strong' then 'bold' when 'bold' then 'bold' else 'moderate' end,
++  pg_temp.to_list(time), coalesce(occasion, ''),
++  array(select upper(b) from unnest(pg_temp.to_list(badges)) b),
++  pg_temp.to_bool(active, true)
++from public.import_products
++where lower(trim(coalesce(id, ''))) ~ '^[a-z0-9][a-z0-9_-]{0,63}$'
++on conflict (id) do nothing;
++
++-- ---------- promotions ----------
++insert into public.promotions (name, type, min_qty, fixed_total, percent_off, active)
++select
++  trim(name),
++  case when lower(trim(type)) like 'percent%' then 'percent' else 'fixed_total' end,
++  greatest(1, coalesce(pg_temp.to_num(min_qty), 2))::int,
++  greatest(0, coalesce(pg_temp.to_num(fixed_total), 0)),
++  least(100, greatest(0, coalesce(pg_temp.to_num(percent_off), 0))),
++  pg_temp.to_bool(active, true)
++from public.import_promotions i
++where nullif(trim(name), '') is not null
++  and not exists (select 1 from public.promotions p where p.name = trim(i.name));
++
++-- ---------- orders ----------
++insert into public.orders (order_id, fullname, contact, items, scent, quantity, address, payment,
++  notes, subtotal, total, status, created_at)
++select
++  coalesce(nullif(trim(order_id), ''), 'IMPORT-' || row_number() over ()),
++  coalesce(nullif(trim(fullname), ''), 'Customer'),
++  coalesce(contact, ''),
++  pg_temp.to_items(items, scent, qty),
++  coalesce(scent, ''),
++  coalesce(pg_temp.to_num(qty), 1)::int,
++  coalesce(address, ''), coalesce(payment, ''), coalesce(notes, ''),
++  coalesce(pg_temp.to_num(total), 0),
++  coalesce(pg_temp.to_num(total), 0),
++  case when trim(status) in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled')
++       then trim(status) else 'New' end,
++  pg_temp.to_ts(timestamp)
++from public.import_orders
++on conflict (order_id) do nothing;
++
++-- ---------- reviews (blank "approved" = visible, since they were already on your site) ----------
++insert into public.reviews (name, scent, scent_id, rating, review, photo_url, approved, created_at)
++select
++  coalesce(nullif(trim(name), ''), 'Customer'),
++  coalesce(scent, ''),
++  nullif(trim(scent_id), ''),
++  least(5, greatest(1, coalesce(pg_temp.to_num(rating), 5)))::int,
++  coalesce(review, ''),
++  nullif(trim(photo_url), ''),
++  pg_temp.to_bool(approved, true),
++  pg_temp.to_ts(timestamp)
++from public.import_reviews
++where nullif(trim(review), '') is not null;
++
++-- ---------- summary ----------
++select 'products' as "table", count(*) as rows from public.products
++union all select 'promotions', count(*) from public.promotions
++union all select 'orders', count(*) from public.orders
++union all select 'reviews', count(*) from public.reviews;
++
++-- ---------- clean up ----------
++drop table if exists public.import_products, public.import_promotions,
++                     public.import_orders, public.import_reviews;
+diff --git a/supabase/schema.sql b/supabase/schema.sql
+new file mode 100644
+index 0000000..b999539
+--- /dev/null
++++ b/supabase/schema.sql
+@@ -0,0 +1,632 @@
++-- =====================================================================
++-- AURA & ESSENCE — Supabase schema
++-- Run this whole file once in Supabase → SQL Editor → New query → Run.
++-- It is safe to run again; it updates functions and policies in place.
++-- =====================================================================
++
++create extension if not exists pgcrypto;
++
++-- ---------------------------------------------------------------------
++-- TABLES
++-- ---------------------------------------------------------------------
++
++create table if not exists public.admins (
++  user_id    uuid primary key references auth.users (id) on delete cascade,
++  email      text,
++  created_at timestamptz not null default now()
++);
++
++create table if not exists public.products (
++  id          text primary key check (id ~ '^[a-z0-9][a-z0-9_-]{0,63}$'),
++  name        text not null check (char_length(name) between 1 and 120),
++  cat         text not null default 'men' check (cat in ('men', 'women', 'unisex')),
++  price       numeric(10,2) not null default 430 check (price >= 0),
++  stock       integer check (stock is null or stock >= 0),   -- null = unlimited
++  sort_order  integer not null default 0,
++  img         text not null default '',
++  descr       text not null default '',
++  desc_long   text not null default '',
++  top_notes   text[] not null default '{}',
++  heart_notes text[] not null default '{}',
++  base_notes  text[] not null default '{}',
++  application text not null default '',
++  profiles    text[] not null default '{}',
++  longevity   smallint not null default 7 check (longevity between 1 and 10),
++  projection  smallint not null default 7 check (projection between 1 and 10),
++  strength    text not null default 'moderate' check (strength in ('subtle', 'moderate', 'bold')),
++  time        text[] not null default '{}',
++  occasion    text not null default '',
++  badges      text[] not null default '{}',
++  active      boolean not null default true,
++  created_at  timestamptz not null default now(),
++  updated_at  timestamptz not null default now()
++);
++
++create table if not exists public.promotions (
++  id          uuid primary key default gen_random_uuid(),
++  name        text not null check (char_length(name) between 1 and 120),
++  type        text not null default 'fixed_total' check (type in ('fixed_total', 'percent')),
++  min_qty     integer not null default 2 check (min_qty >= 1),
++  fixed_total numeric(10,2) not null default 0 check (fixed_total >= 0),
++  percent_off numeric(5,2) not null default 0 check (percent_off between 0 and 100),
++  active      boolean not null default true,
++  created_at  timestamptz not null default now(),
++  updated_at  timestamptz not null default now()
++);
++
++create table if not exists public.site_settings (
++  id         smallint primary key default 1 check (id = 1),
++  data       jsonb not null default '{}'::jsonb,
++  updated_at timestamptz not null default now()
++);
++insert into public.site_settings (id, data)
++values (1, '{"lowStockThreshold": 5, "showBestSellers": true, "showFeatured": true, "showNewArrivals": true, "showSignature": true}')
++on conflict (id) do nothing;
++
++create table if not exists public.orders (
++  id              bigint generated always as identity primary key,
++  order_id        text not null unique,
++  fullname        text not null,
++  contact         text not null,
++  contact_digits  text generated always as (regexp_replace(contact, '\D', '', 'g')) stored,
++  items           jsonb not null default '[]'::jsonb,   -- [{id, name, qty, price}]
++  scent           text not null default '',
++  quantity        integer not null default 0,
++  address         text not null default '',
++  payment         text not null default '',
++  notes           text not null default '',
++  subtotal        numeric(10,2) not null default 0,
++  discount        numeric(10,2) not null default 0,
++  total           numeric(10,2) not null default 0,
++  promotion_name  text,
++  status          text not null default 'New'
++                  check (status in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled')),
++  created_at      timestamptz not null default now(),
++  updated_at      timestamptz not null default now()
++);
++create index if not exists orders_created_at_idx on public.orders (created_at desc);
++create index if not exists orders_contact_digits_idx on public.orders (contact_digits);
++
++create table if not exists public.reviews (
++  id         uuid primary key default gen_random_uuid(),
++  name       text not null,
++  scent      text not null default '',
++  scent_id   text,
++  rating     smallint not null default 5 check (rating between 1 and 5),
++  review     text not null,
++  photo_url  text,
++  approved   boolean not null default false,
++  created_at timestamptz not null default now()
++);
++create index if not exists reviews_approved_idx on public.reviews (approved, created_at desc);
++
++create table if not exists public.audit_log (
++  id         bigint generated always as identity primary key,
++  actor      text not null default 'system',
++  action     text not null,
++  details    jsonb,
++  created_at timestamptz not null default now()
++);
++create index if not exists audit_log_created_at_idx on public.audit_log (created_at desc);
++
++-- ---------------------------------------------------------------------
++-- HELPERS
++-- ---------------------------------------------------------------------
++
++create or replace function public.is_admin()
++returns boolean
++language sql stable security definer set search_path = public
++as $$
++  select exists (select 1 from public.admins where user_id = auth.uid());
++$$;
++
++create or replace function public.current_actor()
++returns text
++language sql stable
++as $$
++  select coalesce(auth.jwt() ->> 'email', auth.uid()::text, 'system');
++$$;
++
++create or replace function public.touch_updated_at()
++returns trigger language plpgsql as $$
++begin
++  new.updated_at := now();
++  return new;
++end $$;
++
++drop trigger if exists products_touch on public.products;
++create trigger products_touch before update on public.products
++  for each row execute function public.touch_updated_at();
++drop trigger if exists promotions_touch on public.promotions;
++create trigger promotions_touch before update on public.promotions
++  for each row execute function public.touch_updated_at();
++drop trigger if exists orders_touch on public.orders;
++create trigger orders_touch before update on public.orders
++  for each row execute function public.touch_updated_at();
++drop trigger if exists settings_touch on public.site_settings;
++create trigger settings_touch before update on public.site_settings
++  for each row execute function public.touch_updated_at();
++
++-- ---------------------------------------------------------------------
++-- AUDIT LOG (automatic — written by the database, not the browser)
++-- Only admin actions are logged, so customer orders don't flood it.
++-- ---------------------------------------------------------------------
++
++create or replace function public.audit_admin_change()
++returns trigger
++language plpgsql security definer set search_path = public
++as $$
++declare
++  label  text;
++  verb   text;
++  target text;
++begin
++  if not public.is_admin() then
++    return coalesce(new, old);
++  end if;
++
++  verb := case tg_op when 'INSERT' then 'Created' when 'UPDATE' then 'Updated' else 'Deleted' end;
++
++  case tg_table_name
++    when 'products' then
++      label  := 'product';
++      target := coalesce(new.id, old.id);
++    when 'promotions' then
++      label  := 'promotion';
++      target := coalesce(new.name, old.name);
++    when 'site_settings' then
++      label  := 'homepage settings';
++      target := null;
++    when 'reviews' then
++      label  := 'review';
++      target := coalesce(new.name, old.name);
++      if tg_op = 'UPDATE' and new.approved is distinct from old.approved then
++        verb := case when new.approved then 'Approved' else 'Hid' end;
++      end if;
++    when 'orders' then
++      label  := 'order';
++      target := coalesce(new.order_id, old.order_id);
++      if tg_op = 'UPDATE' and new.status is distinct from old.status then
++        verb   := 'Set status ' || new.status || ' on';
++      end if;
++    else
++      label  := tg_table_name;
++  end case;
++
++  insert into public.audit_log (actor, action)
++  values (public.current_actor(), trim(verb || ' ' || label || coalesce(' ' || target, '')));
++
++  return coalesce(new, old);
++end $$;
++
++drop trigger if exists products_audit on public.products;
++create trigger products_audit after insert or update or delete on public.products
++  for each row execute function public.audit_admin_change();
++drop trigger if exists promotions_audit on public.promotions;
++create trigger promotions_audit after insert or update or delete on public.promotions
++  for each row execute function public.audit_admin_change();
++drop trigger if exists settings_audit on public.site_settings;
++create trigger settings_audit after update on public.site_settings
++  for each row execute function public.audit_admin_change();
++drop trigger if exists reviews_audit on public.reviews;
++create trigger reviews_audit after update or delete on public.reviews
++  for each row execute function public.audit_admin_change();
++drop trigger if exists orders_audit on public.orders;
++create trigger orders_audit after update of status or delete on public.orders
++  for each row execute function public.audit_admin_change();
++
++-- ---------------------------------------------------------------------
++-- INVENTORY: cancelling an order puts its bottles back in stock,
++-- un-cancelling takes them out again.
++-- ---------------------------------------------------------------------
++
++create or replace function public.restock_on_cancel()
++returns trigger
++language plpgsql security definer set search_path = public
++as $$
++declare
++  line jsonb;
++  dir  integer;
++begin
++  if new.status = old.status then
++    return new;
++  end if;
++  if new.status = 'Cancelled' then
++    dir := 1;
++  elsif old.status = 'Cancelled' then
++    dir := -1;
++  else
++    return new;
++  end if;
++
++  for line in select * from jsonb_array_elements(new.items) loop
++    update public.products
++       set stock = greatest(0, stock + dir * coalesce((line ->> 'qty')::int, 0))
++     where id = line ->> 'id' and stock is not null;
++  end loop;
++  return new;
++end $$;
++
++drop trigger if exists orders_restock on public.orders;
++create trigger orders_restock after update of status on public.orders
++  for each row execute function public.restock_on_cancel();
++
++-- ---------------------------------------------------------------------
++-- PLACE ORDER (customers)
++-- Prices, promotions and stock are checked here on the server, so the
++-- total can't be changed from the browser.
++-- ---------------------------------------------------------------------
++
++create or replace function public.place_order(
++  p_fullname text,
++  p_contact  text,
++  p_items    jsonb,
++  p_address  text,
++  p_payment  text,
++  p_notes    text default ''
++)
++returns jsonb
++language plpgsql security definer set search_path = public
++as $$
++declare
++  v_digits   text := regexp_replace(coalesce(p_contact, ''), '\D', '', 'g');
++  v_line     record;
++  v_product  public.products%rowtype;
++  v_items    jsonb := '[]'::jsonb;
++  v_names    text[] := '{}';
++  v_qty      integer := 0;
++  v_subtotal numeric(10,2) := 0;
++  v_discount numeric(10,2) := 0;
++  v_total    numeric(10,2);
++  v_promo    public.promotions%rowtype;
++  v_order_id text;
++begin
++  -- Basic validation
++  if char_length(trim(coalesce(p_fullname, ''))) not between 1 and 120 then
++    return jsonb_build_object('success', false, 'message', 'Please enter your full name.');
++  end if;
++  if char_length(v_digits) not between 7 and 15 then
++    return jsonb_build_object('success', false, 'message', 'Please enter a valid contact number.');
++  end if;
++  if char_length(trim(coalesce(p_address, ''))) not between 1 and 500 then
++    return jsonb_build_object('success', false, 'message', 'Please enter your delivery or meetup location.');
++  end if;
++  if char_length(trim(coalesce(p_payment, ''))) not between 1 and 60 then
++    return jsonb_build_object('success', false, 'message', 'Please choose a payment method.');
++  end if;
++  if char_length(coalesce(p_notes, '')) > 1000 then
++    return jsonb_build_object('success', false, 'message', 'Notes are too long (1000 characters max).');
++  end if;
++  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
++    return jsonb_build_object('success', false, 'message', 'Your cart is empty.');
++  end if;
++
++  -- Simple spam guard: max 5 orders per contact number per 10 minutes
++  if (select count(*) from public.orders
++       where contact_digits = v_digits and created_at > now() - interval '10 minutes') >= 5 then
++    return jsonb_build_object('success', false, 'message', 'Too many orders from this number. Please wait a few minutes or contact us directly.');
++  end if;
++
++  if (select count(distinct x ->> 'id') from jsonb_array_elements(p_items) x) > 30 then
++    return jsonb_build_object('success', false, 'message', 'Too many different scents in one order.');
++  end if;
++
++  -- Everything below runs as one unit: if any check fails, stock changes are rolled back.
++  begin
++    -- Merge duplicate lines, then price each one from the products table
++    for v_line in
++      select x ->> 'id' as id, sum(greatest(0, coalesce((x ->> 'qty')::int, 0)))::int as qty
++        from jsonb_array_elements(p_items) x
++       group by x ->> 'id'
++       order by x ->> 'id'
++    loop
++      if v_line.qty < 1 or v_line.qty > 50 then
++        raise exception 'Each scent must have a quantity between 1 and 50.' using errcode = 'P0001';
++      end if;
++
++      select * into v_product from public.products where id = v_line.id for update;
++      if not found or not v_product.active then
++        raise exception 'One of the scents in your cart is no longer available.' using errcode = 'P0001';
++      end if;
++      if v_product.stock is not null and v_product.stock < v_line.qty then
++        raise exception '%', format('Only %s bottle(s) of %s left.', v_product.stock, v_product.name)
++          using errcode = 'P0001';
++      end if;
++
++      if v_product.stock is not null then
++        update public.products set stock = stock - v_line.qty where id = v_product.id;
++      end if;
++
++      v_items    := v_items || jsonb_build_object('id', v_product.id, 'name', v_product.name,
++                                                  'qty', v_line.qty, 'price', v_product.price);
++      v_names    := v_names || v_product.name;
++      v_qty      := v_qty + v_line.qty;
++      v_subtotal := v_subtotal + v_product.price * v_line.qty;
++    end loop;
++
++    -- Same promotion rules as the storefront:
++    -- fixed_total applies at exactly min_qty, percent at min_qty or more; highest min_qty wins.
++    select * into v_promo from public.promotions
++     where active
++       and ((type = 'fixed_total' and v_qty = min_qty) or (type = 'percent' and v_qty >= min_qty))
++     order by min_qty desc, created_at
++     limit 1;
++
++    if found then
++      if v_promo.type = 'fixed_total' and v_promo.fixed_total > 0 and v_promo.fixed_total < v_subtotal then
++        v_discount := v_subtotal - v_promo.fixed_total;
++      elsif v_promo.type = 'percent' then
++        v_discount := round(v_subtotal * v_promo.percent_off / 100, 2);
++      else
++        v_promo := null;
++      end if;
++    end if;
++    v_total := greatest(0, v_subtotal - v_discount);
++
++    -- Human-friendly order ID, e.g. AE-261005-7KQ2M
++    loop
++      v_order_id := 'AE-' || to_char(now() at time zone 'Asia/Manila', 'YYMMDD') || '-'
++                    || upper(substr(translate(encode(gen_random_bytes(8), 'base64'), '+/=0O1Il', ''), 1, 5));
++      exit when not exists (select 1 from public.orders where order_id = v_order_id);
++    end loop;
++
++    insert into public.orders (order_id, fullname, contact, items, scent, quantity, address, payment,
++                               notes, subtotal, discount, total, promotion_name)
++    values (v_order_id, trim(p_fullname), trim(p_contact), v_items, array_to_string(v_names, ', '),
++            v_qty, trim(p_address), trim(p_payment), coalesce(trim(p_notes), ''),
++            v_subtotal, v_discount, v_total, v_promo.name);
++  exception
++    when sqlstate 'P0001' then
++      return jsonb_build_object('success', false, 'message', sqlerrm);
++  end;
++
++  return jsonb_build_object('success', true, 'orderId', v_order_id,
++                            'subtotal', v_subtotal, 'discount', v_discount, 'total', v_total);
++end $$;
++
++-- ---------------------------------------------------------------------
++-- TRACK ORDER (customers) — needs the order ID AND the contact number
++-- ---------------------------------------------------------------------
++
++create or replace function public.track_order(p_order_id text, p_contact text)
++returns jsonb
++language plpgsql stable security definer set search_path = public
++as $$
++declare
++  v_digits text := regexp_replace(coalesce(p_contact, ''), '\D', '', 'g');
++  o        public.orders%rowtype;
++begin
++  if char_length(v_digits) < 7 then
++    return jsonb_build_object('success', false, 'message', 'Order not found. Check your Order ID and contact number.');
++  end if;
++
++  select * into o from public.orders
++   where upper(order_id) = upper(trim(p_order_id))
++     and right(contact_digits, 10) = right(v_digits, 10);
++
++  if not found then
++    return jsonb_build_object('success', false, 'message', 'Order not found. Check your Order ID and contact number.');
++  end if;
++
++  return jsonb_build_object(
++    'success', true,
++    'orderId', o.order_id,
++    'fullname', split_part(o.fullname, ' ', 1),   -- first name only
++    'scent', o.scent,
++    'qty', o.quantity || case when o.quantity = 1 then ' bottle' else ' bottles' end,
++    'total', o.total,
++    'status', o.status,
++    'timestamp', o.created_at
++  );
++end $$;
++
++-- ---------------------------------------------------------------------
++-- SUBMIT REVIEW (customers) — saved hidden until an admin approves it
++-- ---------------------------------------------------------------------
++
++create or replace function public.submit_review(
++  p_name      text,
++  p_scent     text,
++  p_scent_id  text,
++  p_rating    integer,
++  p_review    text,
++  p_photo_url text
++)
++returns jsonb
++language plpgsql security definer set search_path = public
++as $$
++begin
++  if char_length(trim(coalesce(p_name, ''))) not between 1 and 80 then
++    return jsonb_build_object('success', false, 'message', 'Please enter your name.');
++  end if;
++  if char_length(trim(coalesce(p_review, ''))) not between 3 and 1500 then
++    return jsonb_build_object('success', false, 'message', 'Please write a review (up to 1500 characters).');
++  end if;
++  if p_rating is null or p_rating not between 1 and 5 then
++    return jsonb_build_object('success', false, 'message', 'Please choose a rating.');
++  end if;
++  -- Only accept photos stored in this project's review-photos bucket
++  if p_photo_url is not null and p_photo_url !~ '/storage/v1/object/public/review-photos/pending/[A-Za-z0-9._-]+$' then
++    return jsonb_build_object('success', false, 'message', 'Invalid photo upload.');
++  end if;
++  if (select count(*) from public.reviews where created_at > now() - interval '1 minute') >= 20 then
++    return jsonb_build_object('success', false, 'message', 'Too many reviews right now. Please try again shortly.');
++  end if;
++
++  insert into public.reviews (name, scent, scent_id, rating, review, photo_url)
++  values (trim(p_name), left(coalesce(p_scent, ''), 120), left(p_scent_id, 64), p_rating, trim(p_review), p_photo_url);
++
++  return jsonb_build_object('success', true);
++end $$;
++
++-- ---------------------------------------------------------------------
++-- ADMIN DASHBOARD
++-- ---------------------------------------------------------------------
++
++create or replace function public.admin_dashboard()
++returns jsonb
++language plpgsql stable security definer set search_path = public
++as $$
++declare
++  v_settings  jsonb;
++  v_threshold integer;
++begin
++  if not public.is_admin() then
++    raise exception 'Not authorized' using errcode = '42501';
++  end if;
++
++  select data into v_settings from public.site_settings where id = 1;
++  v_threshold := coalesce((v_settings ->> 'lowStockThreshold')::int, 5);
++
++  return jsonb_build_object(
++    'success', true,
++    'settings', coalesce(v_settings, '{}'::jsonb),
++    'stats', (
++      select jsonb_build_object(
++        'orders',    count(*),
++        'revenue',   coalesce(sum(total) filter (where status <> 'Cancelled'), 0),
++        'completed', count(*) filter (where status = 'Completed'),
++        'pending',   count(*) filter (where status not in ('Completed', 'Cancelled')),
++        'customers', count(distinct right(contact_digits, 10))
++      ) from public.orders
++    ),
++    'topProducts', coalesce((
++      select jsonb_agg(t order by t.units desc)
++        from (
++          select coalesce(max(i ->> 'name'), i ->> 'id') as name, sum((i ->> 'qty')::int) as units
++            from public.orders o, jsonb_array_elements(o.items) i
++           where o.status <> 'Cancelled'
++           group by i ->> 'id'
++           order by units desc
++           limit 5
++        ) t
++    ), '[]'::jsonb),
++    'lowStock', coalesce((
++      select jsonb_agg(jsonb_build_object('id', id, 'name', name, 'stock', stock) order by stock, name)
++        from public.products
++       where active and stock is not null and stock <= v_threshold
++    ), '[]'::jsonb)
++  );
++end $$;
++
++-- ---------------------------------------------------------------------
++-- ROW LEVEL SECURITY
++-- ---------------------------------------------------------------------
++
++alter table public.admins        enable row level security;
++alter table public.products      enable row level security;
++alter table public.promotions    enable row level security;
++alter table public.site_settings enable row level security;
++alter table public.orders        enable row level security;
++alter table public.reviews       enable row level security;
++alter table public.audit_log     enable row level security;
++
++-- admins: a signed-in user can only see their own row
++drop policy if exists "admins read own" on public.admins;
++create policy "admins read own" on public.admins for select to authenticated
++  using (user_id = auth.uid());
++
++-- products: everyone can read (storefront needs inactive ones to hide them), admins write
++drop policy if exists "products public read" on public.products;
++create policy "products public read" on public.products for select to anon, authenticated using (true);
++drop policy if exists "products admin write" on public.products;
++create policy "products admin write" on public.products for all to authenticated
++  using (public.is_admin()) with check (public.is_admin());
++
++-- promotions: everyone reads active ones, admins read and write all
++drop policy if exists "promotions public read" on public.promotions;
++create policy "promotions public read" on public.promotions for select to anon, authenticated
++  using (active or public.is_admin());
++drop policy if exists "promotions admin write" on public.promotions;
++create policy "promotions admin write" on public.promotions for all to authenticated
++  using (public.is_admin()) with check (public.is_admin());
++
++-- settings: everyone reads, admins update
++drop policy if exists "settings public read" on public.site_settings;
++create policy "settings public read" on public.site_settings for select to anon, authenticated using (true);
++drop policy if exists "settings admin write" on public.site_settings;
++create policy "settings admin write" on public.site_settings for update to authenticated
++  using (public.is_admin()) with check (public.is_admin());
++
++-- orders: admins only (customers go through place_order / track_order)
++drop policy if exists "orders admin read" on public.orders;
++create policy "orders admin read" on public.orders for select to authenticated using (public.is_admin());
++drop policy if exists "orders admin update" on public.orders;
++create policy "orders admin update" on public.orders for update to authenticated
++  using (public.is_admin()) with check (public.is_admin());
++drop policy if exists "orders admin delete" on public.orders;
++create policy "orders admin delete" on public.orders for delete to authenticated using (public.is_admin());
++
++-- reviews: everyone reads approved ones, admins read and manage all
++drop policy if exists "reviews public read" on public.reviews;
++create policy "reviews public read" on public.reviews for select to anon, authenticated
++  using (approved or public.is_admin());
++drop policy if exists "reviews admin update" on public.reviews;
++create policy "reviews admin update" on public.reviews for update to authenticated
++  using (public.is_admin()) with check (public.is_admin());
++drop policy if exists "reviews admin delete" on public.reviews;
++create policy "reviews admin delete" on public.reviews for delete to authenticated using (public.is_admin());
++
++-- audit log: admins read only
++drop policy if exists "audit admin read" on public.audit_log;
++create policy "audit admin read" on public.audit_log for select to authenticated using (public.is_admin());
++
++-- ---------------------------------------------------------------------
++-- GRANTS (explicit, so it works whatever the project's defaults are)
++-- ---------------------------------------------------------------------
++
++grant usage on schema public to anon, authenticated;
++
++revoke all on public.orders, public.audit_log, public.admins from anon;
++grant select on public.products, public.promotions, public.site_settings, public.reviews to anon, authenticated;
++grant insert, update, delete on public.products, public.promotions to authenticated;
++grant update on public.site_settings to authenticated;
++grant update, delete on public.reviews to authenticated;
++grant select, update, delete on public.orders to authenticated;
++grant select on public.audit_log, public.admins to authenticated;
++
++revoke execute on function public.place_order(text, text, jsonb, text, text, text) from public;
++revoke execute on function public.track_order(text, text) from public;
++revoke execute on function public.submit_review(text, text, text, integer, text, text) from public;
++revoke execute on function public.admin_dashboard() from public;
++revoke execute on function public.is_admin() from public;
++
++grant execute on function public.place_order(text, text, jsonb, text, text, text) to anon, authenticated;
++grant execute on function public.track_order(text, text) to anon, authenticated;
++grant execute on function public.submit_review(text, text, text, integer, text, text) to anon, authenticated;
++grant execute on function public.is_admin() to anon, authenticated;
++grant execute on function public.admin_dashboard() to authenticated;
++
++-- ---------------------------------------------------------------------
++-- REALTIME: new orders appear in the admin panel instantly
++-- ---------------------------------------------------------------------
++
++do $$
++begin
++  if not exists (
++    select 1 from pg_publication_tables
++     where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'orders'
++  ) then
++    alter publication supabase_realtime add table public.orders;
++  end if;
++end $$;
++
++-- ---------------------------------------------------------------------
++-- STORAGE: review photos
++-- Customers may only upload small JPEGs into review-photos/pending/.
++-- ---------------------------------------------------------------------
++
++insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
++values ('review-photos', 'review-photos', true, 2097152, array['image/jpeg'])
++on conflict (id) do update
++  set public = excluded.public,
++      file_size_limit = excluded.file_size_limit,
++      allowed_mime_types = excluded.allowed_mime_types;
++
++drop policy if exists "review photos upload" on storage.objects;
++create policy "review photos upload" on storage.objects for insert to anon, authenticated
++  with check (bucket_id = 'review-photos' and (storage.foldername(name))[1] = 'pending');
++
++drop policy if exists "review photos admin delete" on storage.objects;
++create policy "review photos admin delete" on storage.objects for delete to authenticated
++  using (bucket_id = 'review-photos' and public.is_admin());
+-- 
+2.43.0
+
+
+From b9b2a93ea1f464369e8224d8e1d6b75f725011a1 Mon Sep 17 00:00:00 2001
+From: Jobert Visto <jobert.visto@itresources.ph>
+Date: Mon, 5 Oct 2026 16:47:01 +0800
+Subject: [PATCH 2/2] Align Supabase backend with the existing Apps Script
+
+- Same order ID format, 100-per-scent limit, stock messages, review rules
+- Text promotion/review IDs so Sheets data imports unchanged
+- Import scripts use the exact Google Sheets headers (incl. settings + audit)
+- Order email notifications via pg_net + small Apps Script mailer
+- Dashboard parity (top 10 incl. zero sales, average order value)
+- CSV export formula-injection guard
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_018C5CBuXsy3SVMLE81AaYjQ
+---
+ README.md                                |  62 ++++--
+ assets/js/admin.js                       |  13 +-
+ assets/js/supabase-api.js                |  11 +-
+ google-apps-script/OrderEmailNotifier.gs | 128 +++++++++++++
+ supabase/import-step1-staging.sql        |  65 ++++---
+ supabase/import-step2-convert.sql        | 234 ++++++++++++++---------
+ supabase/schema.sql                      | 132 ++++++++++---
+ 7 files changed, 488 insertions(+), 157 deletions(-)
+ create mode 100644 google-apps-script/OrderEmailNotifier.gs
+
+diff --git a/README.md b/README.md
+index f9d8e92..01a7ec9 100644
+--- a/README.md
++++ b/README.md
+@@ -20,6 +20,8 @@ aura-essence/
+ │       ├── admin-api.js
+ │       ├── products.js         ← built-in catalog (used to seed the database)
+ │       └── profile-sync.js
++├── google-apps-script/
++│   └── OrderEmailNotifier.gs   ← optional: emails you on every new order
+ └── supabase/
+     ├── schema.sql              ← run once to create the database
+     ├── import-step1-staging.sql
+@@ -54,28 +56,44 @@ Open `/admin.html` and sign in with the email and password from step 2. If the p
+ 
+ ---
+ 
++## 5. Order email notifications (same email as before)
++Every new order still emails you, using a tiny Apps Script mailer (free, uses your Gmail).
++1. Follow the setup steps at the top of `google-apps-script/OrderEmailNotifier.gs`. Make a **new** Apps Script project for it, not your old backend.
++2. Run the `insert into private.config …` query from that file in the Supabase SQL Editor.
++3. Place a test order. The email arrives within a few seconds. If email isn't set up, orders still work; you just don't get the email.
++
++## 6. Turn off the old Apps Script backend
++Once the site runs on Supabase, open your old Apps Script project → **Deploy → Manage deployments → Archive**. Its URL was public in this repo, so leaving it live lets anyone keep writing to your sheets. Keep the spreadsheets themselves as a backup.
++
++---
++
+ ## Moving your data from Google Sheets
+-Do this once, after step 1.
++Do this after step 1 and before you start taking new orders. No renaming or editing of your sheets is needed.
+ 
+ 1. In **SQL Editor**, run `supabase/import-step1-staging.sql`.
+-2. In Google Sheets, export each tab with **File → Download → Comma-separated values (.csv)**.
+-3. Open each CSV (in Sheets or Excel) and **rename the header row** to the names below. Delete any columns that aren't listed.
++2. In Google Sheets, download each tab as CSV (**File → Download → Comma-separated values**). Do this with the tab open, one tab at a time:
+ 
+-   | Sheet tab | Import into table | Header names to use |
++   | Spreadsheet | Tab | Upload into |
+    |---|---|---|
+-   | Products | `import_products` | `id, name, cat, price, stock, sort_order, img, desc, desc_long, top_notes, heart_notes, base_notes, application, profiles, longevity, projection, strength, time, occasion, badges, active` |
+-   | Promotions | `import_promotions` | `name, type, min_qty, fixed_total, percent_off, active` |
+-   | Orders | `import_orders` | `timestamp, order_id, fullname, contact, items, scent, qty, address, payment, notes, total, status` |
+-   | Reviews | `import_reviews` | `timestamp, name, scent, scent_id, rating, review, photo_url, approved` |
+-
+-   - You only need the columns you actually have.
+-   - Lists (notes, profiles, badges) can be `Fresh, Woody` or `["Fresh","Woody"]`.
+-   - Reviews with a blank `approved` column are imported as **visible**. Use `FALSE` to keep one hidden.
+-4. **Table Editor →** open each `import_*` table **→ Insert → Import data from CSV** and upload the matching file.
+-5. In **SQL Editor**, run `supabase/import-step2-convert.sql`. It copies everything into the real tables, shows row counts, and deletes the `import_*` tables.
+-   Existing rows are never overwritten, so it's safe to run again.
+-
+-Review photos stored in Google Drive keep working as long as their links stay public.
++   | Main (orders) spreadsheet | Orders | `import_orders` |
++   | | Products | `import_products` |
++   | | Promotions | `import_promotions` |
++   | | Site Settings | `import_site_settings` |
++   | | Admin Audit | `import_admin_audit` |
++   | Reviews spreadsheet | Reviews | `import_reviews` |
++
++3. **Table Editor →** open each `import_*` table **→ Insert → Import data from CSV** and upload the matching file. The column names already match your sheets.
++4. In **SQL Editor**, run `supabase/import-step2-convert.sql`. It shows how many rows were imported, lists any product rows it skipped, and deletes the import tables.
++
++What it keeps:
++- **Order IDs, statuses, totals, items and dates.** Old order IDs still work in Track Order.
++- **Products.** Your sheet overwrites the built-in catalog, so prices, stock and badges are exactly as in the sheet. A blank Stock still means unlimited.
++- **Promotions,** including the same IDs (like `two-bottle`).
++- **Reviews.** Only ones with Status **Approved** are shown. Pending ones wait in the new Reviews tab.
++- **Review photos stay in your Google Drive folder,** so don't delete that folder or change its sharing.
++- **Homepage settings and the admin audit history.**
++
++If dates come out wrong (day and month swapped), your sheet uses day/month format. Change `'ISO, MDY'` to `'ISO, DMY'` at the top of step 2 and run it again.
+ 
+ ---
+ 
+@@ -96,7 +114,15 @@ Review photos stored in Google Drive keep working as long as their links stay pu
+ - New orders appear instantly (Supabase Realtime), with no 15-second polling.
+ - New **Reviews** tab to approve, hide, or delete customer reviews.
+ - The audit log is written by the database itself, so every admin change is recorded.
+-- Order IDs look like `AE-261005-7KQ2M`.
++- Order IDs use the same format as before: `AE-20261005-143012-7F3A9C`.
++
++**Kept the same as your Apps Script**
++- The same order rules: up to 100 bottles per scent, stock is checked before saving, and the same "only N bottle(s) in stock" message.
++- The same review rules: name, scent, rating, review and photo are required, up to 600 characters, saved as Pending until approved, and the newest 30 approved reviews are shown.
++- The same dashboard numbers. Top 10 products include ones with 0 sales.
++- The same order email layout.
++- One deliberate difference: a fixed-total promo is only applied when it's lower than the regular price, which is what the cart already showed customers. The old script could charge the promo total even when it was higher.
++- Exported order CSVs are protected from spreadsheet-formula tricks, like the old `clean_()` function did.
+ 
+ **Speed and reliability**
+ - No more Apps Script cold starts, 404 retries, or JSONP.
+diff --git a/assets/js/admin.js b/assets/js/admin.js
+index 7729814..ab0c024 100644
+--- a/assets/js/admin.js
++++ b/assets/js/admin.js
+@@ -58,6 +58,13 @@ function formatCurrency(value) {
+   return "₱" + Number(value || 0).toLocaleString();
+ }
+ 
++// Stops Excel/Sheets from running a customer-typed "=formula" when the CSV is opened.
++function csvSafe(value) {
++  const text = String(value ?? "");
++  if (/^[+-]?[\d\s().-]+$/.test(text)) return text;   // phone numbers / amounts are safe
++  return /^[=+\-@\t\r]/.test(text) ? "'" + text : text;
++}
++
+ function escapeHTML(value) {
+   return String(value ?? "")
+     .replace(/&/g, "&amp;")
+@@ -1742,10 +1749,8 @@ class AdminApp {
+           row
+             .map(
+               value =>
+-                '"' +
+-                String(
+-                  value ?? ""
+-                ).replace(
++              '"' +
++              csvSafe(value).replace(
+                   /"/g,
+                   '""'
+                 ) +
+diff --git a/assets/js/supabase-api.js b/assets/js/supabase-api.js
+index 741f9af..17fa0ed 100644
+--- a/assets/js/supabase-api.js
++++ b/assets/js/supabase-api.js
+@@ -86,6 +86,11 @@ function parseJSON(value, fallback) {
+   try { return JSON.parse(value); } catch { return fallback; }
+ }
+ 
++// Same as the old Apps Script slugify_(): used when the ID is left blank.
++function slugify(name) {
++  return String(name || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, "").slice(0, 40);
++}
++
+ function normalizeStrength(value) {
+   const s = String(value || "").trim().toLowerCase();
+   if (s === "light") return "subtle";
+@@ -102,7 +107,7 @@ function friendlyError(error) {
+   }
+   if (code === "23505") return "That ID is already used. Please choose a different one.";
+   if (code === "23514" && /products_id_check/.test(msg)) {
+-    return "Product ID must use lowercase letters, numbers, - or _ only (e.g. sauvage-edp).";
++    return "Product ID can only use letters, numbers, - _ or . (no spaces), e.g. sauvage-edp.";
+   }
+   if (code === "23514") return "Some fields have invalid values. Please check numbers and ranges.";
+   if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) {
+@@ -145,7 +150,7 @@ function productFromRow(r) {
+ function productToRow(p) {
+   const stockText = String(p.stock ?? "").trim();
+   return {
+-    id: String(p.id || "").trim().toLowerCase(),
++    id: String(p.id || "").trim() || slugify(p.name),
+     name: String(p.name || "").trim(),
+     cat: ["men", "women", "unisex"].includes(p.cat) ? p.cat : "men",
+     price: Math.max(0, toNum(p.price, 430)),
+@@ -280,7 +285,7 @@ const actions = {
+ 
+   async reviews(db) {
+     const rows = must(await db.from("reviews").select("*")
+-      .eq("approved", true).order("created_at", { ascending: false }).limit(60));
++      .eq("approved", true).order("created_at", { ascending: false }).limit(30));
+     return ok({ reviews: rows.map(reviewFromRow) });
+   },
+ 
+diff --git a/google-apps-script/OrderEmailNotifier.gs b/google-apps-script/OrderEmailNotifier.gs
+new file mode 100644
+index 0000000..993bc8f
+--- /dev/null
++++ b/google-apps-script/OrderEmailNotifier.gs
+@@ -0,0 +1,128 @@
++/*************************************************
++ * AURA & ESSENCE — ORDER EMAIL NOTIFIER
++ *
++ * Supabase calls this tiny web app every time a new order
++ * is placed, and it emails you, the same as the old MailApp email.
++ * It does NOT touch any spreadsheet.
++ *
++ * SETUP (one time):
++ * 1. Go to script.google.com → New project. Paste this whole file.
++ * 2. Set ADMIN_EMAIL and WEBHOOK_SECRET below. Make the secret
++ *    long and random (e.g. 40 letters and numbers).
++ * 3. Run authorizeEmail() once and allow the permissions.
++ * 4. Deploy → New deployment → Web app
++ *      Execute as: Me
++ *      Who has access: Anyone
++ *    Copy the /exec URL.
++ * 5. In Supabase → SQL Editor, run (with your URL + the same secret):
++ *
++ *    insert into private.config (key, value) values
++ *      ('order_email_webhook_url',    'PASTE_THE_EXEC_URL'),
++ *      ('order_email_webhook_secret', 'PASTE_THE_SAME_SECRET')
++ *    on conflict (key) do update set value = excluded.value;
++ *
++ * Only type your real email and secret inside Apps Script, never in
++ * the copy of this file in your GitHub repo.
++ *************************************************/
++
++const ADMIN_EMAIL = 'YOUR_EMAIL@gmail.com';
++const WEBHOOK_SECRET = 'CHANGE_THIS_TO_A_LONG_RANDOM_SECRET';
++const TIME_ZONE = 'Asia/Manila';
++
++
++function doPost(e) {
++  try {
++    var data = JSON.parse((e && e.postData && e.postData.contents) || '{}');
++
++    if (
++      !WEBHOOK_SECRET ||
++      WEBHOOK_SECRET === 'CHANGE_THIS_TO_A_LONG_RANDOM_SECRET' ||
++      data.secret !== WEBHOOK_SECRET
++    ) {
++      return json_({ success: false, message: 'Unauthorized.' });
++    }
++
++    sendOrderEmail_(data);
++    return json_({ success: true });
++
++  } catch (error) {
++    console.error('Order email failed: ' + (error && error.message ? error.message : error));
++    return json_({ success: false, message: 'Email failed.' });
++  }
++}
++
++
++function doGet() {
++  return json_({ success: true, message: 'Aura & Essence order notifier is running.' });
++}
++
++
++function sendOrderEmail_(o) {
++  var items = Array.isArray(o.items) ? o.items : [];
++
++  var itemText = items.map(function (i) {
++    return i.name + ' × ' + i.qty + ' — ₱' + money_(Number(i.price || 0) * Number(i.qty || 0));
++  }).join('\n');
++
++  var discountLine = Number(o.discount || 0) > 0
++    ? '<p><b>Promo:</b> ' + esc_(o.promo || 'Discount') + ' (−₱' + money_(o.discount) + ')</p>'
++    : '';
++
++  MailApp.sendEmail({
++    to: ADMIN_EMAIL,
++    subject: '🛍️ New Aura & Essence Order - ' + o.orderId,
++    htmlBody:
++      '<div style="font-family:Arial,sans-serif;max-width:650px;margin:auto;color:#222">' +
++        '<div style="background:#111;color:#fff;padding:24px;text-align:center">' +
++          '<h1>AURA &amp; ESSENCE</h1><p>New Order Notification</p>' +
++        '</div>' +
++        '<div style="padding:24px;border:1px solid #ddd">' +
++          '<p><b>Order ID:</b> ' + esc_(o.orderId) + '</p>' +
++          '<p><b>Date:</b> ' + esc_(o.date || Utilities.formatDate(new Date(), TIME_ZONE, 'MMMM dd, yyyy • hh:mm a')) + '</p>' +
++          '<p><b>Customer:</b> ' + esc_(o.fullname) + '</p>' +
++          '<p><b>Contact:</b> ' + esc_(o.contact) + '</p>' +
++          '<p><b>Items:</b><br>' + esc_(itemText).replace(/\n/g, '<br>') + '</p>' +
++          discountLine +
++          '<p><b>Total:</b> ₱' + money_(o.total) + '</p>' +
++          '<p><b>Delivery / Meetup:</b> ' + esc_(o.address) + '</p>' +
++          '<p><b>Payment:</b> ' + esc_(o.payment) + '</p>' +
++          '<p><b>Notes:</b> ' + esc_(o.notes || '—') + '</p>' +
++          '<p><b>Status:</b> ' + esc_(o.status || 'New') + '</p>' +
++        '</div>' +
++      '</div>',
++    body: [
++      'New Aura & Essence order received.',
++      'Order ID: ' + o.orderId,
++      'Customer: ' + o.fullname,
++      'Contact: ' + o.contact,
++      'Items:',
++      itemText,
++      'Total: ₱' + money_(o.total),
++      'Delivery / Meetup: ' + o.address,
++      'Payment: ' + o.payment,
++      'Notes: ' + (o.notes || '—')
++    ].join('\n')
++  });
++}
++
++
++function money_(v) {
++  return Number(v || 0).toLocaleString();
++}
++
++function esc_(v) {
++  return String(v == null ? '' : v)
++    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
++    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
++}
++
++function json_(data) {
++  return ContentService.createTextOutput(JSON.stringify(data))
++    .setMimeType(ContentService.MimeType.JSON);
++}
++
++
++/* Run once from the editor to grant email permission. */
++function authorizeEmail() {
++  MailApp.sendEmail(ADMIN_EMAIL, 'Aura & Essence notifier test', 'Order email notifications are working.');
++}
+diff --git a/supabase/import-step1-staging.sql b/supabase/import-step1-staging.sql
+index 8e28175..7470365 100644
+--- a/supabase/import-step1-staging.sql
++++ b/supabase/import-step1-staging.sql
+@@ -1,39 +1,60 @@
+ -- =====================================================================
+ -- IMPORT FROM GOOGLE SHEETS — STEP 1 of 2
+--- Creates temporary "import_*" tables that accept your CSV files as-is
+--- (every column is plain text, so nothing gets rejected).
++-- Creates temporary import tables whose columns match your Google
++-- Sheets tabs EXACTLY, so you can upload each tab's CSV without editing.
+ --
+--- Run this in Supabase → SQL Editor, then upload each CSV into the
+--- matching import_* table (Table Editor → table → Insert → Import CSV).
+--- The FIRST ROW of each CSV must use the column names below.
+--- Columns you don't have can be left out; extra columns are not allowed.
++--   Sheet tab (main spreadsheet)   →  import table
++--   Orders                         →  import_orders
++--   Products                       →  import_products
++--   Promotions                     →  import_promotions
++--   Site Settings                  →  import_site_settings
++--   Admin Audit                    →  import_admin_audit
++--   Reviews (reviews spreadsheet)  →  import_reviews
++--
++-- Every column is plain text, so no row gets rejected during upload.
+ -- =====================================================================
+ 
++create table if not exists public.import_orders (
++  "Timestamp" text, "Order ID" text, "Full Name" text, "Contact Number" text,
++  "Scent" text, "Scent ID" text, "Quantity" text, "Delivery / Meetup Location" text,
++  "Payment Method" text, "Notes" text, "Price per Bottle" text, "Estimated Total" text,
++  "Status" text, "Items JSON" text
++);
++
+ create table if not exists public.import_products (
+-  id text, name text, cat text, price text, stock text, sort_order text, img text,
+-  "desc" text, desc_long text, top_notes text, heart_notes text, base_notes text,
+-  application text, profiles text, longevity text, projection text, strength text,
+-  time text, occasion text, badges text, active text
++  "ID" text, "Name" text, "Category" text, "Description" text, "Image URL" text,
++  "Price" text, "Stock" text, "Badges" text, "Active" text, "Profiles" text,
++  "Longevity" text, "Projection" text, "Strength" text, "Time" text, "Occasion" text,
++  "Long Description" text, "Top Notes" text, "Heart Notes" text, "Base Notes" text,
++  "Application" text, "Sort Order" text
+ );
+ 
+ create table if not exists public.import_promotions (
+-  name text, type text, min_qty text, fixed_total text, percent_off text, active text
++  "ID" text, "Name" text, "Type" text, "Min Qty" text, "Fixed Total" text,
++  "Percent Off" text, "Active" text
+ );
+ 
+-create table if not exists public.import_orders (
+-  timestamp text, order_id text, fullname text, contact text, items text, scent text,
+-  qty text, address text, payment text, notes text, total text, status text
++create table if not exists public.import_site_settings (
++  "Key" text, "Value" text
++);
++
++create table if not exists public.import_admin_audit (
++  "Timestamp" text, "Actor" text, "Action" text
+ );
+ 
+ create table if not exists public.import_reviews (
+-  timestamp text, name text, scent text, scent_id text, rating text, review text,
+-  photo_url text, approved text
++  "Timestamp" text, "Review ID" text, "Customer Name" text, "Scent" text,
++  "Scent ID" text, "Rating" text, "Review" text, "Photo URL" text, "Status" text
+ );
+ 
+ -- Lock these tables so the public website can't read them while they exist.
+-alter table public.import_products   enable row level security;
+-alter table public.import_promotions enable row level security;
+-alter table public.import_orders     enable row level security;
+-alter table public.import_reviews    enable row level security;
+-revoke all on public.import_products, public.import_promotions,
+-              public.import_orders, public.import_reviews from anon, authenticated;
++do $$
++declare t text;
++begin
++  foreach t in array array['import_orders', 'import_products', 'import_promotions',
++                           'import_site_settings', 'import_admin_audit', 'import_reviews']
++  loop
++    execute format('alter table public.%I enable row level security', t);
++    execute format('revoke all on public.%I from anon, authenticated', t);
++  end loop;
++end $$;
+diff --git a/supabase/import-step2-convert.sql b/supabase/import-step2-convert.sql
+index f581b95..9299e6e 100644
+--- a/supabase/import-step2-convert.sql
++++ b/supabase/import-step2-convert.sql
+@@ -1,18 +1,28 @@
+ -- =====================================================================
+ -- IMPORT FROM GOOGLE SHEETS — STEP 2 of 2
+--- Run AFTER you have uploaded your CSVs into the import_* tables.
+--- Copies the rows into the real tables, then deletes the import tables.
+--- Existing rows are never overwritten (safe to run more than once).
++-- Run AFTER uploading your CSVs into the import_* tables (step 1).
++--
++-- • Products, Promotions, Site Settings: your sheet is treated as the
++--   source of truth, so it overwrites rows with the same ID.
++-- • Orders, Reviews, Admin Audit: added once; existing rows are kept,
++--   so running this again won't create duplicates (except audit lines).
++-- At the end it shows what was imported and deletes the import tables.
+ -- =====================================================================
+ 
+--- Google Sheets exports dates like 10/3/2026 9:34:11 (month/day/year)
++-- Google Sheets exports dates like 10/3/2026 9:34:11 (month/day/year).
+ set datestyle = 'ISO, MDY';
+ set timezone = 'Asia/Manila';
+ 
+--- ---------- temporary helpers ----------
++-- ---------- temporary helpers (disappear when the query ends) ----------
++
++-- trims and removes the leading apostrophe Apps Script added to some values
++create or replace function pg_temp.txt(v text) returns text language sql immutable as $$
++  select regexp_replace(trim(coalesce(v, '')), '^''', '');
++$$;
++
+ create or replace function pg_temp.to_list(v text) returns text[] language plpgsql immutable as $$
+ begin
+-  v := nullif(trim(coalesce(v, '')), '');
++  v := nullif(pg_temp.txt(v), '');
+   if v is null then return '{}'; end if;
+   if left(v, 1) = '[' then
+     begin
+@@ -25,112 +35,162 @@ end $$;
+ 
+ create or replace function pg_temp.to_num(v text) returns numeric language plpgsql immutable as $$
+ begin
+-  return nullif(regexp_replace(coalesce(v, ''), '[^0-9.\-]', '', 'g'), '')::numeric;
++  return nullif(substring(replace(coalesce(v, ''), ',', '') from '-?[0-9]+(?:\.[0-9]+)?'), '')::numeric;
+ exception when others then return null;
+ end $$;
+ 
+-create or replace function pg_temp.to_bool(v text, fallback boolean) returns boolean language sql immutable as $$
+-  select case
+-    when nullif(trim(coalesce(v, '')), '') is null then fallback
+-    when lower(trim(v)) in ('false', '0', 'no', 'off', 'n', 'hidden', 'pending', 'rejected') then false
+-    else true end;
++create or replace function pg_temp.is_false(v text) returns boolean language sql immutable as $$
++  select lower(pg_temp.txt(v)) in ('false', '0', 'no', 'off');
+ $$;
+ 
+-create or replace function pg_temp.to_items(v text, scent text, qty text) returns jsonb language plpgsql immutable as $$
++create or replace function pg_temp.to_ts(v text) returns timestamptz language plpgsql stable as $$
+ begin
+-  if left(trim(coalesce(v, '')), 1) = '[' then
+-    return v::jsonb;
+-  end if;
+-  raise exception 'not json';
+-exception when others then
+-  return jsonb_build_array(jsonb_build_object('id', null, 'name', coalesce(scent, ''),
+-                                              'qty', coalesce(pg_temp.to_num(qty), 1)::int));
++  return coalesce(nullif(pg_temp.txt(v), '')::timestamptz, now());
++exception when others then return now();
+ end $$;
+ 
+-create or replace function pg_temp.to_ts(v text) returns timestamptz language plpgsql stable as $$
++-- Orders: use "Items JSON" when present; older rows fall back to Scent / Scent ID / Quantity.
++create or replace function pg_temp.to_items(items text, scent text, scent_id text, qty text)
++returns jsonb language plpgsql immutable as $$
++declare
++  j jsonb;
+ begin
+-  return coalesce(nullif(trim(v), '')::timestamptz, now());
+-exception when others then return now();
++  begin
++    j := pg_temp.txt(items)::jsonb;
++    if jsonb_typeof(j) = 'array' and jsonb_array_length(j) > 0 then
++      return j;
++    end if;
++  exception when others then null;
++  end;
++  return jsonb_build_array(jsonb_build_object(
++    'id',   case when position(',' in coalesce(scent_id, '')) = 0 then nullif(pg_temp.txt(scent_id), '') end,
++    'name', pg_temp.txt(scent),
++    'qty',  coalesce(pg_temp.to_num(qty), 1)::int));
+ end $$;
+ 
+--- ---------- products ----------
+-insert into public.products (id, name, cat, price, stock, sort_order, img, descr, desc_long,
+-  top_notes, heart_notes, base_notes, application, profiles, longevity, projection, strength,
+-  time, occasion, badges, active)
++-- ---------- products (sheet "Products") ----------
++insert into public.products (id, name, cat, descr, img, price, stock, badges, active, profiles,
++  longevity, projection, strength, time, occasion, desc_long, top_notes, heart_notes, base_notes,
++  application, sort_order)
+ select
+-  lower(trim(id)),
+-  coalesce(nullif(trim(name), ''), trim(id)),
+-  case when lower(trim(cat)) in ('men', 'women', 'unisex') then lower(trim(cat)) else 'men' end,
+-  coalesce(pg_temp.to_num(price), 430),
+-  greatest(0, pg_temp.to_num(stock))::int,
+-  coalesce(pg_temp.to_num(sort_order), 0)::int,
+-  coalesce(img, ''), coalesce("desc", ''), coalesce(desc_long, ''),
+-  pg_temp.to_list(top_notes), pg_temp.to_list(heart_notes), pg_temp.to_list(base_notes),
+-  coalesce(application, ''), pg_temp.to_list(profiles),
+-  least(10, greatest(1, coalesce(pg_temp.to_num(longevity), 7)))::int,
+-  least(10, greatest(1, coalesce(pg_temp.to_num(projection), 7)))::int,
+-  case lower(trim(coalesce(strength, '')))
++  pg_temp.txt("ID"),
++  pg_temp.txt("Name"),
++  case when lower(pg_temp.txt("Category")) in ('men', 'women', 'unisex') then lower(pg_temp.txt("Category")) else 'men' end,
++  pg_temp.txt("Description"),
++  pg_temp.txt("Image URL"),
++  coalesce(pg_temp.to_num("Price"), 430),
++  case when pg_temp.to_num("Stock") is null then null    -- blank = unlimited (same as before)
++       else greatest(0, pg_temp.to_num("Stock"))::int end,
++  array(select upper(b) from unnest(pg_temp.to_list("Badges")) b),
++  not pg_temp.is_false("Active"),
++  pg_temp.to_list("Profiles"),
++  least(10, greatest(1, coalesce(pg_temp.to_num("Longevity"), 7)))::int,
++  least(10, greatest(1, coalesce(pg_temp.to_num("Projection"), 7)))::int,
++  case lower(pg_temp.txt("Strength"))
+     when 'light' then 'subtle' when 'subtle' then 'subtle'
+     when 'strong' then 'bold' when 'bold' then 'bold' else 'moderate' end,
+-  pg_temp.to_list(time), coalesce(occasion, ''),
+-  array(select upper(b) from unnest(pg_temp.to_list(badges)) b),
+-  pg_temp.to_bool(active, true)
++  pg_temp.to_list("Time"),
++  pg_temp.txt("Occasion"),
++  pg_temp.txt("Long Description"),
++  pg_temp.to_list("Top Notes"), pg_temp.to_list("Heart Notes"), pg_temp.to_list("Base Notes"),
++  pg_temp.txt("Application"),
++  coalesce(pg_temp.to_num("Sort Order"), 0)::int
+ from public.import_products
+-where lower(trim(coalesce(id, ''))) ~ '^[a-z0-9][a-z0-9_-]{0,63}$'
+-on conflict (id) do nothing;
++where pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'
++  and pg_temp.txt("Name") <> ''
++on conflict (id) do update set
++  name = excluded.name, cat = excluded.cat, descr = excluded.descr, img = excluded.img,
++  price = excluded.price, stock = excluded.stock, badges = excluded.badges, active = excluded.active,
++  profiles = excluded.profiles, longevity = excluded.longevity, projection = excluded.projection,
++  strength = excluded.strength, time = excluded.time, occasion = excluded.occasion,
++  desc_long = excluded.desc_long, top_notes = excluded.top_notes, heart_notes = excluded.heart_notes,
++  base_notes = excluded.base_notes, application = excluded.application, sort_order = excluded.sort_order;
+ 
+--- ---------- promotions ----------
+-insert into public.promotions (name, type, min_qty, fixed_total, percent_off, active)
++-- ---------- promotions (sheet "Promotions") ----------
++insert into public.promotions (id, name, type, min_qty, fixed_total, percent_off, active)
+ select
+-  trim(name),
+-  case when lower(trim(type)) like 'percent%' then 'percent' else 'fixed_total' end,
+-  greatest(1, coalesce(pg_temp.to_num(min_qty), 2))::int,
+-  greatest(0, coalesce(pg_temp.to_num(fixed_total), 0)),
+-  least(100, greatest(0, coalesce(pg_temp.to_num(percent_off), 0))),
+-  pg_temp.to_bool(active, true)
+-from public.import_promotions i
+-where nullif(trim(name), '') is not null
+-  and not exists (select 1 from public.promotions p where p.name = trim(i.name));
+-
+--- ---------- orders ----------
++  coalesce(nullif(pg_temp.txt("ID"), ''), gen_random_uuid()::text),
++  coalesce(nullif(pg_temp.txt("Name"), ''), pg_temp.txt("ID")),
++  case when lower(pg_temp.txt("Type")) = 'percent' then 'percent' else 'fixed_total' end,
++  greatest(1, coalesce(pg_temp.to_num("Min Qty"), 2))::int,
++  greatest(0, coalesce(pg_temp.to_num("Fixed Total"), 0)),
++  least(100, greatest(0, coalesce(pg_temp.to_num("Percent Off"), 0))),
++  not pg_temp.is_false("Active")
++from public.import_promotions
++where coalesce(nullif(pg_temp.txt("Name"), ''), pg_temp.txt("ID")) <> ''
++on conflict (id) do update set
++  name = excluded.name, type = excluded.type, min_qty = excluded.min_qty,
++  fixed_total = excluded.fixed_total, percent_off = excluded.percent_off, active = excluded.active;
++
++-- ---------- site settings (sheet "Site Settings": Key / Value) ----------
++update public.site_settings s
++   set data = s.data || coalesce((
++     select jsonb_object_agg(
++              pg_temp.txt("Key"),
++              case
++                when lower(pg_temp.txt("Value")) in ('true', 'false') then to_jsonb(lower(pg_temp.txt("Value")) = 'true')
++                when pg_temp.txt("Value") ~ '^-?[0-9]+$' then to_jsonb(pg_temp.txt("Value")::int)
++                else to_jsonb(pg_temp.txt("Value"))
++              end)
++       from public.import_site_settings
++      where pg_temp.txt("Key") <> ''), '{}'::jsonb)
++ where s.id = 1;
++
++-- ---------- orders (sheet "Orders") ----------
+ insert into public.orders (order_id, fullname, contact, items, scent, quantity, address, payment,
+   notes, subtotal, total, status, created_at)
+ select
+-  coalesce(nullif(trim(order_id), ''), 'IMPORT-' || row_number() over ()),
+-  coalesce(nullif(trim(fullname), ''), 'Customer'),
+-  coalesce(contact, ''),
+-  pg_temp.to_items(items, scent, qty),
+-  coalesce(scent, ''),
+-  coalesce(pg_temp.to_num(qty), 1)::int,
+-  coalesce(address, ''), coalesce(payment, ''), coalesce(notes, ''),
+-  coalesce(pg_temp.to_num(total), 0),
+-  coalesce(pg_temp.to_num(total), 0),
+-  case when trim(status) in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled')
+-       then trim(status) else 'New' end,
+-  pg_temp.to_ts(timestamp)
++  pg_temp.txt("Order ID"),
++  coalesce(nullif(pg_temp.txt("Full Name"), ''), 'Customer'),
++  pg_temp.txt("Contact Number"),
++  pg_temp.to_items("Items JSON", "Scent", "Scent ID", "Quantity"),
++  pg_temp.txt("Scent"),
++  coalesce(pg_temp.to_num("Quantity"), 1)::int,
++  pg_temp.txt("Delivery / Meetup Location"),
++  pg_temp.txt("Payment Method"),
++  pg_temp.txt("Notes"),
++  coalesce(pg_temp.to_num("Estimated Total"), 0),
++  coalesce(pg_temp.to_num("Estimated Total"), 0),
++  case when pg_temp.txt("Status") in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled')
++       then pg_temp.txt("Status") else 'New' end,
++  pg_temp.to_ts("Timestamp")
+ from public.import_orders
++where pg_temp.txt("Order ID") <> ''
+ on conflict (order_id) do nothing;
+ 
+--- ---------- reviews (blank "approved" = visible, since they were already on your site) ----------
+-insert into public.reviews (name, scent, scent_id, rating, review, photo_url, approved, created_at)
++-- ---------- reviews (Reviews spreadsheet; only "Approved" ones are shown) ----------
++insert into public.reviews (id, name, scent, scent_id, rating, review, photo_url, approved, created_at)
+ select
+-  coalesce(nullif(trim(name), ''), 'Customer'),
+-  coalesce(scent, ''),
+-  nullif(trim(scent_id), ''),
+-  least(5, greatest(1, coalesce(pg_temp.to_num(rating), 5)))::int,
+-  coalesce(review, ''),
+-  nullif(trim(photo_url), ''),
+-  pg_temp.to_bool(approved, true),
+-  pg_temp.to_ts(timestamp)
++  coalesce(nullif(pg_temp.txt("Review ID"), ''), 'REV-IMPORT-' || md5(coalesce("Timestamp", '') || coalesce("Review", ''))),
++  coalesce(nullif(pg_temp.txt("Customer Name"), ''), 'Customer'),
++  pg_temp.txt("Scent"),
++  nullif(pg_temp.txt("Scent ID"), ''),
++  least(5, greatest(1, coalesce(pg_temp.to_num("Rating"), 5)))::int,
++  pg_temp.txt("Review"),
++  nullif(pg_temp.txt("Photo URL"), ''),
++  lower(pg_temp.txt("Status")) = 'approved',
++  pg_temp.to_ts("Timestamp")
+ from public.import_reviews
+-where nullif(trim(review), '') is not null;
++where pg_temp.txt("Review") <> ''
++on conflict (id) do nothing;
++
++-- ---------- admin audit (sheet "Admin Audit") ----------
++insert into public.audit_log (actor, action, created_at)
++select coalesce(nullif(pg_temp.txt("Actor"), ''), 'admin'), pg_temp.txt("Action"), pg_temp.to_ts("Timestamp")
++from public.import_admin_audit
++where pg_temp.txt("Action") <> '';
+ 
+--- ---------- summary ----------
+-select 'products' as "table", count(*) as rows from public.products
+-union all select 'promotions', count(*) from public.promotions
+-union all select 'orders', count(*) from public.orders
+-union all select 'reviews', count(*) from public.reviews;
++-- ---------- results ----------
++select 'Products in database' as item, count(*)::text as result from public.products
++union all select 'Promotions in database', count(*)::text from public.promotions
++union all select 'Orders in database', count(*)::text from public.orders
++union all select 'Reviews in database (approved)', count(*) || ' (' || count(*) filter (where approved) || ')' from public.reviews
++union all select 'Audit log entries', count(*)::text from public.audit_log
++union all select 'SKIPPED product rows (bad or missing ID/Name): ' || coalesce(string_agg(coalesce("ID", '(blank)'), ', '), 'none'),
++                 count(*)::text
++  from public.import_products
++ where not (pg_temp.txt("ID") ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$' and pg_temp.txt("Name") <> '');
+ 
+ -- ---------- clean up ----------
+-drop table if exists public.import_products, public.import_promotions,
+-                     public.import_orders, public.import_reviews;
++drop table if exists public.import_orders, public.import_products, public.import_promotions,
++                     public.import_site_settings, public.import_admin_audit, public.import_reviews;
+diff --git a/supabase/schema.sql b/supabase/schema.sql
+index b999539..ce3e8f7 100644
+--- a/supabase/schema.sql
++++ b/supabase/schema.sql
+@@ -17,7 +17,7 @@ create table if not exists public.admins (
+ );
+ 
+ create table if not exists public.products (
+-  id          text primary key check (id ~ '^[a-z0-9][a-z0-9_-]{0,63}$'),
++  id          text primary key check (id ~ '^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$'),
+   name        text not null check (char_length(name) between 1 and 120),
+   cat         text not null default 'men' check (cat in ('men', 'women', 'unisex')),
+   price       numeric(10,2) not null default 430 check (price >= 0),
+@@ -43,7 +43,7 @@ create table if not exists public.products (
+ );
+ 
+ create table if not exists public.promotions (
+-  id          uuid primary key default gen_random_uuid(),
++  id          text primary key default gen_random_uuid()::text,
+   name        text not null check (char_length(name) between 1 and 120),
+   type        text not null default 'fixed_total' check (type in ('fixed_total', 'percent')),
+   min_qty     integer not null default 2 check (min_qty >= 1),
+@@ -54,6 +54,10 @@ create table if not exists public.promotions (
+   updated_at  timestamptz not null default now()
+ );
+ 
++insert into public.promotions (id, name, type, min_qty, fixed_total, percent_off, active)
++select 'two-bottle', '2-Bottle Promo', 'fixed_total', 2, 840, 0, true
++where not exists (select 1 from public.promotions);
++
+ create table if not exists public.site_settings (
+   id         smallint primary key default 1 check (id = 1),
+   data       jsonb not null default '{}'::jsonb,
+@@ -88,7 +92,7 @@ create index if not exists orders_created_at_idx on public.orders (created_at de
+ create index if not exists orders_contact_digits_idx on public.orders (contact_digits);
+ 
+ create table if not exists public.reviews (
+-  id         uuid primary key default gen_random_uuid(),
++  id         text primary key default ('REV-' || to_char(now() at time zone 'Asia/Manila', 'YYYYMMDD-HH24MISS') || '-' || upper(substr(md5(random()::text), 1, 6))),
+   name       text not null,
+   scent      text not null default '',
+   scent_id   text,
+@@ -320,8 +324,8 @@ begin
+        group by x ->> 'id'
+        order by x ->> 'id'
+     loop
+-      if v_line.qty < 1 or v_line.qty > 50 then
+-        raise exception 'Each scent must have a quantity between 1 and 50.' using errcode = 'P0001';
++      if v_line.qty < 1 or v_line.qty > 100 then
++        raise exception 'Maximum order quantity exceeded (100 per scent).' using errcode = 'P0001';
+       end if;
+ 
+       select * into v_product from public.products where id = v_line.id for update;
+@@ -329,7 +333,7 @@ begin
+         raise exception 'One of the scents in your cart is no longer available.' using errcode = 'P0001';
+       end if;
+       if v_product.stock is not null and v_product.stock < v_line.qty then
+-        raise exception '%', format('Only %s bottle(s) of %s left.', v_product.stock, v_product.name)
++        raise exception '%', format('%s has only %s bottle(s) in stock.', v_product.name, v_product.stock)
+           using errcode = 'P0001';
+       end if;
+ 
+@@ -363,10 +367,10 @@ begin
+     end if;
+     v_total := greatest(0, v_subtotal - v_discount);
+ 
+-    -- Human-friendly order ID, e.g. AE-261005-7KQ2M
++    -- Same format as the old Apps Script: AE-20261005-143012-7F3A9C
+     loop
+-      v_order_id := 'AE-' || to_char(now() at time zone 'Asia/Manila', 'YYMMDD') || '-'
+-                    || upper(substr(translate(encode(gen_random_bytes(8), 'base64'), '+/=0O1Il', ''), 1, 5));
++      v_order_id := 'AE-' || to_char(clock_timestamp() at time zone 'Asia/Manila', 'YYYYMMDD-HH24MISS') || '-'
++                    || upper(encode(gen_random_bytes(3), 'hex'));
+       exit when not exists (select 1 from public.orders where order_id = v_order_id);
+     end loop;
+ 
+@@ -380,8 +384,9 @@ begin
+       return jsonb_build_object('success', false, 'message', sqlerrm);
+   end;
+ 
+-  return jsonb_build_object('success', true, 'orderId', v_order_id,
+-                            'subtotal', v_subtotal, 'discount', v_discount, 'total', v_total);
++  return jsonb_build_object('success', true, 'type', 'order', 'orderId', v_order_id,
++                            'subtotal', v_subtotal, 'discount', v_discount, 'total', v_total,
++                            'promo', coalesce(v_promo.name, ''), 'message', 'Order saved successfully.');
+ end $$;
+ 
+ -- ---------------------------------------------------------------------
+@@ -439,14 +444,17 @@ begin
+   if char_length(trim(coalesce(p_name, ''))) not between 1 and 80 then
+     return jsonb_build_object('success', false, 'message', 'Please enter your name.');
+   end if;
+-  if char_length(trim(coalesce(p_review, ''))) not between 3 and 1500 then
+-    return jsonb_build_object('success', false, 'message', 'Please write a review (up to 1500 characters).');
++  if char_length(trim(coalesce(p_scent, ''))) = 0 or char_length(trim(coalesce(p_review, ''))) = 0 or p_photo_url is null then
++    return jsonb_build_object('success', false, 'message', 'Name, scent, rating, review, and photo are required.');
++  end if;
++  if char_length(trim(p_review)) > 600 then
++    return jsonb_build_object('success', false, 'message', 'Review is too long. Maximum is 600 characters.');
+   end if;
+   if p_rating is null or p_rating not between 1 and 5 then
+     return jsonb_build_object('success', false, 'message', 'Please choose a rating.');
+   end if;
+   -- Only accept photos stored in this project's review-photos bucket
+-  if p_photo_url is not null and p_photo_url !~ '/storage/v1/object/public/review-photos/pending/[A-Za-z0-9._-]+$' then
++  if p_photo_url !~ '/storage/v1/object/public/review-photos/pending/[A-Za-z0-9._-]+$' then
+     return jsonb_build_object('success', false, 'message', 'Invalid photo upload.');
+   end if;
+   if (select count(*) from public.reviews where created_at > now() - interval '1 minute') >= 20 then
+@@ -456,7 +464,7 @@ begin
+   insert into public.reviews (name, scent, scent_id, rating, review, photo_url)
+   values (trim(p_name), left(coalesce(p_scent, ''), 120), left(p_scent_id, 64), p_rating, trim(p_review), p_photo_url);
+ 
+-  return jsonb_build_object('success', true);
++  return jsonb_build_object('success', true, 'type', 'review', 'message', 'Review submitted successfully.');
+ end $$;
+ 
+ -- ---------------------------------------------------------------------
+@@ -487,18 +495,23 @@ begin
+         'revenue',   coalesce(sum(total) filter (where status <> 'Cancelled'), 0),
+         'completed', count(*) filter (where status = 'Completed'),
+         'pending',   count(*) filter (where status not in ('Completed', 'Cancelled')),
+-        'customers', count(distinct right(contact_digits, 10))
++        'customers', count(distinct coalesce(nullif(right(contact_digits, 10), ''), fullname)),
++        'averageOrderValue', coalesce(round(avg(total) filter (where status <> 'Cancelled'), 2), 0)
+       ) from public.orders
+     ),
+     'topProducts', coalesce((
+-      select jsonb_agg(t order by t.units desc)
++      select jsonb_agg(t order by t.units desc, t.name)
+         from (
+-          select coalesce(max(i ->> 'name'), i ->> 'id') as name, sum((i ->> 'qty')::int) as units
+-            from public.orders o, jsonb_array_elements(o.items) i
+-           where o.status <> 'Cancelled'
+-           group by i ->> 'id'
+-           order by units desc
+-           limit 5
++          select p.id, p.name, coalesce(s.units, 0) as units
++            from public.products p
++            left join (
++              select i ->> 'id' as id, sum((i ->> 'qty')::int) as units
++                from public.orders o, jsonb_array_elements(o.items) i
++               where o.status <> 'Cancelled'
++               group by i ->> 'id'
++            ) s on s.id = p.id
++           order by units desc, p.name
++           limit 10
+         ) t
+     ), '[]'::jsonb),
+     'lowStock', coalesce((
+@@ -509,6 +522,79 @@ begin
+   );
+ end $$;
+ 
++-- ---------------------------------------------------------------------
++-- ORDER EMAIL NOTIFICATION
++-- Like the old MailApp email: every new order is sent to a small
++-- Apps Script "mailer" (google-apps-script/OrderEmailNotifier.gs),
++-- which emails the admin. Runs in the background; an email problem
++-- can never block or cancel an order.
++--
++-- Settings live in the "private" schema, which the website can't read:
++--   insert into private.config (key, value) values
++--     ('order_email_webhook_url',    'https://script.google.com/macros/s/.../exec'),
++--     ('order_email_webhook_secret', 'the-same-secret-as-in-the-mailer')
++--   on conflict (key) do update set value = excluded.value;
++-- ---------------------------------------------------------------------
++
++create extension if not exists pg_net;
++
++create schema if not exists private;
++revoke all on schema private from public, anon, authenticated;
++
++create table if not exists private.config (
++  key   text primary key,
++  value text not null
++);
++
++create or replace function public.notify_new_order()
++returns trigger
++language plpgsql security definer set search_path = public
++as $$
++declare
++  v_url    text;
++  v_secret text;
++begin
++  select value into v_url    from private.config where key = 'order_email_webhook_url';
++  select value into v_secret from private.config where key = 'order_email_webhook_secret';
++
++  if coalesce(v_url, '') = '' then
++    return new;   -- email not set up yet
++  end if;
++
++  begin
++    perform net.http_post(
++      url     := v_url,
++      body    := jsonb_build_object(
++                   'secret',   coalesce(v_secret, ''),
++                   'orderId',  new.order_id,
++                   'date',     to_char(new.created_at at time zone 'Asia/Manila', 'FMMonth DD, YYYY • HH12:MI AM'),
++                   'fullname', new.fullname,
++                   'contact',  new.contact,
++                   'items',    new.items,
++                   'subtotal', new.subtotal,
++                   'discount', new.discount,
++                   'promo',    coalesce(new.promotion_name, ''),
++                   'total',    new.total,
++                   'address',  new.address,
++                   'payment',  new.payment,
++                   'notes',    new.notes,
++                   'status',   new.status),
++      headers := '{"Content-Type": "application/json"}'::jsonb,
++      timeout_milliseconds := 10000
++    );
++  exception when others then
++    raise warning 'Order email notification failed: %', sqlerrm;
++  end;
++
++  return new;
++end $$;
++
++revoke execute on function public.notify_new_order() from public, anon, authenticated;
++
++drop trigger if exists orders_notify on public.orders;
++create trigger orders_notify after insert on public.orders
++  for each row execute function public.notify_new_order();
++
+ -- ---------------------------------------------------------------------
+ -- ROW LEVEL SECURITY
+ -- ---------------------------------------------------------------------
+-- 
+2.43.0
+

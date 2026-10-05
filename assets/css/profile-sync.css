@@ -1,0 +1,168 @@
+/* ============================================================
+   AURA & ESSENCE
+   PROFILE DISPLAY OVERRIDE
+   ============================================================ */
+
+
+/* ------------------------------------------------------------
+   SCENT PROFILE
+   Fresh / Sweet / Woody / Floral / Warm
+   are displayed as text tags.
+   ------------------------------------------------------------ */
+
+#fragranceProfileBars .profile-section {
+  display: grid;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+
+#fragranceProfileBars .profile-label {
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+
+
+#fragranceProfileBars .profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+}
+
+
+/* Individual profile text */
+
+#fragranceProfileBars .profile-tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 30px;
+
+  padding: 7px 12px;
+
+  border: 1px solid var(--line);
+
+  background: rgba(212, 178, 106, 0.05);
+
+  color: var(--parchment);
+
+  font-size: 10px;
+
+  line-height: 1;
+
+  letter-spacing: 0.08em;
+
+  text-transform: uppercase;
+
+  white-space: nowrap;
+}
+
+
+/* ------------------------------------------------------------
+   LONGEVITY + STRENGTH
+   These remain line/bar style.
+   ------------------------------------------------------------ */
+
+#fragranceProfileBars .profile-row {
+  display: grid;
+
+  grid-template-columns:
+    72px
+    minmax(0, 1fr)
+    55px;
+
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 4px;
+
+  font-size: 10px;
+
+  line-height: 1.4;
+
+  color: var(--parchment-dim);
+}
+
+
+/* Bar background */
+
+#fragranceProfileBars .profile-track {
+  display: block;
+
+  width: 100%;
+
+  height: 6px;
+
+  overflow: hidden;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.06);
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 255, 255, 0.10);
+
+  box-shadow:
+    inset 0 0 3px rgba(0, 0, 0, 0.45);
+}
+
+
+/* Bar fill */
+
+#fragranceProfileBars .profile-fill {
+  display: block;
+
+  height: 100%;
+
+  min-width: 2px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      var(--brass),
+      var(--brass-bright)
+    );
+
+  box-shadow:
+    0 0 8px rgba(212, 178, 106, 0.22);
+
+  transition:
+    width 0.45s ease;
+}
+
+
+/* ------------------------------------------------------------
+   MOBILE
+   ------------------------------------------------------------ */
+
+@media (max-width: 600px) {
+
+  #fragranceProfileBars .profile-row {
+    grid-template-columns:
+      65px
+      minmax(0, 1fr)
+      45px;
+
+    gap: 7px;
+
+    font-size: 9px;
+  }
+
+
+  #fragranceProfileBars .profile-tag {
+    padding: 7px 9px;
+
+    font-size: 9px;
+  }
+
+}
