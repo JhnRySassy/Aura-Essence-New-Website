@@ -49,6 +49,17 @@ begin
 exception when others then return now();
 end $$;
 
+-- Old Drive links (drive.google.com/file/d/ID/view or ?id=ID) can't be shown as images;
+-- convert them to the same lh3 format the Apps Script used for newer photos.
+create or replace function pg_temp.photo(v text) returns text language sql immutable as $$
+  select case
+    when pg_temp.txt(v) = '' then null
+    when pg_temp.txt(v) ~ 'drive\.google\.com' and coalesce(substring(v from '/d/([A-Za-z0-9_-]{10,})'), substring(v from '[?&]id=([A-Za-z0-9_-]{10,})')) is not null
+      then 'https://lh3.googleusercontent.com/d/' || coalesce(substring(v from '/d/([A-Za-z0-9_-]{10,})'), substring(v from '[?&]id=([A-Za-z0-9_-]{10,})')) || '=w1200'
+    else pg_temp.txt(v)
+  end;
+$$;
+
 -- Orders: use "Items JSON" when present; older rows fall back to Scent / Scent ID / Quantity.
 create or replace function pg_temp.to_items(items text, scent text, scent_id text, qty text)
 returns jsonb language plpgsql immutable as $$
@@ -167,7 +178,7 @@ select
   nullif(pg_temp.txt("Scent ID"), ''),
   least(5, greatest(1, coalesce(pg_temp.to_num("Rating"), 5)))::int,
   pg_temp.txt("Review"),
-  nullif(pg_temp.txt("Photo URL"), ''),
+  pg_temp.photo("Photo URL"),
   lower(pg_temp.txt("Status")) = 'approved',
   pg_temp.to_ts("Timestamp")
 from public.import_reviews
