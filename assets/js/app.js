@@ -17,6 +17,11 @@ import {
 
 const reviewStats = {};
 
+// Latest approved reviews, kept so the star ratings can be
+// recalculated once the product list from the database arrives
+// (products like "Clinique Happy" only exist after that).
+let lastReviews = [];
+
 // ============================================================
 // OOP CORE SERVICES
 // ============================================================
@@ -2211,6 +2216,9 @@ async function loadManagedProducts() {
 
     renderReviewScentOptions();
 
+    // Reviews may have loaded before these products existed.
+    computeReviewStats();
+
     renderCarousel(
       activeCat,
     );
@@ -2355,12 +2363,7 @@ function escapeText(value) {
 // RENDER REVIEWS
 // ============================================================
 
-function renderReviews(
-  reviews,
-) {
-  reviewsLoading.style.display =
-    "none";
-
+function computeReviewStats() {
   Object.keys(
     reviewStats,
   ).forEach(
@@ -2368,22 +2371,26 @@ function renderReviews(
       delete reviewStats[k],
   );
 
-  (reviews || []).forEach(
+  const products = catalog.all();
+
+  lastReviews.forEach(
     (r) => {
       const scentName =
-        String(
-          r.scent || "",
-        ).toLowerCase();
+        String(r.scent || "")
+          .trim()
+          .toLowerCase();
+
+      const scentId =
+        String(r.scentId || "")
+          .trim()
+          .toLowerCase();
 
       const p =
-        catalog
-          .all()
-          .find(
-            (x) =>
-              x.name
-                .toLowerCase() ===
-              scentName,
-          );
+        products.find(
+          (x) =>
+            String(x.id).toLowerCase() === scentId ||
+            String(x.name || "").trim().toLowerCase() === scentName,
+        );
 
       if (!p) {
         return;
@@ -2410,6 +2417,17 @@ function renderReviews(
           .count;
     },
   );
+}
+
+function renderReviews(
+  reviews,
+) {
+  reviewsLoading.style.display =
+    "none";
+
+  lastReviews = reviews || [];
+
+  computeReviewStats();
 
   renderCarousel(
     activeCat,
