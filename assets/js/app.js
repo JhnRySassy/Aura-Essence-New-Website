@@ -5666,3 +5666,38 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
     mutations.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) watch(n); }));
   }).observe(document.body, { childList: true, subtree: true });
 })();
+
+// ============================================================
+// LIGHT / DARK MODE
+// Dark is the brand default; the choice is remembered on this
+// device. The <head> script applies it before the page paints.
+// ============================================================
+
+(function themeToggle() {
+  const btn = document.getElementById("themeToggle");
+  const root = document.documentElement;
+  const meta = document.getElementById("themeColor");
+
+  const apply = (theme, animate) => {
+    if (animate) {
+      root.classList.add("theme-anim");
+      setTimeout(() => root.classList.remove("theme-anim"), 500);
+    }
+    if (theme === "light") root.setAttribute("data-theme", "light");
+    else root.removeAttribute("data-theme");
+    if (meta) meta.setAttribute("content", theme === "light" ? "#f6f1e8" : "#0e0d0c");
+    if (btn) {
+      const next = theme === "light" ? "dark" : "light";
+      btn.setAttribute("aria-label", `Switch to ${next} mode`);
+      btn.title = next === "light" ? "Light mode" : "Dark mode";
+    }
+  };
+
+  apply(root.getAttribute("data-theme") === "light" ? "light" : "dark", false);
+
+  btn?.addEventListener("click", () => {
+    const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+    apply(next, true);
+    try { localStorage.setItem("aeTheme", next); } catch { /* private mode */ }
+  });
+})();
