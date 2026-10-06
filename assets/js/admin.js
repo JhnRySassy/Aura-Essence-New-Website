@@ -209,6 +209,13 @@ class AdminApp {
       "refreshProducts",
       "newProduct",
       "productSearch",
+      "filterCat",
+      "filterStock",
+      "filterBadge",
+      "filterActive",
+      "sortProducts",
+      "clearFilters",
+      "productCount",
       "productsRows",
 
       "productEditor",
@@ -401,6 +408,30 @@ class AdminApp {
     this.dom.productSearch?.addEventListener("input", () =>
       this.debouncedProductSearch(),
     );
+
+    /* Product filters */
+    [
+      "filterCat",
+      "filterStock",
+      "filterBadge",
+      "filterActive",
+      "sortProducts",
+    ].forEach((id) => {
+      this.dom[id]?.addEventListener("change", () => this.renderProducts());
+    });
+
+    this.dom.clearFilters?.addEventListener("click", () => {
+      ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach(
+        (id) => {
+          if (this.dom[id]) this.dom[id].value = "";
+        },
+      );
+
+      if (this.dom.sortProducts) this.dom.sortProducts.value = "order";
+      if (this.dom.productSearch) this.dom.productSearch.value = "";
+
+      this.renderProducts();
+    });
 
     this.dom.closeEditor?.addEventListener("click", () =>
       this.dom.productEditor?.classList.add("hidden"),
@@ -1382,14 +1413,79 @@ class AdminApp {
 
     const search = normalize(this.dom.productSearch?.value);
 
+    const cat = this.dom.filterCat?.value || "";
+    const stockFilter = this.dom.filterStock?.value || "";
+    const badge = this.dom.filterBadge?.value || "";
+    const visibility = this.dom.filterActive?.value || "";
+    const sortBy = this.dom.sortProducts?.value || "order";
+
+    const lowLimit =
+      Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+
+    const stockOf = (product) =>
+      product.stock == null ? Infinity : Number(product.stock);
+
+    // Highlight filters that are switched on
+    ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach((id) =>
+      this.dom[id]?.classList.toggle("on", Boolean(this.dom[id].value)),
+    );
+
+    const sorters = {
+      order: (a, b) =>
+        Number(a.sortOrder || 0) - Number(b.sortOrder || 0) ||
+        String(a.name).localeCompare(String(b.name)),
+      name: (a, b) => String(a.name).localeCompare(String(b.name)),
+      stockAsc: (a, b) => stockOf(a) - stockOf(b),
+      stockDesc: (a, b) => stockOf(b) - stockOf(a),
+      priceAsc: (a, b) => Number(a.price || 0) - Number(b.price || 0),
+      priceDesc: (a, b) => Number(b.price || 0) - Number(a.price || 0),
+    };
+
     const products = this.productSearchIndex
 
       .filter((item) => !search || item.search.includes(search))
 
       .map((item) => item.product)
 
+      .filter((product) => {
+        if (cat && product.cat !== cat) return false;
+
+        const stock = stockOf(product);
+
+        if (stockFilter === "in" && !(stock > 0)) return false;
+        if (stockFilter === "low" && !(stock > 0 && stock <= lowLimit))
+          return false;
+        if (stockFilter === "out" && stock !== 0) return false;
+        if (stockFilter === "unlimited" && product.stock != null) return false;
+
+        const badges = (product.badges || []).map((b) =>
+          String(b).toUpperCase(),
+        );
+
+        if (badge === "__none" && badges.length) return false;
+        if (badge && badge !== "__none" && !badges.includes(badge))
+          return false;
+
+        if (visibility === "active" && product.active === false) return false;
+        if (visibility === "hidden" && product.active !== false) return false;
+
+        return true;
+      })
+
       .slice()
-      .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0));
+      .sort(sorters[sortBy] || sorters.order);
+
+    if (this.dom.productCount) {
+      this.dom.productCount.textContent =
+        products.length === this.products.length
+          ? `${products.length} products`
+          : `Showing ${products.length} of ${this.products.length}`;
+    }
+
+    if (!products.length) {
+      table.innerHTML = `<tr><td colspan="7" class="muted">No products match these filters.</td></tr>`;
+      return;
+    }
 
     table.innerHTML = products
       .map(
