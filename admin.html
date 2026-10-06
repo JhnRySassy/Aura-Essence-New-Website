@@ -13,18 +13,31 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="A&amp;E Admin">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap">
 <link rel="stylesheet" href="assets/css/admin.css">
 <link rel="stylesheet" href="assets/css/admin-ui.css">
+<link rel="stylesheet" href="assets/css/admin-premium.css">
 </head>
 <body>
 
 <!-- ============ LOGIN ============ -->
 <div id="loginView" class="login-shell">
+  <div class="login-art" aria-hidden="true">
+    <img src="assets/images/hero.jpg" alt="">
+    <div class="login-art-text">
+      <span class="login-mark">A &amp; E</span>
+      <p>Maison de Parfum</p>
+      <blockquote>Every bottle, a quiet signature.</blockquote>
+      <small>Extrait de Parfum · 25% Concentration</small>
+    </div>
+  </div>
   <div class="login-card">
-    <div class="brand-mini">A &amp; E</div>
-    <p class="eyebrow">AURA &amp; ESSENCE</p>
-    <h1>Admin Portal</h1>
-    <p class="muted">Sign in to manage products, orders, inventory, promotions and site settings.</p>
+    <div class="brand-mini">A&amp;E</div>
+    <p class="eyebrow">AURA &amp; ESSENCE · MAISON</p>
+    <h1>Welcome back</h1>
+    <p class="muted">Sign in to tend to orders, bottles, vouchers and the boutique.</p>
     <form id="credentialsForm">
       <label>Admin Email<input id="loginIdentifier" type="email" required autocomplete="username"></label>
       <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
@@ -37,7 +50,7 @@
 <!-- ============ APP ============ -->
 <div id="appView" class="app hidden">
   <aside class="sidebar">
-    <div class="side-brand"><span>A&nbsp;&amp;&nbsp;E</span><small>ADMIN</small></div>
+    <div class="side-brand"><span>A&nbsp;&amp;&nbsp;E</span><small>MAISON<br>DE PARFUM</small></div>
     <nav class="side-nav">
       <p class="nav-group">Sales</p>
       <button data-view="dashboard" class="nav-item active">Dashboard</button>
@@ -64,7 +77,7 @@
   <main class="main">
     <header class="topbar">
       <div>
-        <p class="eyebrow">CONTROL CENTER</p>
+        <p class="eyebrow" id="topGreeting">MAISON A&amp;E</p>
         <h2 id="viewTitle">Dashboard</h2>
       </div>
       <div class="topbar-actions">

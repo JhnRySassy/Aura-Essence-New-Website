@@ -1811,7 +1811,7 @@ class AdminApp {
 
     if (!rows.length) {
       table.innerHTML =
-        `<tr><td colspan="7" class="muted">${current[0] === "active" ? "Nothing to do right now. 🎉" : "No orders here."}</td></tr>`;
+        `<tr><td colspan="7" class="muted">${current[0] === "active" ? "All caught up — nothing is waiting on you." : "No orders here."}</td></tr>`;
       return;
     }
 
@@ -7184,6 +7184,402 @@ Object.assign(AdminApp.prototype, {
     }
     target.closest("tr")?.scrollIntoView({ behavior: "smooth", block: "center" });
     this.startCostEdit(target);
+  }
+});
+
+
+/* =========================================================
+   MAISON LOOK (v5)
+   Bottle thumbnails in orders, the order drawer and the
+   dashboard lists, an A&E placeholder for missing photos,
+   and a greeting in the top bar.
+========================================================= */
+
+const _orig5 = {
+  renderDashboard: AdminApp.prototype.renderDashboard,
+  renderOrders: AdminApp.prototype.renderOrders,
+  openOrder: AdminApp.prototype.openOrder,
+  renderProducts: AdminApp.prototype.renderProducts,
+  showView: AdminApp.prototype.showView
+};
+
+function bottleThumb(src, size = "") {
+  return src
+    ? `<span class="bottle ${size}"><img src="${escapeHTML(src)}" alt="" loading="lazy" onerror="this.parentNode.classList.add('ph');this.remove()"></span>`
+    : `<span class="bottle ph ${size}" aria-hidden="true"></span>`;
+}
+
+Object.assign(AdminApp.prototype, {
+
+  productFor(idOrName) {
+    const key = String(idOrName || "").trim().toLowerCase();
+    return (this.products || []).find(p =>
+      String(p.id).toLowerCase() === key || String(p.name || "").trim().toLowerCase() === key) || null;
+  },
+
+
+  renderDashboard(response) {
+    _orig5.renderDashboard.call(this, response);
+
+    document.querySelectorAll("#topProducts .top-row > span").forEach(span => {
+      if (span.querySelector(".bottle")) return;
+      const name = span.textContent.replace(/^\s*\d+\.\s*/, "").trim();
+      span.insertAdjacentHTML("afterbegin", bottleThumb(this.productFor(name)?.img));
+    });
+    document.querySelectorAll("#lowStock .mini[data-product] > span").forEach(span => {
+      if (span.querySelector(".bottle")) return;
+      span.insertAdjacentHTML("afterbegin", bottleThumb(this.productFor(span.closest("[data-product]").dataset.product)?.img));
+    });
+  },
+
+
+  renderOrders() {
+    _orig5.renderOrders.call(this);
+    document.querySelectorAll("#ordersRows tr[data-order]").forEach(tr => {
+      const cell = tr.querySelector('td[data-label="Items"]');
+      const order = (this.orders || []).find(o => o.orderId === tr.dataset.order);
+      if (!cell || !order || !Array.isArray(order.items) || !order.items.length) return;
+      cell.innerHTML = `<div class="item-lines">${order.items.map(i => `
+        <span class="item-line">${bottleThumb((this.productFor(i.id) || this.productFor(i.name))?.img, "sm")}<span>${escapeHTML(i.name || i.id)} <em>× ${escapeHTML(i.qty)}</em></span></span>`).join("")}</div>`;
+    });
+  },
+
+
+  openOrder(orderId) {
+    _orig5.openOrder.call(this, orderId);
+    const order = (this.orders || []).find(o => o.orderId === orderId);
+    const rows = document.querySelectorAll("#drawerBody table.items tbody tr");
+    if (!order || !Array.isArray(order.items)) return;
+    rows.forEach((tr, i) => {
+      const item = order.items[i];
+      const td = tr.querySelector("td");
+      if (!item || !td || td.querySelector(".bottle")) return;
+      td.classList.add("item-cell");
+      td.innerHTML = `<span class="item-cell-inner">${bottleThumb((this.productFor(item.id) || this.productFor(item.name))?.img, "md")}<span>${td.innerHTML}</span></span>`;
+    });
+  },
+
+
+  renderProducts() {
+    _orig5.renderProducts.call(this);
+    document.querySelectorAll("#productsRows .thumb").forEach(t => {
+      if (!t.querySelector("img")) { t.classList.add("ph"); t.textContent = ""; }
+      const img = t.querySelector("img");
+      if (img) img.addEventListener("error", () => { t.classList.add("ph"); }, { once: true });
+    });
+  },
+
+
+  showView(view) {
+    _orig5.showView.call(this, view);
+    this.updateGreeting();
+  },
+
+
+  updateGreeting() {
+    const el = byId("topGreeting");
+    if (!el) return;
+    const now = new Date();
+    const h = now.getHours();
+    const part = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    const narrow = window.innerWidth < 600;
+    const day = now.toLocaleDateString(undefined, narrow
+      ? { weekday: "short", month: "short", day: "numeric" }
+      : { weekday: "long", month: "long", day: "numeric" });
+    el.textContent = `${part} · ${day}`;
+  }
+});
+
+
+/* =========================================================
+   MAISON DETAILS (v6)
+   Bottle stock gauges · scent-family colours ·
+   best-seller hero card · scent family breakdown ·
+   bottle thumbnails in search and notifications
+========================================================= */
+
+const _orig6 = {
+  renderProducts: AdminApp.prototype.renderProducts,
+  renderInventory: AdminApp.prototype.renderInventory,
+  renderDashboard: AdminApp.prototype.renderDashboard,
+  renderOrders: AdminApp.prototype.renderOrders,
+  renderReports: AdminApp.prototype.renderReports,
+  renderPalette: AdminApp.prototype.renderPalette,
+  renderNotifications: AdminApp.prototype.renderNotifications
+};
+
+// Scent families: first matching profile decides the family
+const SCENT_FAMILIES = [
+  { key: "fresh",  label: "Fresh",  color: "#8fb59a", words: ["fresh", "citrus", "aquatic", "marine", "aromatic", "minty", "mint", "green", "clean"] },
+  { key: "floral", label: "Floral", color: "#d79aa3", words: ["floral", "rose", "powdery", "jasmine", "white floral"] },
+  { key: "sweet",  label: "Sweet",  color: "#e2c48a", words: ["sweet", "vanilla", "fruity", "gourmand", "coffee", "caramel"] },
+  { key: "spicy",  label: "Spicy",  color: "#c97a4a", words: ["spicy", "warm", "pepper", "cinnamon"] },
+  { key: "woody",  label: "Woody",  color: "#a98458", words: ["woody", "amber", "chestnut", "musky", "musk", "leather", "oud", "earthy"] }
+];
+
+function scentFamilyOf(product) {
+  const profiles = (Array.isArray(product?.profiles) ? product.profiles : String(product?.profiles || "").split(","))
+    .map(p => String(p).trim().toLowerCase()).filter(Boolean);
+  for (const prof of profiles) {
+    const fam = SCENT_FAMILIES.find(f => f.words.some(w => prof.includes(w)));
+    if (fam) return fam;
+  }
+  return null;
+}
+
+function familyDot(fam, withLabel) {
+  if (!fam) return "";
+  return `<span class="fam" style="--fam:${fam.color}" title="${escapeHTML(fam.label)}"><i></i>${withLabel ? escapeHTML(fam.label) : ""}</span>`;
+}
+
+// A small bottle whose liquid level shows the stock
+function stockGauge(stock, low) {
+  if (stock == null) {
+    return `<span class="gauge unlimited" style="--level:100%" title="Unlimited stock"><span class="g-neck"></span><span class="g-body"><span class="g-liquid"></span></span></span>`;
+  }
+  const n = Math.max(0, Number(stock) || 0);
+  const full = Math.max(low * 3, 10);
+  const level = n === 0 ? 0 : Math.max(12, Math.min(100, Math.round((n / full) * 100)));
+  const state = n === 0 ? "out" : n <= low ? "low" : "ok";
+  return `<span class="gauge ${state}" style="--level:${level}%" title="${n === 0 ? "Sold out" : `${n} in stock`}">
+    <span class="g-neck"></span><span class="g-body"><span class="g-liquid"></span></span></span>`;
+}
+
+Object.assign(AdminApp.prototype, {
+
+  lowLimit() {
+    return Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+  },
+
+
+  /* ----- Products: gauge + family under the name ----- */
+  renderProducts() {
+    _orig6.renderProducts.call(this);
+    const low = this.lowLimit();
+    document.querySelectorAll("#productsRows tr").forEach(tr => {
+      const id = tr.querySelector("[data-edit]")?.dataset.edit;
+      const p = id && this.productFor(id);
+      if (!p) return;
+      const cell = tr.querySelector(".stock-cell");
+      if (cell && !cell.querySelector(".gauge")) cell.insertAdjacentHTML("afterbegin", stockGauge(p.stock, low));
+      const small = tr.querySelector(".prod-cell small");
+      const fam = scentFamilyOf(p);
+      if (small && fam && !small.querySelector(".fam")) small.insertAdjacentHTML("afterbegin", familyDot(fam, true) + " · ");
+    });
+  },
+
+
+  /* ----- Restocks → Stock & cost: gauge beside the number ----- */
+  renderInventory() {
+    _orig6.renderInventory.call(this);
+    const low = this.lowLimit();
+    document.querySelectorAll("#invRows tr").forEach(tr => {
+      const id = tr.querySelector("[data-restock]")?.dataset.restock;
+      const p = id && this.productFor(id);
+      const cell = tr.querySelector('td[data-label="Stock"]');
+      if (!p || !cell || cell.querySelector(".gauge")) return;
+      cell.innerHTML = `<span class="gauge-cell">${stockGauge(p.stock, low)}<span>${p.stock == null ? "∞" : p.stock}</span></span>`;
+      const name = tr.querySelector("[data-restock]");
+      const fam = scentFamilyOf(p);
+      if (name && fam && !name.querySelector(".fam")) name.insertAdjacentHTML("afterbegin", familyDot(fam));
+    });
+  },
+
+
+  /* ----- Orders: family dot beside each scent ----- */
+  renderOrders() {
+    _orig6.renderOrders.call(this);
+    document.querySelectorAll("#ordersRows .item-line").forEach(line => {
+      if (line.querySelector(".fam")) return;
+      const name = line.querySelector("span:last-child")?.childNodes[0]?.textContent?.trim();
+      const fam = scentFamilyOf(this.productFor(name));
+      if (fam) line.querySelector("span:last-child")?.insertAdjacentHTML("afterbegin", familyDot(fam));
+    });
+  },
+
+
+  /* ----- Reports: family dot on each product row ----- */
+  renderReports() {
+    _orig6.renderReports.call(this);
+    document.querySelectorAll("#profitRows td.td-main b").forEach(b => {
+      if (b.querySelector(".fam")) return;
+      const fam = scentFamilyOf(this.productFor(b.textContent.trim()));
+      if (fam) b.insertAdjacentHTML("afterbegin", familyDot(fam));
+    });
+  },
+
+
+  /* ----- Dashboard: best-seller hero, family breakdown, gauges ----- */
+  renderDashboard(response) {
+    _orig6.renderDashboard.call(this, response);
+    const low = this.lowLimit();
+
+    // low stock: bottle gauges instead of plain text
+    document.querySelectorAll("#lowStock .mini[data-product]").forEach(row => {
+      const p = this.productFor(row.dataset.product);
+      const b = row.querySelector("b");
+      if (!p || !b || b.querySelector(".gauge")) return;
+      b.insertAdjacentHTML("afterbegin", stockGauge(p.stock, low));
+      b.classList.add("gauge-cell");
+    });
+
+    // top products: family dots
+    document.querySelectorAll("#topProducts .top-row > span").forEach(span => {
+      if (span.querySelector(".fam")) return;
+      const name = span.textContent.replace(/^\s*\d+\.\s*/, "").trim();
+      const fam = scentFamilyOf(this.productFor(name));
+      if (fam) span.insertAdjacentHTML("beforeend", familyDot(fam));
+    });
+
+    this.renderHeroCard();
+    this.renderFamilyBreakdown();
+  },
+
+
+  // Units sold per product in the dashboard's current date range
+  unitsInRange() {
+    const range = typeof this.dashboardRange === "function" ? this.dashboardRange() : null;
+    const units = new Map();
+    (this.orders || []).forEach(o => {
+      if (o.status === "Cancelled") return;
+      const t = new Date(o.timestamp);
+      if (range && (t < range.from || t > range.to)) return;
+      (o.items || []).forEach(i => {
+        const p = this.productFor(i.id) || this.productFor(i.name);
+        const key = p ? p.id : (i.name || i.id);
+        const row = units.get(key) || { product: p, name: p?.name || i.name || i.id, units: 0, sales: 0 };
+        row.units += Number(i.qty || 0);
+        row.sales += Number(i.price || p?.price || 0) * Number(i.qty || 0);
+        units.set(key, row);
+      });
+    });
+    return [...units.values()].sort((a, b) => b.units - a.units || b.sales - a.sales);
+  },
+
+
+  renderHeroCard() {
+    let box = byId("heroCard");
+    if (!box) {
+      const cards = byId("statsCards");
+      if (!cards) return;
+      cards.insertAdjacentHTML("beforebegin", `<div class="hero-card" id="heroCard"></div>`);
+      box = byId("heroCard");
+    }
+    const list = this.unitsInRange();
+    const top = list[0];
+    const label = byId("rangePreset")?.selectedOptions?.[0]?.textContent || "All time";
+
+    if (!top || !top.units) {
+      box.innerHTML = `
+        <div class="hc-text">
+          <p class="eyebrow">Signature of the period · ${escapeHTML(label)}</p>
+          <h3>No bottles sold yet</h3>
+          <p class="muted">Your best seller will appear here once orders come in.</p>
+        </div>`;
+      return;
+    }
+
+    const p = top.product;
+    const fam = scentFamilyOf(p);
+    const share = list.reduce((s, r) => s + r.units, 0);
+    const pct = share ? Math.round((top.units / share) * 100) : 0;
+    box.innerHTML = `
+      <div class="hc-photo">${p?.img ? `<img src="${escapeHTML(p.img)}" alt="" onerror="this.parentNode.classList.add('ph');this.remove()">` : ""}</div>
+      <div class="hc-text">
+        <p class="eyebrow">Signature of the period · ${escapeHTML(label)}</p>
+        <h3>${escapeHTML(top.name)}</h3>
+        <p class="hc-meta">${fam ? familyDot(fam, true) : ""}${p ? `<span>${escapeHTML({ men: "For Him", women: "For Her", unisex: "Unisex" }[p.cat] || "")}</span>` : ""}</p>
+        <div class="hc-stats">
+          <div><b>${top.units}</b><small>bottles sold</small></div>
+          <div><b>${pct}%</b><small>of all bottles</small></div>
+          <div><b>${p?.stock == null ? "∞" : p.stock}</b><small>left in stock</small></div>
+        </div>
+      </div>
+      ${p ? `<button type="button" class="btn hc-btn" data-hero-edit="${escapeHTML(p.id)}">View product</button>` : ""}`;
+    if (!p && !box.querySelector(".hc-photo img")) box.querySelector(".hc-photo")?.classList.add("ph");
+    if (p && !p.img) box.querySelector(".hc-photo")?.classList.add("ph");
+    box.querySelector("[data-hero-edit]")?.addEventListener("click", e => {
+      this.showView("products");
+      this.editProduct(this.productFor(e.currentTarget.dataset.heroEdit));
+    });
+  },
+
+
+  renderFamilyBreakdown() {
+    let panel = byId("familyPanel");
+    if (!panel) {
+      const grid = byId("topProducts")?.closest(".grid-2");
+      if (!grid) return;
+      grid.insertAdjacentHTML("afterend", `
+        <div class="panel family-panel" id="familyPanel">
+          <div class="panel-head"><h3>By scent family</h3><span>Bottles sold in this period</span></div>
+          <div class="fam-bar" id="famBar"></div>
+          <div class="fam-legend" id="famLegend"></div>
+        </div>`);
+      panel = byId("familyPanel");
+    }
+    const totals = new Map(SCENT_FAMILIES.map(f => [f.key, 0]));
+    let other = 0;
+    this.unitsInRange().forEach(r => {
+      const fam = scentFamilyOf(r.product);
+      if (fam) totals.set(fam.key, totals.get(fam.key) + r.units); else other += r.units;
+    });
+    const sum = [...totals.values()].reduce((a, b) => a + b, 0) + other;
+    const rows = SCENT_FAMILIES.map(f => ({ ...f, units: totals.get(f.key) }))
+      .concat(other ? [{ key: "other", label: "Other", color: "#6f685c", units: other }] : [])
+      .filter(r => r.units > 0)
+      .sort((a, b) => b.units - a.units);
+
+    byId("famBar").innerHTML = sum
+      ? rows.map(r => `<span style="--fam:${r.color};flex:${r.units}" title="${escapeHTML(r.label)} · ${r.units}"></span>`).join("")
+      : `<span class="empty" style="flex:1"></span>`;
+    byId("famLegend").innerHTML = sum
+      ? rows.map(r => `<div class="fam-row"><span class="fam" style="--fam:${r.color}"><i></i>${escapeHTML(r.label)}</span><b>${r.units}</b><small>${Math.round(r.units / sum * 100)}%</small></div>`).join("")
+      : `<p class="empty-note">No bottles sold in this period yet.</p>`;
+  },
+
+
+  /* ----- Ctrl+K: bottle thumbnails for products and orders ----- */
+  renderPalette() {
+    _orig6.renderPalette.call(this);
+    (this.paletteItems || []).forEach((it, i) => {
+      const el = document.querySelector(`#paletteList [data-pi="${i}"] .pi-icon`);
+      if (!el) return;
+      let p = null;
+      if (it.group === "Products") p = this.productFor(it.title);
+      if (it.group === "Orders") {
+        const id = String(it.sub || "").split(" · ")[0];
+        const o = (this.orders || []).find(x => x.orderId === id);
+        const first = o?.items?.[0];
+        p = first ? (this.productFor(first.id) || this.productFor(first.name)) : null;
+      }
+      if (p || it.group === "Products" || it.group === "Orders") {
+        el.classList.add("pi-bottle");
+        el.innerHTML = bottleThumb(p?.img);
+      }
+    });
+  },
+
+
+  /* ----- Notifications: bottle thumbnails for orders and stock ----- */
+  renderNotifications() {
+    _orig6.renderNotifications.call(this);
+    document.querySelectorAll("#notifList [data-notif]").forEach(btn => {
+      const id = btn.dataset.notif;
+      let p = null;
+      if (id.startsWith("stock:")) p = this.productFor(id.slice(6, id.lastIndexOf(":")));
+      if (id.startsWith("order-new:")) {
+        const o = (this.orders || []).find(x => x.orderId === id.slice(10));
+        const first = o?.items?.[0];
+        p = first ? (this.productFor(first.id) || this.productFor(first.name)) : null;
+      }
+      if (!p) return;
+      const icon = btn.querySelector(".notif-icon");
+      if (icon && !icon.querySelector(".bottle")) {
+        icon.classList.add("with-bottle");
+        icon.innerHTML = bottleThumb(p.img);
+      }
+    });
   }
 });
 

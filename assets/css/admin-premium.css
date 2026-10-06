@@ -1,0 +1,267 @@
+/* =========================================================
+   AURA & ESSENCE ADMIN — "Maison" look
+   Same fonts and gold as the boutique, softer surfaces,
+   bottle thumbnails and perfume-house details.
+   Loaded after admin.css and admin-ui.css.
+========================================================= */
+
+:root {
+  --bg: #0b0a09;
+  --panel: #12100e;
+  --panel2: #17140f;
+  --line: rgba(216, 189, 114, .14);
+  --text: #ede7da;
+  --muted: #a39a89;
+  --gold: #d4b26a;
+  --gold-deep: #b08d4f;
+  --serif: "Cormorant Garamond", Georgia, serif;
+  --sans: "Jost", Inter, Arial, sans-serif;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+}
+
+body { font-family: var(--sans); font-size: 13.5px; letter-spacing: .01em; background: var(--bg); -webkit-font-smoothing: antialiased; }
+::selection { background: rgba(212, 178, 106, .3); }
+* { scrollbar-width: thin; scrollbar-color: rgba(212, 178, 106, .35) transparent; }
+
+/* ---------- Type ---------- */
+.eyebrow { font-size: 10px; letter-spacing: .32em; text-transform: uppercase; color: var(--gold); }
+.topbar h2 { font-family: var(--serif); font-weight: 300; font-size: clamp(34px, 3.4vw, 46px); letter-spacing: -.005em; line-height: 1.05; }
+.panel-head h3, .drawer-head h3, .modal-card h3 { font-family: var(--serif); font-weight: 400; font-size: 24px; }
+.drawer-sec h4, .palette-group, .nav-group { letter-spacing: .26em; }
+th { font-size: 9.5px; letter-spacing: .2em; color: #8f8778; font-weight: 500; }
+
+/* ---------- Sidebar: maison panel ---------- */
+.sidebar {
+  background:
+    radial-gradient(120% 40% at 0% 0%, rgba(212, 178, 106, .07), transparent 60%),
+    linear-gradient(180deg, #0f0d0b, #0a0908);
+  border-right: 1px solid var(--line);
+}
+.side-brand { gap: 12px; padding: 10px 12px 30px; align-items: center; }
+.side-brand span { font-family: var(--serif); font-size: 26px; letter-spacing: .28em; color: var(--gold); white-space: nowrap; }
+.side-brand small { font-size: 8.5px; line-height: 1.5; letter-spacing: .28em; color: var(--muted); border-left: 1px solid var(--line); padding-left: 12px; }
+.nav-group { color: #6e675b; font-size: 9px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 0;
+  font-size: 13px; letter-spacing: .03em; color: var(--muted); transition: color .3s, background .3s, border-color .3s;
+}
+.nav-item::before {
+  content: ""; width: 16px; height: 16px; flex: none; background: currentColor; opacity: .75;
+  -webkit-mask: var(--icon) center / contain no-repeat; mask: var(--icon) center / contain no-repeat;
+}
+.nav-item:hover { background: rgba(212, 178, 106, .05); color: var(--text); }
+.nav-item.active { background: linear-gradient(90deg, rgba(212, 178, 106, .12), transparent); color: var(--gold); border-left-color: var(--gold); }
+.nav-item.active::before { opacity: 1; }
+.side-bottom a, .side-bottom button { font-size: 12.5px; letter-spacing: .03em; }
+.side-bottom { border-top: 1px solid var(--line); padding-top: 14px; }
+
+/* nav icons (thin line drawings) */
+.nav-item[data-view="dashboard"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5'%3E%3Crect x='3.5' y='3.5' width='7' height='7'/%3E%3Crect x='13.5' y='3.5' width='7' height='4.5'/%3E%3Crect x='13.5' y='11' width='7' height='9.5'/%3E%3Crect x='3.5' y='13.5' width='7' height='7'/%3E%3C/svg%3E"); }
+.nav-item[data-view="orders"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8Z'/%3E%3Cpath d='M9 10V7a3 3 0 0 1 6 0v3' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.nav-item[data-view="reports"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M4 20h16'/%3E%3Cpath d='M7 16v-5M12 16V7M17 16v-8'/%3E%3C/svg%3E"); }
+.nav-item[data-view="products"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Crect x='9.5' y='2.5' width='5' height='3.5'/%3E%3Cpath d='M10.5 6v2h3V6'/%3E%3Crect x='5.5' y='8' width='13' height='13.5' rx='1.5'/%3E%3Crect x='8.5' y='12.5' width='7' height='5'/%3E%3C/svg%3E"); }
+.nav-item[data-view="inventory"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M3.5 8 12 3.5 20.5 8v8L12 20.5 3.5 16Z'/%3E%3Cpath d='M3.5 8 12 12.5 20.5 8M12 12.5v8'/%3E%3C/svg%3E"); }
+.nav-item[data-view="promotions"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M3.5 12.5V4.5a1 1 0 0 1 1-1h8l8 8-9 9Z'/%3E%3Ccircle cx='8' cy='8' r='1.5'/%3E%3C/svg%3E"); }
+.nav-item[data-view="vouchers"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M3.5 7h17v3a2 2 0 0 0 0 4v3h-17v-3a2 2 0 0 0 0-4Z'/%3E%3Cpath d='M14 7v10' stroke-dasharray='2 2'/%3E%3C/svg%3E"); }
+.nav-item[data-view="homepage"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='M3.5 10.5 12 3.5l8.5 7V20.5h-17Z'/%3E%3Cpath d='M9.5 20.5v-6h5v6'/%3E%3C/svg%3E"); }
+.nav-item[data-view="reviews"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linejoin='round'%3E%3Cpath d='m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9Z'/%3E%3C/svg%3E"); }
+.nav-item[data-view="audit"] { --icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M8 6h12M8 12h12M8 18h12'/%3E%3Ccircle cx='4' cy='6' r='.6'/%3E%3Ccircle cx='4' cy='12' r='.6'/%3E%3Ccircle cx='4' cy='18' r='.6'/%3E%3C/svg%3E"); }
+
+/* ---------- Main area ---------- */
+.main { background: radial-gradient(80% 30% at 100% 0%, rgba(212, 178, 106, .045), transparent 60%); }
+.topbar { margin-bottom: 30px; padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.search-btn, .icon-btn { border-color: var(--line); }
+
+/* Surfaces: soft panels instead of hard boxes */
+.stat, .panel, .editor, .promo-card, .list-row, .review-sec, .table-wrap {
+  border-color: var(--line) !important;
+  background: linear-gradient(180deg, #14110e, #0f0d0b) !important;
+}
+.stat { position: relative; padding: 20px 20px 18px; }
+.stat::before { content: ""; position: absolute; left: 20px; top: 0; width: 28px; height: 1px; background: var(--gold); opacity: .8; }
+.stat small:first-child { font-size: 9.5px; letter-spacing: .22em; text-transform: uppercase; color: var(--muted); }
+.stat strong { font-family: var(--serif); font-weight: 300; font-size: 36px; letter-spacing: -.01em; margin-top: 10px; }
+.stat.highlight { border-color: rgba(212, 178, 106, .4) !important; background: linear-gradient(180deg, #1b170f, #110e0a) !important; }
+.panel { padding: 22px; }
+
+/* Tables */
+td { border-bottom-color: var(--line) !important; }
+tbody tr { transition: background .25s; }
+tbody tr:hover td { background: rgba(212, 178, 106, .035); }
+td b { font-weight: 500; }
+
+/* Buttons & fields */
+.btn { border-radius: 0; border-color: var(--line); font-size: 12.5px; letter-spacing: .04em; transition: border-color .3s, background .3s, color .3s; }
+.btn:hover { border-color: rgba(212, 178, 106, .6); }
+.btn.primary { background: var(--gold); border-color: var(--gold); color: #14110c; font-weight: 500; }
+.btn.primary:hover { background: #e6cd8f; border-color: #e6cd8f; color: #14110c; }
+.btn.danger-solid { border-radius: 0; }
+.login-card input, .form-grid input, .form-grid select, .form-grid textarea, .toolbar input, .toolbar select, .pay-form input, .pay-form select, .status-row select,
+.bulk-bar select, .report-bar input[type=month], #restockForm select, #restockForm input {
+  background: #0e0c0a !important; border-color: var(--line) !important; border-radius: 0;
+  transition: border-color .3s;
+}
+input:focus, select:focus, textarea:focus { border-color: rgba(212, 178, 106, .7) !important; outline: none; }
+.tabs .tab { border-radius: 0; border-color: var(--line); }
+.tabs .tab.active { border-color: var(--gold); color: var(--gold); background: rgba(212, 178, 106, .06); }
+
+/* ---------- Bottles ---------- */
+.bottle {
+  position: relative; display: inline-grid; place-items: center; flex: none; overflow: hidden;
+  width: 30px; height: 36px; margin-right: 10px; vertical-align: middle;
+  border: 1px solid var(--line);
+  background: radial-gradient(70% 70% at 30% 25%, rgba(212, 178, 106, .16), transparent 65%), #0c0b09;
+}
+.bottle img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bottle.ph::after { content: "A&E"; font-family: var(--serif); font-size: 9px; letter-spacing: .06em; color: var(--gold); }
+.bottle.sm { width: 24px; height: 30px; margin-right: 8px; }
+.bottle.sm.ph::after { font-size: 7.5px; }
+.bottle.md { width: 38px; height: 46px; margin-right: 12px; }
+
+.item-lines { display: grid; gap: 6px; }
+.item-line { display: flex; align-items: center; }
+.item-line em { font-style: normal; color: var(--muted); }
+.top-row > span, #lowStock .mini > span { display: inline-flex; align-items: center; }
+#drawerBody .item-cell-inner { display: inline-flex; align-items: center; }
+.top-row { align-items: center; }
+.top-row > b { align-self: center; }
+#lowStock .mini { align-items: center; }
+.side-brand small { white-space: nowrap; }
+
+.thumb { border-color: var(--line) !important; background: radial-gradient(70% 70% at 30% 25%, rgba(212, 178, 106, .16), transparent 65%), #0c0b09 !important; }
+.thumb.ph, .thumb:empty { display: grid; place-items: center; }
+.thumb.ph::after, .thumb:empty::after { content: "A&E"; font-family: var(--serif); font-size: 12px; letter-spacing: .08em; color: var(--gold); }
+
+/* Dashboard bars in gold */
+.top-row .bar { background: rgba(212, 178, 106, .1); height: 3px; }
+.top-row .bar i { background: linear-gradient(90deg, var(--gold-deep), var(--gold)); }
+
+/* Order drawer + side editors */
+.drawer-panel { background: linear-gradient(180deg, #13110e, #0d0b09) !important; border-left-color: var(--line) !important; }
+.drawer-head h3, #drawerBody h3 { font-family: var(--serif); font-weight: 400; }
+#drawerBody h3 { font-size: 26px; }
+.drawer-sec { border-top-color: var(--line) !important; }
+
+/* Pop-ups */
+.toast-item { border-radius: 0; background: #16130f; }
+.modal-card, .palette-card, .notif-panel { border-color: rgba(212, 178, 106, .25) !important; background: #13110e !important; }
+
+/* Pills: refined small caps */
+.pill, .status-pill, .pay-pill { border-radius: 0; letter-spacing: .14em; font-size: 9.5px; }
+
+/* ---------- Login: maison entrance ---------- */
+.login-shell { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); min-height: 100vh; padding: 0; place-items: stretch; }
+.login-art { position: relative; overflow: hidden; background: #0a0908; }
+.login-art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; filter: saturate(.85); }
+.login-art::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10, 9, 8, .2), rgba(10, 9, 8, .85)), linear-gradient(0deg, rgba(10, 9, 8, .9), transparent 55%); }
+.login-art-text { position: absolute; left: clamp(28px, 5vw, 64px); bottom: clamp(28px, 7vh, 72px); z-index: 1; max-width: 420px; }
+.login-mark { font-family: var(--serif); font-size: 34px; letter-spacing: .4em; color: var(--gold); }
+.login-art-text p { margin: 10px 0 0; font-size: 10px; letter-spacing: .4em; text-transform: uppercase; color: var(--muted); }
+.login-art-text blockquote { margin: 28px 0 0; font-family: var(--serif); font-style: italic; font-weight: 300; font-size: clamp(26px, 2.6vw, 36px); line-height: 1.2; color: var(--text); }
+.login-art-text small { display: block; margin-top: 18px; font-size: 10px; letter-spacing: .26em; text-transform: uppercase; color: var(--muted); }
+.login-card { align-self: center; justify-self: center; width: min(400px, calc(100% - 48px)); border: 0; background: none; padding: 40px 0; }
+.login-card h1 { font-family: var(--serif); font-weight: 300; font-size: 44px; }
+.brand-mini { font-family: var(--serif); font-size: 15px; letter-spacing: .1em; border-color: rgba(212, 178, 106, .5); }
+.login-card label { font-size: 10px; letter-spacing: .22em; text-transform: uppercase; }
+.login-card input { background: transparent !important; border: 0 !important; border-bottom: 1px solid var(--line) !important; padding: 12px 2px; font-size: 14px; }
+.login-card .btn.primary { margin-top: 10px; padding: 14px; font-size: 11px; letter-spacing: .26em; text-transform: uppercase; }
+
+@media (max-width: 860px) {
+  .login-shell { grid-template-columns: 1fr; }
+  .login-art { min-height: 34vh; }
+  .login-art-text blockquote { display: none; }
+  .login-card { padding: 28px 0 40px; }
+  .login-card h1 { font-size: 36px; }
+}
+
+/* ---------- Phones ---------- */
+@media (max-width: 760px) {
+  .topbar { padding-bottom: 16px; margin-bottom: 20px; }
+  .topbar h2 { font-size: 34px; }
+  .stat strong { font-size: 28px; }
+  .mobile-nav { background: rgba(12, 11, 9, .96); border-top-color: var(--line); }
+  .m-nav.active { color: var(--gold); }
+  .more-panel { background: #13110e; }
+}
+#drawerBody table.items td { vertical-align: middle; }
+
+/* =========================================================
+   Maison details (v6)
+========================================================= */
+
+/* ---------- Bottle stock gauge ---------- */
+.gauge { display: inline-flex; flex-direction: column; align-items: center; width: 14px; flex: none; vertical-align: middle; margin-right: 8px; }
+.g-neck { width: 6px; height: 4px; border: 1px solid currentColor; border-bottom: 0; border-radius: 1px 1px 0 0; opacity: .8; }
+.g-body { position: relative; width: 14px; height: 20px; border: 1px solid currentColor; border-radius: 3px 3px 2px 2px; overflow: hidden; }
+.g-liquid { position: absolute; left: 0; right: 0; bottom: 0; height: var(--level, 0%); background: currentColor; opacity: .85; transition: height .6s var(--ease); }
+.gauge.ok { color: var(--gold); }
+.gauge.low { color: #f0b36a; }
+.gauge.out { color: #d98b8b; }
+.gauge.out .g-body { border-style: dashed; }
+.gauge.unlimited { color: rgba(212, 178, 106, .55); }
+.stock-cell .gauge { margin-right: 6px; }
+.gauge-cell { display: inline-flex; align-items: center; gap: 2px; }
+#lowStock .mini b.gauge-cell { gap: 4px; }
+
+/* ---------- Scent family dot ---------- */
+.fam { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11px; letter-spacing: .04em; white-space: nowrap; }
+.fam i { width: 8px; height: 8px; border-radius: 50%; background: var(--fam); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fam) 18%, transparent); flex: none; }
+.prod-cell small .fam { font-size: 11px; }
+.item-line .fam, #profitRows .fam, #invRows .fam { margin-right: 6px; }
+.item-line .fam:not(:has(+ *)) { gap: 0; }
+#topProducts .top-row > span .fam { margin-left: 10px; gap: 0; }
+
+/* ---------- Best-seller hero card ---------- */
+.hero-card {
+  position: relative; display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 26px; align-items: center;
+  margin: 0 0 16px; padding: 20px 24px 20px 20px; overflow: hidden;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(212, 178, 106, .12), transparent 55%),
+    linear-gradient(180deg, #16130f, #100e0c);
+}
+.hero-card::after { content: "A & E"; position: absolute; right: 24px; bottom: -18px; font-family: var(--serif); font-size: 110px; letter-spacing: .1em; color: rgba(212, 178, 106, .05); pointer-events: none; }
+.hc-photo { width: 150px; aspect-ratio: 4 / 5; border: 1px solid var(--line); background: #0b0a09; overflow: hidden; display: grid; place-items: center; }
+.hc-photo img { width: 100%; height: 100%; object-fit: cover; }
+.hc-photo.ph::after, .hc-photo:empty::after { content: "A&E"; font-family: var(--serif); font-size: 22px; letter-spacing: .1em; color: var(--gold); }
+.hc-text h3 { margin: 6px 0 8px; font-family: var(--serif); font-weight: 300; font-size: clamp(30px, 3vw, 42px); line-height: 1.05; color: var(--text); }
+.hc-meta { display: flex; gap: 14px; align-items: center; margin: 0 0 16px; color: var(--muted); font-size: 12px; letter-spacing: .04em; }
+.hc-stats { display: flex; gap: 34px; flex-wrap: wrap; }
+.hc-stats b { display: block; font-family: var(--serif); font-weight: 400; font-size: 30px; color: var(--text); line-height: 1; }
+.hc-stats small { display: block; margin-top: 6px; font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+.hc-btn { position: relative; z-index: 1; align-self: end; }
+
+/* ---------- Scent family breakdown ---------- */
+.family-panel { margin-top: 16px; }
+.fam-bar { display: flex; height: 10px; gap: 2px; overflow: hidden; background: rgba(212, 178, 106, .06); }
+.fam-bar span { background: var(--fam); min-width: 4px; transition: flex .6s var(--ease); }
+.fam-bar span.empty { background: transparent; }
+.fam-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px 24px; margin-top: 18px; }
+.fam-row { display: flex; align-items: baseline; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.fam-row .fam { flex: 1; font-size: 13px; color: var(--text); }
+.fam-row b { font-family: var(--serif); font-size: 20px; font-weight: 400; }
+.fam-row small { color: var(--muted); font-size: 11px; min-width: 32px; text-align: right; }
+
+/* ---------- Bottles in search and notifications ---------- */
+.pi-icon.pi-bottle { border: 0; width: 30px; height: 36px; }
+.pi-icon.pi-bottle .bottle { width: 30px; height: 36px; margin: 0; }
+.notif-icon.with-bottle { background: none !important; border: 0 !important; width: 34px; height: 40px; padding: 0; }
+.notif-icon.with-bottle .bottle { width: 34px; height: 40px; margin: 0; }
+
+@media (max-width: 760px) {
+  .hero-card { grid-template-columns: 92px minmax(0, 1fr); gap: 16px; padding: 16px; }
+  .hc-photo { width: 92px; }
+  .hc-btn { grid-column: 1 / -1; justify-self: stretch; text-align: center; }
+  .hc-stats { gap: 18px; }
+  .hc-stats b { font-size: 24px; }
+  .hero-card::after { font-size: 70px; bottom: -10px; }
+  .fam-legend { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 760px) {
+  .hc-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .hc-stats b { font-size: 21px; }
+  .hc-stats small { font-size: 8.5px; letter-spacing: .12em; }
+  .hc-text h3 { font-size: 28px; margin-bottom: 4px; }
+  .hc-meta { margin-bottom: 10px; }
+  .hero-card .eyebrow { font-size: 9px; letter-spacing: .22em; }
+}
