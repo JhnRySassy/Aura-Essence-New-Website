@@ -1,480 +1,1338 @@
 <!doctype html>
 <html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#0a0a0a">
-<meta name="robots" content="noindex">
-<title>AURA & ESSENCE — Admin</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0a0a'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='30' text-anchor='middle' fill='%23d8bd72'%3EA%26amp;E%3C/text%3E%3C/svg%3E">
-<link rel="manifest" href="admin.webmanifest">
-<link rel="apple-touch-icon" href="assets/images/admin-icon-192.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="A&amp;E Admin">
-<meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap">
-<link rel="stylesheet" href="assets/css/admin.css">
-<link rel="stylesheet" href="assets/css/admin-ui.css">
-<link rel="stylesheet" href="assets/css/admin-premium.css">
-</head>
-<body>
-
-<!-- ============ LOGIN ============ -->
-<div id="loginView" class="login-shell">
-  <div class="login-art" aria-hidden="true">
-    <img src="assets/images/hero.jpg" alt="">
-    <div class="login-art-text">
-      <span class="login-mark">A &amp; E</span>
-      <p>Maison de Parfum</p>
-      <blockquote>Every bottle, a quiet signature.</blockquote>
-      <small>Extrait de Parfum · 25% Concentration</small>
-    </div>
-  </div>
-  <div class="login-card">
-    <div class="brand-mini">A&amp;E</div>
-    <p class="eyebrow">AURA &amp; ESSENCE · MAISON</p>
-    <h1>Welcome back</h1>
-    <p class="muted">Sign in to tend to orders, bottles, vouchers and the boutique.</p>
-    <form id="credentialsForm">
-      <label>Admin Email<input id="loginIdentifier" type="email" required autocomplete="username"></label>
-      <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
-      <button class="btn primary" type="submit">Sign In</button>
-    </form>
-    <p id="loginStatus" class="status"></p>
-  </div>
-</div>
-
-<!-- ============ APP ============ -->
-<div id="appView" class="app hidden">
-  <aside class="sidebar">
-    <div class="side-brand"><span>A&nbsp;&amp;&nbsp;E</span><small>MAISON<br>DE PARFUM</small></div>
-    <nav class="side-nav">
-      <p class="nav-group">Sales</p>
-      <button data-view="dashboard" class="nav-item active">Dashboard</button>
-      <button data-view="orders" class="nav-item">Orders</button>
-      <button data-view="reports" class="nav-item">Profit &amp; Reports</button>
-      <p class="nav-group">Catalog</p>
-      <button data-view="products" class="nav-item">Products</button>
-      <button data-view="inventory" class="nav-item">Restocks</button>
-      <button data-view="promotions" class="nav-item">Promotions</button>
-      <button data-view="vouchers" class="nav-item">Vouchers</button>
-      <p class="nav-group">Site</p>
-      <button data-view="homepage" class="nav-item">Homepage &amp; Payment</button>
-      <button data-view="reviews" class="nav-item">Reviews</button>
-      <button data-view="audit" class="nav-item">Audit Log</button>
-    </nav>
-    <div class="side-bottom">
-      <button id="installBtn" type="button" hidden>📲 Install admin app</button>
-      <button id="backupBtn" type="button">⬇ Download backup</button>
-      <a href="index.html" target="_blank" rel="noopener">↗ Customer Site</a>
-      <button id="logoutBtn" type="button">Log out</button>
-    </div>
-  </aside>
-
-  <main class="main">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow" id="topGreeting">MAISON A&amp;E</p>
-        <h2 id="viewTitle">Dashboard</h2>
-      </div>
-      <div class="topbar-actions">
-        <button type="button" class="search-btn" id="paletteBtn" aria-label="Search (Ctrl+K)"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Search</span><kbd>Ctrl K</kbd></button>
-        <span id="globalStatus" class="conn" title="Connected to the database">●</span>
-        <div class="notif-wrap">
-          <button type="button" class="icon-btn" id="notifBtn" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M10 20a2 2 0 0 0 4 0"/></svg>
-            <span class="count-badge" id="notifCount" hidden>0</span>
-          </button>
-          <div class="notif-panel hidden" id="notifPanel" role="dialog" aria-label="Notifications">
-            <div class="notif-head">
-              <b>Notifications</b>
-              <button type="button" class="link-btn" id="notifReadAll">Mark all as read</button>
-            </div>
-            <div class="notif-list" id="notifList"></div>
-          </div>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="robots" content="noindex" />
+    <title>AURA & ESSENCE — Admin</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0a0a'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='30' text-anchor='middle' fill='%23d8bd72'%3EA%26amp;E%3C/text%3E%3C/svg%3E"
+    />
+    <link rel="manifest" href="admin.webmanifest" />
+    <link rel="apple-touch-icon" href="assets/images/admin-icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="A&amp;E Admin" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,400&family=Jost:wght@300;400;500&display=swap"
+    />
+    <link rel="stylesheet" href="assets/css/admin.css" />
+    <link rel="stylesheet" href="assets/css/admin-ui.css" />
+    <link rel="stylesheet" href="assets/css/admin-premium.css" />
+  </head>
+  <body>
+    <!-- ============ LOGIN ============ -->
+    <div id="loginView" class="login-shell">
+      <div class="login-art" aria-hidden="true">
+        <img src="assets/images/hero.jpg" alt="" />
+        <div class="login-art-text">
+          <span class="login-mark">A &amp; E</span>
+          <p>Maison de Parfum</p>
+          <blockquote>Every bottle, a quiet signature.</blockquote>
+          <small>Extrait de Parfum · 25% Concentration</small>
         </div>
       </div>
-    </header>
-
-    <!-- ---------- Dashboard ---------- -->
-    <section id="dashboardView" class="view">
-      <div class="toolbar date-range">
-        <select id="rangePreset" aria-label="Date range">
-          <option value="all">All time</option>
-          <option value="today">Today</option>
-          <option value="yesterday">Yesterday</option>
-          <option value="7d">Last 7 days</option>
-          <option value="30d">Last 30 days</option>
-          <option value="thisMonth">This month</option>
-          <option value="lastMonth">Last month</option>
-          <option value="thisYear">This year</option>
-          <option value="custom">Custom range</option>
-        </select>
-        <label class="range-field">From <input type="date" id="rangeFrom"></label>
-        <label class="range-field">To <input type="date" id="rangeTo"></label>
-        <span id="rangeLabel" class="muted filter-count"></span>
-      </div>
-      <div class="cards" id="statsCards"></div>
-      <div class="panel chart-panel">
-        <div class="panel-head"><h3>Revenue</h3><span id="chartLabel"></span></div>
-        <div id="revenueChart" class="chart"></div>
-        <div id="chartTip" class="chart-tip" hidden></div>
-      </div>
-      <div class="grid-2">
-        <div class="panel"><div class="panel-head"><h3>Top Products</h3><span>Units sold</span></div><div id="topProducts"></div></div>
-        <div class="panel"><div class="panel-head"><h3>Low Stock</h3><span id="lowStockLabel"></span></div><div id="lowStock"></div></div>
-      </div>
-    </section>
-
-    <!-- ---------- Orders ---------- -->
-    <section id="ordersView" class="view hidden">
-      <div class="toolbar">
-        <input id="orderSearch" placeholder="Search order, customer, contact, scent..." aria-label="Search orders">
-        <select id="orderPayFilter" aria-label="Payment"><option value="">All payments</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Refunded">Refunded</option></select>
-        <button class="btn" id="refreshOrders">Refresh</button>
-        <button class="btn" id="exportOrders">Export CSV</button>
-      </div>
-      <div class="tabs" id="orderTabs" role="tablist"></div>
-      <div class="bulk-bar" id="bulkBar" hidden>
-        <b id="bulkCount">0 selected</b>
-        <select id="bulkStatus" aria-label="Set status for selected orders"><option value="">Set status…</option><option>Confirmed</option><option>Preparing</option><option>Out for Delivery</option><option>Completed</option><option>Cancelled</option></select>
-        <button class="btn" type="button" id="bulkPaid">Mark as paid</button>
-        <button class="btn ghost" type="button" id="bulkClear">Clear</button>
-      </div>
-      <div class="table-wrap"><table class="orders-table responsive"><thead><tr><th class="th-check"><input type="checkbox" id="selectAllOrders" aria-label="Select all orders on this tab"></th><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead><tbody id="ordersRows"></tbody></table></div>
-    </section>
-
-    <!-- ---------- Products ---------- -->
-    <section id="productsView" class="view hidden">
-      <div class="toolbar">
-        <input id="productSearch" placeholder="Search products..." aria-label="Search products">
-        <button class="btn primary" id="newProduct">+ Add Product</button>
-        <button class="btn" id="refreshProducts">Refresh</button>
-      </div>
-      <div class="toolbar filters">
-        <select id="filterCat" aria-label="Category"><option value="">All categories</option><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select>
-        <select id="filterStock" aria-label="Stock"><option value="">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="unlimited">Unlimited</option></select>
-        <select id="filterBadge" aria-label="Badge"><option value="">All badges</option><option value="BEST SELLER">Best Seller</option><option value="FEATURED">Featured</option><option value="NEW">New</option><option value="LIMITED">Limited</option><option value="SIGNATURE">Signature</option><option value="__none">No badge</option></select>
-        <select id="filterActive" aria-label="Visibility"><option value="">Active &amp; hidden</option><option value="active">Active only</option><option value="hidden">Hidden only</option></select>
-        <select id="sortProducts" aria-label="Sort"><option value="order">Sort: display order</option><option value="name">Name A–Z</option><option value="stockAsc">Stock: low → high</option><option value="stockDesc">Stock: high → low</option><option value="priceAsc">Price: low → high</option><option value="priceDesc">Price: high → low</option></select>
-        <button class="btn ghost" id="clearFilters" type="button">Clear</button>
-        <span id="productCount" class="muted filter-count"></span>
-      </div>
-      <div class="table-wrap"><table class="products-table responsive"><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Badges</th><th>Visible</th><th></th></tr></thead><tbody id="productsRows"></tbody></table></div>
-    </section>
-
-    <!-- ---------- Promotions ---------- -->
-    <section id="promotionsView" class="view hidden">
-      <div class="toolbar"><button class="btn primary" id="newPromo">+ Add Promotion</button><span class="muted">Active promotions show in the website's promo bar and apply at checkout.</span></div>
-      <div id="promosList" class="list"></div>
-    </section>
-
-    <!-- ---------- Homepage / settings ---------- -->
-    <section id="homepageView" class="view hidden">
-      <form id="settingsForm" class="settings-grid">
-        <div class="panel">
-          <div class="panel-head"><h3>Homepage sections</h3><span>Rows customers see above the collection</span></div>
-          <label class="switch-row"><span><b>Best Sellers</b><small>Products with the Best Seller badge</small></span><input id="setBest" type="checkbox" class="switch" checked></label>
-          <label class="switch-row"><span><b>New Arrivals</b><small>Products with the New badge</small></span><input id="setNew" type="checkbox" class="switch" checked></label>
-          <label class="switch-row"><span><b>Featured</b><small>Products with the Featured badge</small></span><input id="setFeatured" type="checkbox" class="switch" checked></label>
-          <label class="switch-row"><span><b>Signature Collection</b><small>Products with the Signature badge</small></span><input id="setSignature" type="checkbox" class="switch" checked></label>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3>Inventory alerts</h3><span>Low stock warnings</span></div>
-          <div class="form-grid one">
-            <label>Low stock threshold<input id="setLowStock" type="number" min="0" value="5"><small class="muted">Products at or below this show in Low Stock on the Dashboard.</small></label>
-            <label>Email &amp; notify me when stock reaches<input id="setAlertAt" type="number" min="0" value="1"><small class="muted">You also get a notification here in the admin.</small></label>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3>Payment details</h3><span>Shown to customers after they order</span></div>
-          <div class="form-grid one">
-            <label>GCash number<input id="setGcashNumber" type="tel" inputmode="tel" placeholder="09351936851" maxlength="15"></label>
-            <label>GCash account name <small class="muted">(as it appears in GCash, e.g. JO*N R. S.)</small><input id="setGcashName" maxlength="80" placeholder="Name on the GCash account"></label>
-            <label>Facebook Messenger link <small class="muted">(where customers send the payment screenshot)</small><input id="setMessenger" type="url" inputmode="url" placeholder="https://m.me/yourpagename"><small class="muted">Your page's link: <b>https://m.me/</b> + your page username.</small></label>
-          </div>
-        </div>
-        <div class="form-actions full"><button class="btn primary" type="submit">Save Settings</button></div>
-      </form>
-    </section>
-
-
-    <!-- ---------- Restocks / inventory ---------- -->
-    <section id="inventoryView" class="view hidden">
-      <div class="cards inv-cards" id="invCards"></div>
-      <div class="grid-2 inv-grid">
-        <form class="panel" id="restockForm" autocomplete="off">
-          <div class="panel-head"><h3>Record a restock</h3><span>Adds to stock + updates average cost</span></div>
-          <div class="form-grid">
-            <label class="full">Product<select id="rProduct" required></select></label>
-            <label>Bottles received<input id="rQty" type="number" min="1" step="1" inputmode="numeric" required placeholder="e.g. 10"></label>
-            <label>Cost per bottle (₱)<input id="rCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 250"></label>
-            <label>Date received<input id="rDate" type="date"></label>
-            <label>Supplier <small class="muted">(optional)</small><input id="rSupplier" maxlength="120" list="supplierList"></label>
-            <label class="full">Note <small class="muted">(optional)</small><input id="rNote" maxlength="500" placeholder="e.g. batch 3, paid via GCash"></label>
-          </div>
-          <datalist id="supplierList"></datalist>
-          <p class="restock-preview" id="rPreview"></p>
-          <div class="form-actions"><button class="btn primary" type="submit">Save restock</button></div>
+      <div class="login-card">
+        <div class="brand-mini">A&amp;E</div>
+        <p class="eyebrow">AURA &amp; ESSENCE · MAISON</p>
+        <h1>Welcome back</h1>
+        <p class="muted">
+          Sign in to tend to orders, bottles, vouchers and the boutique.
+        </p>
+        <form id="credentialsForm">
+          <label
+            >Admin Email<input
+              id="loginIdentifier"
+              type="email"
+              required
+              autocomplete="username"
+          /></label>
+          <label
+            >Password<input
+              id="loginPassword"
+              type="password"
+              required
+              autocomplete="current-password"
+          /></label>
+          <button class="btn primary" type="submit">Sign In</button>
         </form>
-        <div class="panel">
-          <div class="panel-head"><h3>Stock &amp; cost</h3><span>Current average cost per bottle</span></div>
-          <div class="table-wrap slim"><table class="responsive inv-table"><thead><tr><th>Product</th><th>Stock</th><th>Avg. cost</th><th>Price</th><th>Margin</th></tr></thead><tbody id="invRows"></tbody></table></div>
-        </div>
+        <p id="loginStatus" class="status"></p>
       </div>
-      <div class="panel">
-        <div class="panel-head"><h3>Restock history</h3><span id="restockCount"></span></div>
-        <div class="toolbar"><input id="restockSearch" placeholder="Search product, supplier, note…" aria-label="Search restocks"><button class="btn" id="refreshRestocks">Refresh</button></div>
-        <div class="table-wrap"><table class="responsive"><thead><tr><th>Date</th><th>Product</th><th>Bottles</th><th>Cost / bottle</th><th>Total</th><th>Supplier / note</th><th></th></tr></thead><tbody id="restockRows"></tbody></table></div>
-      </div>
-    </section>
-
-    <!-- ---------- Vouchers ---------- -->
-    <section id="vouchersView" class="view hidden">
-      <div class="toolbar">
-        <button class="btn primary" id="newVoucher" type="button">+ New voucher</button>
-        <input id="voucherSearch" placeholder="Search code or note…" aria-label="Search vouchers">
-        <select id="voucherFilter" aria-label="Filter vouchers"><option value="">All vouchers</option><option value="live">Active now</option><option value="off">Turned off</option><option value="ended">Expired / used up</option></select>
-      </div>
-      <div class="cards voucher-stats" id="voucherStats"></div>
-      <div id="vouchersList" class="promo-list voucher-list"></div>
-    </section>
-
-    <!-- ---------- Profit & reports ---------- -->
-    <section id="reportsView" class="view hidden">
-      <div class="toolbar date-range report-bar">
-        <select id="reportRange" aria-label="Period"><option value="month">Month</option><option value="year">Whole year</option><option value="all">All time</option></select>
-        <input type="month" id="reportMonth" aria-label="Month">
-        <span id="reportLabel" class="muted filter-count"></span>
-        <button class="btn" id="reportExcel" type="button">⬇ Excel</button>
-        <button class="btn primary" id="reportPdf" type="button">⬇ PDF report</button>
-      </div>
-      <div class="cards profit-cards" id="profitCards"></div>
-      <p class="pay-note warn" id="profitWarn" hidden></p>
-      <div class="panel">
-        <div class="panel-head"><h3>Profit per product</h3><span>Sales after discounts − cost of bottles sold</span></div>
-        <div class="table-wrap"><table class="responsive"><thead><tr><th>Product</th><th>Bottles</th><th>Sales</th><th>Cost</th><th>Profit</th><th>Margin</th></tr></thead><tbody id="profitRows"></tbody></table></div>
-      </div>
-      <div class="grid-2">
-        <div class="panel">
-          <div class="panel-head"><h3>Discounts given</h3><span>Promos &amp; vouchers</span></div>
-          <div id="discountList" class="mini-list"></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><h3>Monthly summary</h3><span id="monthlyHint">Last 12 months</span></div>
-          <div class="table-wrap slim"><table class="responsive"><thead><tr><th>Month</th><th>Orders</th><th>Sales</th><th>Profit</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ---------- Reviews ---------- -->
-    <section id="reviewsView" class="view hidden">
-      <div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div>
-      <div class="tabs" id="reviewTabs" role="tablist"></div>
-      <div class="table-wrap"><table class="reviews-table responsive"><thead><tr><th>Photo</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead><tbody id="reviewsRows"></tbody></table></div>
-    </section>
-
-    <!-- ---------- Audit ---------- -->
-    <section id="auditView" class="view hidden">
-      <div class="toolbar">
-        <input id="auditSearch" placeholder="Search the log (e.g. sauvage, AE-2026…)" aria-label="Search audit log">
-        <select id="auditFilter" aria-label="Type"><option value="">Everything</option><option value="order">Orders</option><option value="payment">Payments</option><option value="product">Products &amp; stock</option><option value="promotion">Promotions</option><option value="voucher">Vouchers</option><option value="stock">Restocks</option><option value="review">Reviews</option><option value="homepage settings">Settings</option></select>
-        <button class="btn" id="refreshAudit">Refresh</button>
-      </div>
-      <div id="auditList" class="audit-list"></div>
-      <table hidden><tbody id="auditRows"></tbody></table>
-    </section>
-  </main>
-
-  <!-- Order details (filled by admin.js) -->
-  <div id="orderDrawer" class="drawer hidden" aria-hidden="true">
-    <div class="drawer-backdrop" data-close-drawer></div>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"><div id="drawerBody"></div></aside>
-  </div>
-
-  <!-- Product editor (side panel) -->
-  <div id="productEditor" class="drawer side-editor hidden" aria-hidden="true">
-    <div class="drawer-backdrop" data-close-editor></div>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
-      <div class="drawer-head"><div><p class="eyebrow">PRODUCT</p><h3 id="editorTitle">Add Product</h3></div><button class="btn ghost" type="button" id="closeEditor">Close</button></div>
-      <form id="productForm" class="editor-form">
-        <input type="hidden" id="pOriginalId">
-
-        <fieldset class="form-sec">
-          <legend>Basics</legend>
-          <div class="form-grid">
-            <label>Name<input id="pName" required></label>
-            <label>ID <small class="muted">(used in links; change with care)</small><input id="pId" required></label>
-            <label>Category<select id="pCat"><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select></label>
-            <label>Price (₱)<input id="pPrice" type="number" min="0" value="430" inputmode="decimal"></label>
-            <label>Cost / puhunan (₱) <small class="muted">(auto-updated by restocks)</small><input id="pCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 250"></label>
-            <label>Stock <small class="muted">(blank = unlimited)</small><input id="pStock" type="number" min="0" value="10" inputmode="numeric"></label>
-            <label>Display order<input id="pSort" type="number" value="0" inputmode="numeric"></label>
-            <label class="switch-row full"><span><b>Visible on website</b><small>Hidden products can't be ordered</small></span><input id="pActive" type="checkbox" class="switch" checked></label>
-          </div>
-        </fieldset>
-
-        <fieldset class="form-sec">
-          <legend>Photo</legend>
-          <div class="image-field"><div class="image-row"><div class="image-preview"><img id="pImgPreview" alt="" hidden><span id="pImgEmpty">No photo</span></div><div class="image-actions"><label class="btn upload-btn">Upload photo<input type="file" id="pImgFile" accept="image/jpeg,image/png,image/webp" hidden></label><input id="pImg" placeholder="…or paste an image link" aria-label="Image link"><small id="pImgStatus" class="muted">JPG, PNG or WebP. Big photos are resized automatically.</small></div></div></div>
-        </fieldset>
-
-        <fieldset class="form-sec">
-          <legend>Description</legend>
-          <div class="form-grid one">
-            <label>Short description <small class="muted">(shown on the product card)</small><input id="pDesc"></label>
-            <label>Long description<textarea id="pDescLong" rows="4"></textarea></label>
-            <label>How to apply<textarea id="pApplication" rows="3"></textarea></label>
-          </div>
-        </fieldset>
-
-        <fieldset class="form-sec">
-          <legend>Scent profile</legend>
-          <div class="form-grid">
-            <label class="full">Profiles <small class="muted">(comma separated)</small><input id="pProfiles" placeholder="Fresh, Woody"></label>
-            <label>Strength<select id="pStrength"><option value="subtle">Subtle</option><option value="moderate" selected>Moderate</option><option value="bold">Bold</option></select></label>
-            <label>Best time<input id="pTime" placeholder="Day, Night"></label>
-            <label>Longevity (1–10)<input id="pLongevity" type="number" min="1" max="10" value="7"></label>
-            <label>Projection (1–10)<input id="pProjection" type="number" min="1" max="10" value="7"></label>
-            <label class="full">Occasion<input id="pOccasion" placeholder="Daily, Office, Date Night"></label>
-          </div>
-        </fieldset>
-
-        <fieldset class="form-sec">
-          <legend>Notes</legend>
-          <div class="form-grid one">
-            <label>Top / first notes<input id="pTop"></label>
-            <label>Heart notes<input id="pHeart"></label>
-            <label>Base notes<input id="pBase"></label>
-          </div>
-        </fieldset>
-
-        <fieldset class="form-sec">
-          <legend>Badges</legend>
-          <div class="checks chips"><label><input class="badge" value="BEST SELLER" type="checkbox"> Best Seller</label><label><input class="badge" value="FEATURED" type="checkbox"> Featured</label><label><input class="badge" value="NEW" type="checkbox"> New</label><label><input class="badge" value="LIMITED" type="checkbox"> Limited</label><label><input class="badge" value="SIGNATURE" type="checkbox"> Signature</label></div>
-        </fieldset>
-
-        <div class="form-actions sticky-actions"><button class="btn danger" type="button" id="deleteProduct">Delete</button><button class="btn primary" type="submit">Save Product</button></div>
-      </form>
-    </aside>
-  </div>
-
-  <!-- Promotion editor (side panel) -->
-  <div id="promoEditor" class="drawer side-editor hidden" aria-hidden="true">
-    <div class="drawer-backdrop" data-close-editor></div>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="promoTitle">
-      <div class="drawer-head"><div><p class="eyebrow">PROMOTION</p><h3 id="promoTitle">Promotion</h3></div><button class="btn ghost" type="button" id="closePromo">Close</button></div>
-      <form id="promoForm" class="editor-form">
-        <input type="hidden" id="promoId">
-        <fieldset class="form-sec">
-          <legend>Details</legend>
-          <div class="form-grid">
-            <label class="full">Name<input id="promoName" required placeholder="e.g. 2-Bottle Promo"></label>
-            <label>Type<select id="promoType"><option value="fixed_total">Fixed total (e.g. 2 for ₱840)</option><option value="percent">Percent off</option></select></label>
-            <label>Minimum bottles<input id="promoQty" type="number" min="1" value="2"></label>
-            <label data-promo-field="fixed_total">Fixed total (₱)<input id="promoFixed" type="number" min="0" value="840"></label>
-            <label data-promo-field="percent">Percent off (%)<input id="promoPercent" type="number" min="0" max="100" value="0"></label>
-            <label class="switch-row full"><span><b>Active</b><small>Shows in the promo bar and applies at checkout</small></span><input id="promoActive" type="checkbox" class="switch" checked></label>
-          </div>
-          <p class="promo-preview" id="promoPreview"></p>
-        </fieldset>
-        <div class="form-actions sticky-actions"><button class="btn primary" type="submit">Save Promotion</button></div>
-      </form>
-    </aside>
-  </div>
-
-
-  <!-- Voucher editor (side panel) -->
-  <div id="voucherEditor" class="drawer side-editor hidden" aria-hidden="true">
-    <div class="drawer-backdrop" data-close-editor></div>
-    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="voucherTitle">
-      <div class="drawer-head"><div><p class="eyebrow">VOUCHER</p><h3 id="voucherTitle">New voucher</h3></div><button class="btn ghost" type="button" id="closeVoucher">Close</button></div>
-      <form id="voucherForm" class="editor-form" autocomplete="off">
-        <input type="hidden" id="vOriginal">
-        <fieldset class="form-sec">
-          <legend>Code &amp; discount</legend>
-          <div class="form-grid">
-            <label class="full">Code <small class="muted">(what customers type — letters/numbers, no spaces)</small><div class="code-row"><input id="vCode" required maxlength="30" placeholder="e.g. SUKI50" autocapitalize="characters" spellcheck="false"><button class="btn ghost" type="button" id="vRandom">Generate</button></div></label>
-            <label>Type<select id="vType"><option value="percent">% off</option><option value="amount">₱ off (fixed amount)</option></select></label>
-            <label><span id="vValueLabel">Percent off (%)</span><input id="vValue" type="number" min="0" step="0.01" required inputmode="decimal" placeholder="e.g. 10"></label>
-            <label data-vfield="percent">Maximum discount (₱) <small class="muted">(blank = no cap)</small><input id="vMax" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 100"></label>
-            <label>Minimum order (₱) <small class="muted">(before discounts)</small><input id="vMin" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label>
-          </div>
-        </fieldset>
-        <fieldset class="form-sec">
-          <legend>When &amp; how many</legend>
-          <div class="form-grid">
-            <label>Starts <small class="muted">(blank = now)</small><input id="vStart" type="date"></label>
-            <label>Ends <small class="muted">(blank = no expiry)</small><input id="vEnd" type="date"></label>
-            <label>Total uses <small class="muted">(blank = unlimited)</small><input id="vLimit" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 50"></label>
-            <label>Uses per customer<select id="vPer"><option value="">Unlimited</option><option value="1">Once per customer</option><option value="2">2 times</option><option value="3">3 times</option></select></label>
-            <label class="full">Note <small class="muted">(only you see this)</small><input id="vNote" maxlength="300" placeholder="e.g. Payday promo on FB"></label>
-            <label class="switch-row full"><span><b>Active</b><small>Customers can use it at checkout</small></span><input id="vActive" type="checkbox" class="switch" checked></label>
-          </div>
-          <p class="promo-preview" id="vPreview"></p>
-        </fieldset>
-        <div class="form-actions sticky-actions"><button class="btn danger" type="button" id="deleteVoucher">Delete</button><button class="btn primary" type="submit">Save voucher</button></div>
-      </form>
-    </aside>
-  </div>
-
-  <!-- Mobile bottom navigation -->
-  <nav class="mobile-nav" aria-label="Admin sections">
-    <button type="button" data-view="dashboard" class="m-nav active"><span aria-hidden="true">▦</span>Dashboard</button>
-    <button type="button" data-view="orders" class="m-nav"><span aria-hidden="true">☰</span>Orders<b class="count-badge" id="mOrdersBadge" hidden>0</b></button>
-    <button type="button" data-view="products" class="m-nav"><span aria-hidden="true">◇</span>Products</button>
-    <button type="button" class="m-nav" id="moreBtn" aria-expanded="false" aria-controls="moreSheet"><span aria-hidden="true">⋯</span>More<b class="count-badge" id="mMoreBadge" hidden>0</b></button>
-  </nav>
-  <div class="more-sheet hidden" id="moreSheet">
-    <div class="drawer-backdrop" data-close-more></div>
-    <div class="more-panel">
-      <p class="nav-group">Sales</p>
-      <button type="button" data-view="reports">Profit &amp; Reports</button>
-      <p class="nav-group">Catalog</p>
-      <button type="button" data-view="inventory">Restocks</button>
-      <button type="button" data-view="promotions">Promotions</button>
-      <button type="button" data-view="vouchers">Vouchers</button>
-      <p class="nav-group">Site</p>
-      <button type="button" data-view="homepage">Homepage &amp; Payment</button>
-      <button type="button" data-view="reviews">Reviews <b class="count-badge" id="mReviewsBadge" hidden>0</b></button>
-      <button type="button" data-view="audit">Audit Log</button>
-      <hr>
-      <button type="button" data-more-action="install" id="mInstallBtn" hidden>📲 Install admin app</button>
-      <button type="button" data-more-action="backup">⬇ Download backup</button>
-      <a href="index.html" target="_blank" rel="noopener">↗ Customer Site</a>
-      <button type="button" data-more-action="logout">Log out</button>
     </div>
-  </div>
-</div>
 
-<!-- Search / command palette (Ctrl+K) -->
-<div class="palette hidden" id="palette" role="dialog" aria-modal="true" aria-label="Search">
-  <div class="modal-backdrop" data-close-palette></div>
-  <div class="palette-card">
-    <div class="palette-input"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="paletteInput" placeholder="Search orders, customers, products, vouchers, pages…" autocomplete="off" spellcheck="false"><kbd>Esc</kbd></div>
-    <div class="palette-list" id="paletteList" role="listbox"></div>
-    <div class="palette-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Ctrl</kbd><kbd>K</kbd> anytime</span></div>
-  </div>
-</div>
+    <!-- ============ APP ============ -->
+    <div id="appView" class="app hidden">
+      <aside class="sidebar">
+        <div class="side-brand">
+          <span>A&nbsp;&amp;&nbsp;E</span><small>EXTRAIT<br />DE PARFUM</small>
+        </div>
+        <nav class="side-nav">
+          <p class="nav-group">Sales</p>
+          <button data-view="dashboard" class="nav-item active">
+            Dashboard
+          </button>
+          <button data-view="orders" class="nav-item">Orders</button>
+          <button data-view="reports" class="nav-item">
+            Profit &amp; Reports
+          </button>
+          <p class="nav-group">Catalog</p>
+          <button data-view="products" class="nav-item">Products</button>
+          <button data-view="inventory" class="nav-item">Restocks</button>
+          <button data-view="promotions" class="nav-item">Promotions</button>
+          <button data-view="vouchers" class="nav-item">Vouchers</button>
+          <p class="nav-group">Site</p>
+          <button data-view="homepage" class="nav-item">
+            Homepage &amp; Payment
+          </button>
+          <button data-view="reviews" class="nav-item">Reviews</button>
+          <button data-view="audit" class="nav-item">Audit Log</button>
+        </nav>
+        <div class="side-bottom">
+          <button id="installBtn" type="button" hidden>
+            📲 Install admin app
+          </button>
+          <button id="backupBtn" type="button">⬇ Download backup</button>
+          <a href="index.html" target="_blank" rel="noopener"
+            >↗ Customer Site</a
+          >
+          <button id="logoutBtn" type="button">Log out</button>
+        </div>
+      </aside>
 
-<!-- Pop-up messages + confirmation dialog -->
-<div class="toast-stack" id="toastStack" aria-live="polite"></div>
-<div class="modal hidden" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
-  <div class="modal-backdrop"></div>
-  <div class="modal-card">
-    <h3 id="dialogTitle"></h3>
-    <p id="dialogMessage"></p>
-    <input id="dialogInput" type="number" min="0" hidden>
-    <div class="modal-actions">
-      <button type="button" class="btn ghost" id="dialogCancel">Cancel</button>
-      <button type="button" class="btn primary" id="dialogOk">OK</button>
+      <main class="main">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="topGreeting">MAISON A&amp;E</p>
+            <h2 id="viewTitle">Dashboard</h2>
+          </div>
+          <div class="topbar-actions">
+            <button
+              type="button"
+              class="search-btn"
+              id="paletteBtn"
+              aria-label="Search (Ctrl+K)"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="17"
+                height="17"
+                aria-hidden="true"
+              >
+                <circle
+                  cx="11"
+                  cy="11"
+                  r="6.5"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                />
+                <path
+                  d="m16 16 4 4"
+                  stroke="currentColor"
+                  stroke-width="1.6"
+                  stroke-linecap="round"
+                /></svg
+              ><span>Search</span><kbd>Ctrl K</kbd>
+            </button>
+            <span
+              id="globalStatus"
+              class="conn"
+              title="Connected to the database"
+              >●</span
+            >
+            <div class="notif-wrap">
+              <button
+                type="button"
+                class="icon-btn"
+                id="notifBtn"
+                aria-label="Notifications"
+                aria-expanded="false"
+                aria-controls="notifPanel"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  width="20"
+                  height="20"
+                  aria-hidden="true"
+                >
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linejoin="round"
+                    d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z"
+                  />
+                  <path
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    d="M10 20a2 2 0 0 0 4 0"
+                  />
+                </svg>
+                <span class="count-badge" id="notifCount" hidden>0</span>
+              </button>
+              <div
+                class="notif-panel hidden"
+                id="notifPanel"
+                role="dialog"
+                aria-label="Notifications"
+              >
+                <div class="notif-head">
+                  <b>Notifications</b>
+                  <button type="button" class="link-btn" id="notifReadAll">
+                    Mark all as read
+                  </button>
+                </div>
+                <div class="notif-list" id="notifList"></div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- ---------- Dashboard ---------- -->
+        <section id="dashboardView" class="view">
+          <div class="toolbar date-range">
+            <select id="rangePreset" aria-label="Date range">
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="thisMonth">This month</option>
+              <option value="lastMonth">Last month</option>
+              <option value="thisYear">This year</option>
+              <option value="custom">Custom range</option>
+            </select>
+            <label class="range-field"
+              >From <input type="date" id="rangeFrom"
+            /></label>
+            <label class="range-field"
+              >To <input type="date" id="rangeTo"
+            /></label>
+            <span id="rangeLabel" class="muted filter-count"></span>
+          </div>
+          <div class="cards" id="statsCards"></div>
+          <div class="panel chart-panel">
+            <div class="panel-head">
+              <h3>Revenue</h3>
+              <span id="chartLabel"></span>
+            </div>
+            <div id="revenueChart" class="chart"></div>
+            <div id="chartTip" class="chart-tip" hidden></div>
+          </div>
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Top Products</h3>
+                <span>Units sold</span>
+              </div>
+              <div id="topProducts"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Low Stock</h3>
+                <span id="lowStockLabel"></span>
+              </div>
+              <div id="lowStock"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------- Orders ---------- -->
+        <section id="ordersView" class="view hidden">
+          <div class="toolbar">
+            <input
+              id="orderSearch"
+              placeholder="Search order, customer, contact, scent..."
+              aria-label="Search orders"
+            />
+            <select id="orderPayFilter" aria-label="Payment">
+              <option value="">All payments</option>
+              <option value="Unpaid">Unpaid</option>
+              <option value="Partial">Partial</option>
+              <option value="Paid">Paid</option>
+              <option value="Refunded">Refunded</option>
+            </select>
+            <button class="btn" id="refreshOrders">Refresh</button>
+            <button class="btn" id="exportOrders">Export CSV</button>
+          </div>
+          <div class="tabs" id="orderTabs" role="tablist"></div>
+          <div class="bulk-bar" id="bulkBar" hidden>
+            <b id="bulkCount">0 selected</b>
+            <select id="bulkStatus" aria-label="Set status for selected orders">
+              <option value="">Set status…</option>
+              <option>Confirmed</option>
+              <option>Preparing</option>
+              <option>Out for Delivery</option>
+              <option>Completed</option>
+              <option>Cancelled</option>
+            </select>
+            <button class="btn" type="button" id="bulkPaid">
+              Mark as paid
+            </button>
+            <button class="btn ghost" type="button" id="bulkClear">
+              Clear
+            </button>
+          </div>
+          <div class="table-wrap">
+            <table class="orders-table responsive">
+              <thead>
+                <tr>
+                  <th class="th-check">
+                    <input
+                      type="checkbox"
+                      id="selectAllOrders"
+                      aria-label="Select all orders on this tab"
+                    />
+                  </th>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="ordersRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ---------- Products ---------- -->
+        <section id="productsView" class="view hidden">
+          <div class="toolbar">
+            <input
+              id="productSearch"
+              placeholder="Search products..."
+              aria-label="Search products"
+            />
+            <button class="btn primary" id="newProduct">+ Add Product</button>
+            <button class="btn" id="refreshProducts">Refresh</button>
+          </div>
+          <div class="toolbar filters">
+            <select id="filterCat" aria-label="Category">
+              <option value="">All categories</option>
+              <option value="men">For Him</option>
+              <option value="women">For Her</option>
+              <option value="unisex">Unisex</option>
+            </select>
+            <select id="filterStock" aria-label="Stock">
+              <option value="">All stock</option>
+              <option value="in">In stock</option>
+              <option value="low">Low stock</option>
+              <option value="out">Out of stock</option>
+              <option value="unlimited">Unlimited</option>
+            </select>
+            <select id="filterBadge" aria-label="Badge">
+              <option value="">All badges</option>
+              <option value="BEST SELLER">Best Seller</option>
+              <option value="FEATURED">Featured</option>
+              <option value="NEW">New</option>
+              <option value="LIMITED">Limited</option>
+              <option value="SIGNATURE">Signature</option>
+              <option value="__none">No badge</option>
+            </select>
+            <select id="filterActive" aria-label="Visibility">
+              <option value="">Active &amp; hidden</option>
+              <option value="active">Active only</option>
+              <option value="hidden">Hidden only</option>
+            </select>
+            <select id="sortProducts" aria-label="Sort">
+              <option value="order">Sort: display order</option>
+              <option value="name">Name A–Z</option>
+              <option value="stockAsc">Stock: low → high</option>
+              <option value="stockDesc">Stock: high → low</option>
+              <option value="priceAsc">Price: low → high</option>
+              <option value="priceDesc">Price: high → low</option>
+            </select>
+            <button class="btn ghost" id="clearFilters" type="button">
+              Clear
+            </button>
+            <span id="productCount" class="muted filter-count"></span>
+          </div>
+          <div class="table-wrap">
+            <table class="products-table responsive">
+              <thead>
+                <tr>
+                  <th>Product</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Badges</th>
+                  <th>Visible</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="productsRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ---------- Promotions ---------- -->
+        <section id="promotionsView" class="view hidden">
+          <div class="toolbar">
+            <button class="btn primary" id="newPromo">+ Add Promotion</button
+            ><span class="muted"
+              >Active promotions show in the website's promo bar and apply at
+              checkout.</span
+            >
+          </div>
+          <div id="promosList" class="list"></div>
+        </section>
+
+        <!-- ---------- Homepage / settings ---------- -->
+        <section id="homepageView" class="view hidden">
+          <form id="settingsForm" class="settings-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Homepage sections</h3>
+                <span>Rows customers see above the collection</span>
+              </div>
+              <label class="switch-row"
+                ><span
+                  ><b>Best Sellers</b
+                  ><small>Products with the Best Seller badge</small></span
+                ><input id="setBest" type="checkbox" class="switch" checked
+              /></label>
+              <label class="switch-row"
+                ><span
+                  ><b>New Arrivals</b
+                  ><small>Products with the New badge</small></span
+                ><input id="setNew" type="checkbox" class="switch" checked
+              /></label>
+              <label class="switch-row"
+                ><span
+                  ><b>Featured</b
+                  ><small>Products with the Featured badge</small></span
+                ><input id="setFeatured" type="checkbox" class="switch" checked
+              /></label>
+              <label class="switch-row"
+                ><span
+                  ><b>Signature Collection</b
+                  ><small>Products with the Signature badge</small></span
+                ><input
+                  id="setSignature"
+                  type="checkbox"
+                  class="switch"
+                  checked
+              /></label>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Inventory alerts</h3>
+                <span>Low stock warnings</span>
+              </div>
+              <div class="form-grid one">
+                <label
+                  >Low stock threshold<input
+                    id="setLowStock"
+                    type="number"
+                    min="0"
+                    value="5"
+                  /><small class="muted"
+                    >Products at or below this show in Low Stock on the
+                    Dashboard.</small
+                  ></label
+                >
+                <label
+                  >Email &amp; notify me when stock reaches<input
+                    id="setAlertAt"
+                    type="number"
+                    min="0"
+                    value="1"
+                  /><small class="muted"
+                    >You also get a notification here in the admin.</small
+                  ></label
+                >
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Payment details</h3>
+                <span>Shown to customers after they order</span>
+              </div>
+              <div class="form-grid one">
+                <label
+                  >GCash number<input
+                    id="setGcashNumber"
+                    type="tel"
+                    inputmode="tel"
+                    placeholder="09351936851"
+                    maxlength="15"
+                /></label>
+                <label
+                  >GCash account name
+                  <small class="muted"
+                    >(as it appears in GCash, e.g. JO*N R. S.)</small
+                  ><input
+                    id="setGcashName"
+                    maxlength="80"
+                    placeholder="Name on the GCash account"
+                /></label>
+                <label
+                  >Facebook Messenger link
+                  <small class="muted"
+                    >(where customers send the payment screenshot)</small
+                  ><input
+                    id="setMessenger"
+                    type="url"
+                    inputmode="url"
+                    placeholder="https://m.me/yourpagename"
+                  /><small class="muted"
+                    >Your page's link: <b>https://m.me/</b> + your page
+                    username.</small
+                  ></label
+                >
+              </div>
+            </div>
+            <div class="form-actions full">
+              <button class="btn primary" type="submit">Save Settings</button>
+            </div>
+          </form>
+        </section>
+
+        <!-- ---------- Restocks / inventory ---------- -->
+        <section id="inventoryView" class="view hidden">
+          <div class="cards inv-cards" id="invCards"></div>
+          <div class="grid-2 inv-grid">
+            <form class="panel" id="restockForm" autocomplete="off">
+              <div class="panel-head">
+                <h3>Record a restock</h3>
+                <span>Adds to stock + updates average cost</span>
+              </div>
+              <div class="form-grid">
+                <label class="full"
+                  >Product<select id="rProduct" required></select
+                ></label>
+                <label
+                  >Bottles received<input
+                    id="rQty"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    required
+                    placeholder="e.g. 10"
+                /></label>
+                <label
+                  >Cost per bottle (₱)<input
+                    id="rCost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="e.g. 250"
+                /></label>
+                <label>Date received<input id="rDate" type="date" /></label>
+                <label
+                  >Supplier <small class="muted">(optional)</small
+                  ><input id="rSupplier" maxlength="120" list="supplierList"
+                /></label>
+                <label class="full"
+                  >Note <small class="muted">(optional)</small
+                  ><input
+                    id="rNote"
+                    maxlength="500"
+                    placeholder="e.g. batch 3, paid via GCash"
+                /></label>
+              </div>
+              <datalist id="supplierList"></datalist>
+              <p class="restock-preview" id="rPreview"></p>
+              <div class="form-actions">
+                <button class="btn primary" type="submit">Save restock</button>
+              </div>
+            </form>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Stock &amp; cost</h3>
+                <span>Current average cost per bottle</span>
+              </div>
+              <div class="table-wrap slim">
+                <table class="responsive inv-table">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Stock</th>
+                      <th>Avg. cost</th>
+                      <th>Price</th>
+                      <th>Margin</th>
+                    </tr>
+                  </thead>
+                  <tbody id="invRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Restock history</h3>
+              <span id="restockCount"></span>
+            </div>
+            <div class="toolbar">
+              <input
+                id="restockSearch"
+                placeholder="Search product, supplier, note…"
+                aria-label="Search restocks"
+              /><button class="btn" id="refreshRestocks">Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table class="responsive">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Bottles</th>
+                    <th>Cost / bottle</th>
+                    <th>Total</th>
+                    <th>Supplier / note</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="restockRows"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------- Vouchers ---------- -->
+        <section id="vouchersView" class="view hidden">
+          <div class="toolbar">
+            <button class="btn primary" id="newVoucher" type="button">
+              + New voucher
+            </button>
+            <input
+              id="voucherSearch"
+              placeholder="Search code or note…"
+              aria-label="Search vouchers"
+            />
+            <select id="voucherFilter" aria-label="Filter vouchers">
+              <option value="">All vouchers</option>
+              <option value="live">Active now</option>
+              <option value="off">Turned off</option>
+              <option value="ended">Expired / used up</option>
+            </select>
+          </div>
+          <div class="cards voucher-stats" id="voucherStats"></div>
+          <div id="vouchersList" class="promo-list voucher-list"></div>
+        </section>
+
+        <!-- ---------- Profit & reports ---------- -->
+        <section id="reportsView" class="view hidden">
+          <div class="toolbar date-range report-bar">
+            <select id="reportRange" aria-label="Period">
+              <option value="month">Month</option>
+              <option value="year">Whole year</option>
+              <option value="all">All time</option>
+            </select>
+            <input type="month" id="reportMonth" aria-label="Month" />
+            <span id="reportLabel" class="muted filter-count"></span>
+            <button class="btn" id="reportExcel" type="button">⬇ Excel</button>
+            <button class="btn primary" id="reportPdf" type="button">
+              ⬇ PDF report
+            </button>
+          </div>
+          <div class="cards profit-cards" id="profitCards"></div>
+          <p class="pay-note warn" id="profitWarn" hidden></p>
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Profit per product</h3>
+              <span>Sales after discounts − cost of bottles sold</span>
+            </div>
+            <div class="table-wrap">
+              <table class="responsive">
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Bottles</th>
+                    <th>Sales</th>
+                    <th>Cost</th>
+                    <th>Profit</th>
+                    <th>Margin</th>
+                  </tr>
+                </thead>
+                <tbody id="profitRows"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Discounts given</h3>
+                <span>Promos &amp; vouchers</span>
+              </div>
+              <div id="discountList" class="mini-list"></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head">
+                <h3>Monthly summary</h3>
+                <span id="monthlyHint">Last 12 months</span>
+              </div>
+              <div class="table-wrap slim">
+                <table class="responsive">
+                  <thead>
+                    <tr>
+                      <th>Month</th>
+                      <th>Orders</th>
+                      <th>Sales</th>
+                      <th>Profit</th>
+                    </tr>
+                  </thead>
+                  <tbody id="monthlyRows"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ---------- Reviews ---------- -->
+        <section id="reviewsView" class="view hidden">
+          <div class="toolbar">
+            <button class="btn" id="refreshReviews">Refresh</button
+            ><span class="muted"
+              >New reviews stay hidden until you approve them.</span
+            >
+          </div>
+          <div class="tabs" id="reviewTabs" role="tablist"></div>
+          <div class="table-wrap">
+            <table class="reviews-table responsive">
+              <thead>
+                <tr>
+                  <th>Photo</th>
+                  <th>Customer</th>
+                  <th>Rating</th>
+                  <th>Review</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="reviewsRows"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- ---------- Audit ---------- -->
+        <section id="auditView" class="view hidden">
+          <div class="toolbar">
+            <input
+              id="auditSearch"
+              placeholder="Search the log (e.g. sauvage, AE-2026…)"
+              aria-label="Search audit log"
+            />
+            <select id="auditFilter" aria-label="Type">
+              <option value="">Everything</option>
+              <option value="order">Orders</option>
+              <option value="payment">Payments</option>
+              <option value="product">Products &amp; stock</option>
+              <option value="promotion">Promotions</option>
+              <option value="voucher">Vouchers</option>
+              <option value="stock">Restocks</option>
+              <option value="review">Reviews</option>
+              <option value="homepage settings">Settings</option>
+            </select>
+            <button class="btn" id="refreshAudit">Refresh</button>
+          </div>
+          <div id="auditList" class="audit-list"></div>
+          <table hidden>
+            <tbody id="auditRows"></tbody>
+          </table>
+        </section>
+      </main>
+
+      <!-- Order details (filled by admin.js) -->
+      <div id="orderDrawer" class="drawer hidden" aria-hidden="true">
+        <div class="drawer-backdrop" data-close-drawer></div>
+        <aside
+          class="drawer-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="drawerTitle"
+        >
+          <div id="drawerBody"></div>
+        </aside>
+      </div>
+
+      <!-- Product editor (side panel) -->
+      <div
+        id="productEditor"
+        class="drawer side-editor hidden"
+        aria-hidden="true"
+      >
+        <div class="drawer-backdrop" data-close-editor></div>
+        <aside
+          class="drawer-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="editorTitle"
+        >
+          <div class="drawer-head">
+            <div>
+              <p class="eyebrow">PRODUCT</p>
+              <h3 id="editorTitle">Add Product</h3>
+            </div>
+            <button class="btn ghost" type="button" id="closeEditor">
+              Close
+            </button>
+          </div>
+          <form id="productForm" class="editor-form">
+            <input type="hidden" id="pOriginalId" />
+
+            <fieldset class="form-sec">
+              <legend>Basics</legend>
+              <div class="form-grid">
+                <label>Name<input id="pName" required /></label>
+                <label
+                  >ID
+                  <small class="muted">(used in links; change with care)</small
+                  ><input id="pId" required
+                /></label>
+                <label
+                  >Category<select id="pCat">
+                    <option value="men">For Him</option>
+                    <option value="women">For Her</option>
+                    <option value="unisex">Unisex</option>
+                  </select></label
+                >
+                <label
+                  >Price (₱)<input
+                    id="pPrice"
+                    type="number"
+                    min="0"
+                    value="430"
+                    inputmode="decimal"
+                /></label>
+                <label
+                  >Cost / puhunan (₱)
+                  <small class="muted">(auto-updated by restocks)</small
+                  ><input
+                    id="pCost"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="e.g. 250"
+                /></label>
+                <label
+                  >Stock <small class="muted">(blank = unlimited)</small
+                  ><input
+                    id="pStock"
+                    type="number"
+                    min="0"
+                    value="10"
+                    inputmode="numeric"
+                /></label>
+                <label
+                  >Display order<input
+                    id="pSort"
+                    type="number"
+                    value="0"
+                    inputmode="numeric"
+                /></label>
+                <label class="switch-row full"
+                  ><span
+                    ><b>Visible on website</b
+                    ><small>Hidden products can't be ordered</small></span
+                  ><input id="pActive" type="checkbox" class="switch" checked
+                /></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-sec">
+              <legend>Photo</legend>
+              <div class="image-field">
+                <div class="image-row">
+                  <div class="image-preview">
+                    <img id="pImgPreview" alt="" hidden /><span id="pImgEmpty"
+                      >No photo</span
+                    >
+                  </div>
+                  <div class="image-actions">
+                    <label class="btn upload-btn"
+                      >Upload photo<input
+                        type="file"
+                        id="pImgFile"
+                        accept="image/jpeg,image/png,image/webp"
+                        hidden /></label
+                    ><input
+                      id="pImg"
+                      placeholder="…or paste an image link"
+                      aria-label="Image link"
+                    /><small id="pImgStatus" class="muted"
+                      >JPG, PNG or WebP. Big photos are resized
+                      automatically.</small
+                    >
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-sec">
+              <legend>Description</legend>
+              <div class="form-grid one">
+                <label
+                  >Short description
+                  <small class="muted">(shown on the product card)</small
+                  ><input id="pDesc"
+                /></label>
+                <label
+                  >Long description<textarea id="pDescLong" rows="4"></textarea>
+                </label>
+                <label
+                  >How to apply<textarea id="pApplication" rows="3"></textarea>
+                </label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-sec">
+              <legend>Scent profile</legend>
+              <div class="form-grid">
+                <label class="full"
+                  >Profiles <small class="muted">(comma separated)</small
+                  ><input id="pProfiles" placeholder="Fresh, Woody"
+                /></label>
+                <label
+                  >Strength<select id="pStrength">
+                    <option value="subtle">Subtle</option>
+                    <option value="moderate" selected>Moderate</option>
+                    <option value="bold">Bold</option>
+                  </select></label
+                >
+                <label
+                  >Best time<input id="pTime" placeholder="Day, Night"
+                /></label>
+                <label
+                  >Longevity (1–10)<input
+                    id="pLongevity"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value="7"
+                /></label>
+                <label
+                  >Projection (1–10)<input
+                    id="pProjection"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value="7"
+                /></label>
+                <label class="full"
+                  >Occasion<input
+                    id="pOccasion"
+                    placeholder="Daily, Office, Date Night"
+                /></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-sec">
+              <legend>Notes</legend>
+              <div class="form-grid one">
+                <label>Top / first notes<input id="pTop" /></label>
+                <label>Heart notes<input id="pHeart" /></label>
+                <label>Base notes<input id="pBase" /></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="form-sec">
+              <legend>Badges</legend>
+              <div class="checks chips">
+                <label
+                  ><input class="badge" value="BEST SELLER" type="checkbox" />
+                  Best Seller</label
+                ><label
+                  ><input class="badge" value="FEATURED" type="checkbox" />
+                  Featured</label
+                ><label
+                  ><input class="badge" value="NEW" type="checkbox" />
+                  New</label
+                ><label
+                  ><input class="badge" value="LIMITED" type="checkbox" />
+                  Limited</label
+                ><label
+                  ><input class="badge" value="SIGNATURE" type="checkbox" />
+                  Signature</label
+                >
+              </div>
+            </fieldset>
+
+            <div class="form-actions sticky-actions">
+              <button class="btn danger" type="button" id="deleteProduct">
+                Delete</button
+              ><button class="btn primary" type="submit">Save Product</button>
+            </div>
+          </form>
+        </aside>
+      </div>
+
+      <!-- Promotion editor (side panel) -->
+      <div
+        id="promoEditor"
+        class="drawer side-editor hidden"
+        aria-hidden="true"
+      >
+        <div class="drawer-backdrop" data-close-editor></div>
+        <aside
+          class="drawer-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="promoTitle"
+        >
+          <div class="drawer-head">
+            <div>
+              <p class="eyebrow">PROMOTION</p>
+              <h3 id="promoTitle">Promotion</h3>
+            </div>
+            <button class="btn ghost" type="button" id="closePromo">
+              Close
+            </button>
+          </div>
+          <form id="promoForm" class="editor-form">
+            <input type="hidden" id="promoId" />
+            <fieldset class="form-sec">
+              <legend>Details</legend>
+              <div class="form-grid">
+                <label class="full"
+                  >Name<input
+                    id="promoName"
+                    required
+                    placeholder="e.g. 2-Bottle Promo"
+                /></label>
+                <label
+                  >Type<select id="promoType">
+                    <option value="fixed_total">
+                      Fixed total (e.g. 2 for ₱840)
+                    </option>
+                    <option value="percent">Percent off</option>
+                  </select></label
+                >
+                <label
+                  >Minimum bottles<input
+                    id="promoQty"
+                    type="number"
+                    min="1"
+                    value="2"
+                /></label>
+                <label data-promo-field="fixed_total"
+                  >Fixed total (₱)<input
+                    id="promoFixed"
+                    type="number"
+                    min="0"
+                    value="840"
+                /></label>
+                <label data-promo-field="percent"
+                  >Percent off (%)<input
+                    id="promoPercent"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value="0"
+                /></label>
+                <label class="switch-row full"
+                  ><span
+                    ><b>Active</b
+                    ><small
+                      >Shows in the promo bar and applies at checkout</small
+                    ></span
+                  ><input
+                    id="promoActive"
+                    type="checkbox"
+                    class="switch"
+                    checked
+                /></label>
+              </div>
+              <p class="promo-preview" id="promoPreview"></p>
+            </fieldset>
+            <div class="form-actions sticky-actions">
+              <button class="btn primary" type="submit">Save Promotion</button>
+            </div>
+          </form>
+        </aside>
+      </div>
+
+      <!-- Voucher editor (side panel) -->
+      <div
+        id="voucherEditor"
+        class="drawer side-editor hidden"
+        aria-hidden="true"
+      >
+        <div class="drawer-backdrop" data-close-editor></div>
+        <aside
+          class="drawer-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="voucherTitle"
+        >
+          <div class="drawer-head">
+            <div>
+              <p class="eyebrow">VOUCHER</p>
+              <h3 id="voucherTitle">New voucher</h3>
+            </div>
+            <button class="btn ghost" type="button" id="closeVoucher">
+              Close
+            </button>
+          </div>
+          <form id="voucherForm" class="editor-form" autocomplete="off">
+            <input type="hidden" id="vOriginal" />
+            <fieldset class="form-sec">
+              <legend>Code &amp; discount</legend>
+              <div class="form-grid">
+                <label class="full"
+                  >Code
+                  <small class="muted"
+                    >(what customers type — letters/numbers, no spaces)</small
+                  >
+                  <div class="code-row">
+                    <input
+                      id="vCode"
+                      required
+                      maxlength="30"
+                      placeholder="e.g. SUKI50"
+                      autocapitalize="characters"
+                      spellcheck="false"
+                    /><button class="btn ghost" type="button" id="vRandom">
+                      Generate
+                    </button>
+                  </div></label
+                >
+                <label
+                  >Type<select id="vType">
+                    <option value="percent">% off</option>
+                    <option value="amount">₱ off (fixed amount)</option>
+                  </select></label
+                >
+                <label
+                  ><span id="vValueLabel">Percent off (%)</span
+                  ><input
+                    id="vValue"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    required
+                    inputmode="decimal"
+                    placeholder="e.g. 10"
+                /></label>
+                <label data-vfield="percent"
+                  >Maximum discount (₱)
+                  <small class="muted">(blank = no cap)</small
+                  ><input
+                    id="vMax"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    placeholder="e.g. 100"
+                /></label>
+                <label
+                  >Minimum order (₱)
+                  <small class="muted">(before discounts)</small
+                  ><input
+                    id="vMin"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    inputmode="decimal"
+                    value="0"
+                /></label>
+              </div>
+            </fieldset>
+            <fieldset class="form-sec">
+              <legend>When &amp; how many</legend>
+              <div class="form-grid">
+                <label
+                  >Starts <small class="muted">(blank = now)</small
+                  ><input id="vStart" type="date"
+                /></label>
+                <label
+                  >Ends <small class="muted">(blank = no expiry)</small
+                  ><input id="vEnd" type="date"
+                /></label>
+                <label
+                  >Total uses <small class="muted">(blank = unlimited)</small
+                  ><input
+                    id="vLimit"
+                    type="number"
+                    min="1"
+                    step="1"
+                    inputmode="numeric"
+                    placeholder="e.g. 50"
+                /></label>
+                <label
+                  >Uses per customer<select id="vPer">
+                    <option value="">Unlimited</option>
+                    <option value="1">Once per customer</option>
+                    <option value="2">2 times</option>
+                    <option value="3">3 times</option>
+                  </select></label
+                >
+                <label class="full"
+                  >Note <small class="muted">(only you see this)</small
+                  ><input
+                    id="vNote"
+                    maxlength="300"
+                    placeholder="e.g. Payday promo on FB"
+                /></label>
+                <label class="switch-row full"
+                  ><span
+                    ><b>Active</b
+                    ><small>Customers can use it at checkout</small></span
+                  ><input id="vActive" type="checkbox" class="switch" checked
+                /></label>
+              </div>
+              <p class="promo-preview" id="vPreview"></p>
+            </fieldset>
+            <div class="form-actions sticky-actions">
+              <button class="btn danger" type="button" id="deleteVoucher">
+                Delete</button
+              ><button class="btn primary" type="submit">Save voucher</button>
+            </div>
+          </form>
+        </aside>
+      </div>
+
+      <!-- Mobile bottom navigation -->
+      <nav class="mobile-nav" aria-label="Admin sections">
+        <button type="button" data-view="dashboard" class="m-nav active">
+          <span aria-hidden="true">▦</span>Dashboard
+        </button>
+        <button type="button" data-view="orders" class="m-nav">
+          <span aria-hidden="true">☰</span>Orders<b
+            class="count-badge"
+            id="mOrdersBadge"
+            hidden
+            >0</b
+          >
+        </button>
+        <button type="button" data-view="products" class="m-nav">
+          <span aria-hidden="true">◇</span>Products
+        </button>
+        <button
+          type="button"
+          class="m-nav"
+          id="moreBtn"
+          aria-expanded="false"
+          aria-controls="moreSheet"
+        >
+          <span aria-hidden="true">⋯</span>More<b
+            class="count-badge"
+            id="mMoreBadge"
+            hidden
+            >0</b
+          >
+        </button>
+      </nav>
+      <div class="more-sheet hidden" id="moreSheet">
+        <div class="drawer-backdrop" data-close-more></div>
+        <div class="more-panel">
+          <p class="nav-group">Sales</p>
+          <button type="button" data-view="reports">
+            Profit &amp; Reports
+          </button>
+          <p class="nav-group">Catalog</p>
+          <button type="button" data-view="inventory">Restocks</button>
+          <button type="button" data-view="promotions">Promotions</button>
+          <button type="button" data-view="vouchers">Vouchers</button>
+          <p class="nav-group">Site</p>
+          <button type="button" data-view="homepage">
+            Homepage &amp; Payment
+          </button>
+          <button type="button" data-view="reviews">
+            Reviews <b class="count-badge" id="mReviewsBadge" hidden>0</b>
+          </button>
+          <button type="button" data-view="audit">Audit Log</button>
+          <hr />
+          <button
+            type="button"
+            data-more-action="install"
+            id="mInstallBtn"
+            hidden
+          >
+            📲 Install admin app
+          </button>
+          <button type="button" data-more-action="backup">
+            ⬇ Download backup
+          </button>
+          <a href="index.html" target="_blank" rel="noopener"
+            >↗ Customer Site</a
+          >
+          <button type="button" data-more-action="logout">Log out</button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<script type="module" src="assets/js/admin.js"></script>
-</body>
+    <!-- Search / command palette (Ctrl+K) -->
+    <div
+      class="palette hidden"
+      id="palette"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Search"
+    >
+      <div class="modal-backdrop" data-close-palette></div>
+      <div class="palette-card">
+        <div class="palette-input">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle
+              cx="11"
+              cy="11"
+              r="6.5"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+            />
+            <path
+              d="m16 16 4 4"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            /></svg
+          ><input
+            id="paletteInput"
+            placeholder="Search orders, customers, products, vouchers, pages…"
+            autocomplete="off"
+            spellcheck="false"
+          /><kbd>Esc</kbd>
+        </div>
+        <div class="palette-list" id="paletteList" role="listbox"></div>
+        <div class="palette-foot">
+          <span><kbd>↑</kbd><kbd>↓</kbd> move</span
+          ><span><kbd>Enter</kbd> open</span
+          ><span><kbd>Ctrl</kbd><kbd>K</kbd> anytime</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pop-up messages + confirmation dialog -->
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+    <div
+      class="modal hidden"
+      id="dialog"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="dialogTitle"
+    >
+      <div class="modal-backdrop"></div>
+      <div class="modal-card">
+        <h3 id="dialogTitle"></h3>
+        <p id="dialogMessage"></p>
+        <input id="dialogInput" type="number" min="0" hidden />
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" id="dialogCancel">
+            Cancel
+          </button>
+          <button type="button" class="btn primary" id="dialogOk">OK</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module" src="assets/js/admin.js"></script>
+  </body>
 </html>
