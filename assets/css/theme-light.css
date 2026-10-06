@@ -195,5 +195,8 @@ html[data-theme="light"] .co-bar:not([hidden]) { background: #fffcf6; box-shadow
 html[data-theme="light"] .bottom-bar { background: rgba(250, 246, 239, .96); }
 html[data-theme="light"] .toast { background: #fffcf6; color: var(--parchment); }
 html[data-theme="light"] input::placeholder, html[data-theme="light"] textarea::placeholder { color: #9a8f80; }
-html[data-theme="light"] select option { background: #fffcf6; color: var(--parchment); }
+html[data-theme="light"] select { color-scheme: light; }
+html[data-theme="light"] select option, html[data-theme="light"] select optgroup { background-color: #fffcf6; color: #1f1a14; }
+html[data-theme="light"] select option:disabled { color: #a39886; }
+html[data-theme="light"] select option:checked { background-color: #efe5d2; color: #8a682a; }
 
