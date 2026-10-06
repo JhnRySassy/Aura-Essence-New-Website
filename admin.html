@@ -1,416 +1,80 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>AURA & ESSENCE — Admin</title>
-    <link rel="stylesheet" href="assets/css/admin.css" />
-  </head>
-  <body>
-    <div id="loginView" class="login-shell">
-      <div class="login-card">
-        <div class="brand-mini">A &amp; E</div>
-        <p class="eyebrow">AURA &amp; ESSENCE</p>
-        <h1>Admin Portal</h1>
-        <p class="muted">
-          Sign in to manage products, orders, inventory, promotions and site
-          settings.
-        </p>
-        <form id="credentialsForm">
-          <label
-            >Admin Email<input
-              id="loginIdentifier"
-              type="email"
-              required
-              autocomplete="username"
-          /></label>
-          <label
-            >Password<input
-              id="loginPassword"
-              type="password"
-              required
-              autocomplete="current-password"
-          /></label>
-          <button class="btn primary" type="submit">Sign In</button>
-        </form>
-        <p id="loginStatus" class="status"></p>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AURA & ESSENCE — Admin</title>
+<link rel="stylesheet" href="assets/css/admin.css">
+</head>
+<body>
+<div id="loginView" class="login-shell">
+  <div class="login-card">
+    <div class="brand-mini">A &amp; E</div>
+    <p class="eyebrow">AURA &amp; ESSENCE</p>
+    <h1>Admin Portal</h1>
+    <p class="muted">Sign in to manage products, orders, inventory, promotions and site settings.</p>
+    <form id="credentialsForm">
+      <label>Admin Email<input id="loginIdentifier" type="email" required autocomplete="username"></label>
+      <label>Password<input id="loginPassword" type="password" required autocomplete="current-password"></label>
+      <button class="btn primary" type="submit">Sign In</button>
+    </form>
+    <p id="loginStatus" class="status"></p>
+  </div>
+</div>
+<div id="appView" class="app hidden">
+  <aside class="sidebar">
+    <div class="side-brand"><span>A &amp; E</span><small>ADMIN</small></div>
+    <nav>
+      <button data-view="dashboard" class="nav-item active">Dashboard</button>
+      <button data-view="orders" class="nav-item">Orders</button>
+      <button data-view="products" class="nav-item">Products</button>
+      <button data-view="promotions" class="nav-item">Promotions</button>
+      <button data-view="homepage" class="nav-item">Homepage</button>
+      <button data-view="reviews" class="nav-item">Reviews</button>
+      <button data-view="audit" class="nav-item">Audit Log</button>
+    </nav>
+    <div class="side-bottom"><button id="backupBtn" type="button">⬇ Download backup</button><a href="index.html">← Customer Site</a><button id="logoutBtn">Log out</button></div>
+  </aside>
+  <main class="main">
+    <header class="topbar"><div><p class="eyebrow">CONTROL CENTER</p><h2 id="viewTitle">Dashboard</h2></div><div id="globalStatus" class="status"></div></header>
+    <section id="dashboardView" class="view">
+      <div class="toolbar date-range">
+        <select id="rangePreset" aria-label="Date range">
+          <option value="all">All time</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="7d">Last 7 days</option>
+          <option value="30d">Last 30 days</option>
+          <option value="thisMonth">This month</option>
+          <option value="lastMonth">Last month</option>
+          <option value="thisYear">This year</option>
+          <option value="custom">Custom range</option>
+        </select>
+        <label class="range-field">From <input type="date" id="rangeFrom"></label>
+        <label class="range-field">To <input type="date" id="rangeTo"></label>
+        <span id="rangeLabel" class="muted filter-count"></span>
       </div>
-    </div>
-    <div id="appView" class="app hidden">
-      <aside class="sidebar">
-        <div class="side-brand"><span>A &amp; E</span><small>ADMIN</small></div>
-        <nav>
-          <button data-view="dashboard" class="nav-item active">
-            Dashboard
-          </button>
-          <button data-view="orders" class="nav-item">Orders</button>
-          <button data-view="products" class="nav-item">Products</button>
-          <button data-view="promotions" class="nav-item">Promotions</button>
-          <button data-view="homepage" class="nav-item">Homepage</button>
-          <button data-view="reviews" class="nav-item">Reviews</button>
-          <button data-view="audit" class="nav-item">Audit Log</button>
-        </nav>
-        <div class="side-bottom">
-          <a href="index.html">← Customer Site</a
-          ><button id="logoutBtn">Log out</button>
-        </div>
-      </aside>
-      <main class="main">
-        <header class="topbar">
-          <div>
-            <p class="eyebrow">CONTROL CENTER</p>
-            <h2 id="viewTitle">Dashboard</h2>
-          </div>
-          <div id="globalStatus" class="status"></div>
-        </header>
-        <section id="dashboardView" class="view">
-          <div class="toolbar date-range">
-            <select id="rangePreset" aria-label="Date range">
-              <option value="all">All time</option>
-              <option value="today">Today</option>
-              <option value="yesterday">Yesterday</option>
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="thisMonth">This month</option>
-              <option value="lastMonth">Last month</option>
-              <option value="thisYear">This year</option>
-              <option value="custom">Custom range</option>
-            </select>
-            <label class="range-field"
-              >From <input type="date" id="rangeFrom"
-            /></label>
-            <label class="range-field"
-              >To <input type="date" id="rangeTo"
-            /></label>
-            <span id="rangeLabel" class="muted filter-count"></span>
-          </div>
-          <div class="cards" id="statsCards"></div>
-          <div class="grid-2">
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Top Products</h3>
-                <span>Units sold</span>
-              </div>
-              <div id="topProducts"></div>
-            </div>
-            <div class="panel">
-              <div class="panel-head">
-                <h3>Low Stock</h3>
-                <span id="lowStockLabel"></span>
-              </div>
-              <div id="lowStock"></div>
-            </div>
-          </div>
-        </section>
-        <section id="ordersView" class="view hidden">
-          <div class="toolbar">
-            <input
-              id="orderSearch"
-              placeholder="Search order, customer, contact, scent..."
-            /><button class="btn" id="refreshOrders">Refresh</button
-            ><button class="btn" id="exportOrders">Export CSV</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Items</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody id="ordersRows"></tbody>
-            </table>
-          </div>
-        </section>
-        <section id="productsView" class="view hidden">
-          <div class="toolbar">
-            <input id="productSearch" placeholder="Search products..." /><button
-              class="btn primary"
-              id="newProduct"
-            >
-              + Add Product</button
-            ><button class="btn" id="refreshProducts">Refresh</button>
-          </div>
-          <div class="toolbar filters">
-            <select id="filterCat" aria-label="Category">
-              <option value="">All categories</option>
-              <option value="men">For Him</option>
-              <option value="women">For Her</option>
-              <option value="unisex">Unisex</option>
-            </select>
-            <select id="filterStock" aria-label="Stock">
-              <option value="">All stock</option>
-              <option value="in">In stock</option>
-              <option value="low">Low stock</option>
-              <option value="out">Out of stock</option>
-              <option value="unlimited">Unlimited</option>
-            </select>
-            <select id="filterBadge" aria-label="Badge">
-              <option value="">All badges</option>
-              <option value="BEST SELLER">Best Seller</option>
-              <option value="FEATURED">Featured</option>
-              <option value="NEW">New</option>
-              <option value="LIMITED">Limited</option>
-              <option value="SIGNATURE">Signature</option>
-              <option value="__none">No badge</option>
-            </select>
-            <select id="filterActive" aria-label="Visibility">
-              <option value="">Active &amp; hidden</option>
-              <option value="active">Active only</option>
-              <option value="hidden">Hidden only</option>
-            </select>
-            <select id="sortProducts" aria-label="Sort">
-              <option value="order">Sort: display order</option>
-              <option value="name">Name A–Z</option>
-              <option value="stockAsc">Stock: low → high</option>
-              <option value="stockDesc">Stock: high → low</option>
-              <option value="priceAsc">Price: low → high</option>
-              <option value="priceDesc">Price: high → low</option>
-            </select>
-            <button class="btn ghost" id="clearFilters" type="button">
-              Clear
-            </button>
-            <span id="productCount" class="muted filter-count"></span>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Product</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Badges</th>
-                  <th>Active</th>
-                  <th>Order</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="productsRows"></tbody>
-            </table>
-          </div>
-          <div id="productEditor" class="editor hidden">
-            <div class="panel-head">
-              <h3 id="editorTitle">Add Product</h3>
-              <button class="btn ghost" id="closeEditor">Close</button>
-            </div>
-            <form id="productForm" class="form-grid">
-              <input type="hidden" id="pOriginalId" /><label
-                >ID<input id="pId" required /></label
-              ><label>Name<input id="pName" required /></label
-              ><label
-                >Category<select id="pCat">
-                  <option value="men">For Him</option>
-                  <option value="women">For Her</option>
-                </select></label
-              ><label
-                >Price<input
-                  id="pPrice"
-                  type="number"
-                  min="0"
-                  value="430" /></label
-              ><label
-                >Stock<input
-                  id="pStock"
-                  type="number"
-                  min="0"
-                  value="10" /></label
-              ><label
-                >Sort Order<input id="pSort" type="number" value="0" /></label
-              ><label class="full">Image URL<input id="pImg" /></label
-              ><label class="full">Short Description<input id="pDesc" /></label
-              ><label class="full"
-                >Long Description<textarea id="pDescLong"></textarea></label
-              ><label class="full">Top / First Notes<input id="pTop" /></label
-              ><label class="full">Heart Notes<input id="pHeart" /></label
-              ><label class="full">Base Notes<input id="pBase" /></label
-              ><label class="full"
-                >How to Apply<textarea id="pApplication"></textarea></label
-              ><label class="full"
-                >Profiles (comma separated)<input
-                  id="pProfiles"
-                  placeholder="Fresh, Woody" /></label
-              ><label
-                >Longevity<input
-                  id="pLongevity"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value="7" /></label
-              ><label
-                >Projection<input
-                  id="pProjection"
-                  type="number"
-                  min="1"
-                  max="10"
-                  value="7" /></label
-              ><label
-                >Strength<select id="pStrength">
-                  <option value="subtle">Subtle</option>
-                  <option value="moderate" selected>Moderate</option>
-                  <option value="bold">Bold</option>
-                </select></label
-              ><label
-                >Best Time<input id="pTime" placeholder="Day, Night" /></label
-              ><label class="full">Occasion<input id="pOccasion" /></label>
-              <fieldset class="full">
-                <legend>Badges</legend>
-                <div class="checks">
-                  <label
-                    ><input class="badge" value="BEST SELLER" type="checkbox" />
-                    Best Seller</label
-                  ><label
-                    ><input class="badge" value="FEATURED" type="checkbox" />
-                    Featured</label
-                  ><label
-                    ><input class="badge" value="NEW" type="checkbox" />
-                    New</label
-                  ><label
-                    ><input class="badge" value="LIMITED" type="checkbox" />
-                    Limited</label
-                  ><label
-                    ><input class="badge" value="SIGNATURE" type="checkbox" />
-                    Signature</label
-                  >
-                </div>
-              </fieldset>
-              <label class="full inline-check"
-                ><input id="pActive" type="checkbox" checked /> Active / visible
-                on website</label
-              >
-              <div class="form-actions full">
-                <button class="btn primary" type="submit">Save Product</button
-                ><button class="btn danger" type="button" id="deleteProduct">
-                  Delete
-                </button>
-              </div>
-            </form>
-          </div>
-        </section>
-        <section id="promotionsView" class="view hidden">
-          <div class="toolbar">
-            <button class="btn primary" id="newPromo">+ Add Promotion</button>
-          </div>
-          <div id="promosList" class="list"></div>
-          <div id="promoEditor" class="editor hidden">
-            <div class="panel-head">
-              <h3>Promotion</h3>
-              <button class="btn ghost" id="closePromo">Close</button>
-            </div>
-            <form id="promoForm" class="form-grid">
-              <input type="hidden" id="promoId" /><label
-                >Name<input id="promoName" required /></label
-              ><label
-                >Type<select id="promoType">
-                  <option value="fixed_total">Fixed Total</option>
-                  <option value="percent">Percent Off</option>
-                </select></label
-              ><label
-                >Minimum Quantity<input
-                  id="promoQty"
-                  type="number"
-                  min="1"
-                  value="2" /></label
-              ><label
-                >Fixed Total<input
-                  id="promoFixed"
-                  type="number"
-                  min="0"
-                  value="840" /></label
-              ><label
-                >Percent Off<input
-                  id="promoPercent"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value="0" /></label
-              ><label class="inline-check"
-                ><input id="promoActive" type="checkbox" checked />
-                Active</label
-              >
-              <div class="form-actions full">
-                <button class="btn primary">Save Promotion</button>
-              </div>
-            </form>
-          </div>
-        </section>
-        <section id="homepageView" class="view hidden">
-          <div class="panel">
-            <div class="panel-head">
-              <h3>Homepage Controls</h3>
-              <span>Control what customers see</span>
-            </div>
-            <form id="settingsForm" class="form-grid">
-              <label
-                >Low Stock Threshold<input
-                  id="setLowStock"
-                  type="number"
-                  min="0"
-                  value="5" /></label
-              ><label class="inline-check"
-                ><input id="setBest" type="checkbox" checked /> Show Best
-                Sellers</label
-              ><label class="inline-check"
-                ><input id="setFeatured" type="checkbox" checked /> Show
-                Featured</label
-              ><label class="inline-check"
-                ><input id="setNew" type="checkbox" checked /> Show New
-                Arrivals</label
-              ><label class="inline-check"
-                ><input id="setSignature" type="checkbox" checked /> Show
-                Signature Collection</label
-              >
-              <div class="form-actions full">
-                <button class="btn primary">Save Settings</button>
-              </div>
-            </form>
-          </div>
-        </section>
-        <section id="reviewsView" class="view hidden">
-          <div class="toolbar">
-            <button class="btn" id="refreshReviews">Refresh</button
-            ><span class="muted"
-              >New reviews stay hidden until you approve them.</span
-            >
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Photo</th>
-                  <th>Customer</th>
-                  <th>Rating</th>
-                  <th>Review</th>
-                  <th>Status</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody id="reviewsRows"></tbody>
-            </table>
-          </div>
-        </section>
-        <section id="auditView" class="view hidden">
-          <div class="toolbar">
-            <button class="btn" id="refreshAudit">Refresh</button>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Timestamp</th>
-                  <th>Actor</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="auditRows"></tbody>
-            </table>
-          </div>
-        </section>
-      </main>
-    </div>
-    <script type="module" src="assets/js/admin.js"></script>
-  </body>
+      <div class="cards" id="statsCards"></div>
+      <div class="panel chart-panel"><div class="panel-head"><h3>Revenue</h3><span id="chartLabel"></span></div><div id="revenueChart" class="chart"></div><div id="chartTip" class="chart-tip" hidden></div></div>
+      <div class="grid-2"><div class="panel"><div class="panel-head"><h3>Top Products</h3><span>Units sold</span></div><div id="topProducts"></div></div><div class="panel"><div class="panel-head"><h3>Low Stock</h3><span id="lowStockLabel"></span></div><div id="lowStock"></div></div></div>
+    </section>
+    <section id="ordersView" class="view hidden"><div class="toolbar"><input id="orderSearch" placeholder="Search order, customer, contact, scent..."><button class="btn" id="refreshOrders">Refresh</button><button class="btn" id="exportOrders">Export CSV</button></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody id="ordersRows"></tbody></table></div></section>
+    <section id="productsView" class="view hidden"><div class="toolbar"><input id="productSearch" placeholder="Search products..."><button class="btn primary" id="newProduct">+ Add Product</button><button class="btn" id="refreshProducts">Refresh</button></div><div class="toolbar filters">
+      <select id="filterCat" aria-label="Category"><option value="">All categories</option><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select>
+      <select id="filterStock" aria-label="Stock"><option value="">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="unlimited">Unlimited</option></select>
+      <select id="filterBadge" aria-label="Badge"><option value="">All badges</option><option value="BEST SELLER">Best Seller</option><option value="FEATURED">Featured</option><option value="NEW">New</option><option value="LIMITED">Limited</option><option value="SIGNATURE">Signature</option><option value="__none">No badge</option></select>
+      <select id="filterActive" aria-label="Visibility"><option value="">Active &amp; hidden</option><option value="active">Active only</option><option value="hidden">Hidden only</option></select>
+      <select id="sortProducts" aria-label="Sort"><option value="order">Sort: display order</option><option value="name">Name A–Z</option><option value="stockAsc">Stock: low → high</option><option value="stockDesc">Stock: high → low</option><option value="priceAsc">Price: low → high</option><option value="priceDesc">Price: high → low</option></select>
+      <button class="btn ghost" id="clearFilters" type="button">Clear</button>
+      <span id="productCount" class="muted filter-count"></span>
+    </div><div class="table-wrap"><table><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Badges</th><th>Active</th><th>Order</th><th></th></tr></thead><tbody id="productsRows"></tbody></table></div><div id="productEditor" class="editor hidden"><div class="panel-head"><h3 id="editorTitle">Add Product</h3><button class="btn ghost" id="closeEditor">Close</button></div><form id="productForm" class="form-grid">
+      <input type="hidden" id="pOriginalId"><label>ID<input id="pId" required></label><label>Name<input id="pName" required></label><label>Category<select id="pCat"><option value="men">For Him</option><option value="women">For Her</option></select></label><label>Price<input id="pPrice" type="number" min="0" value="430"></label><label>Stock<input id="pStock" type="number" min="0" value="10"></label><label>Sort Order<input id="pSort" type="number" value="0"></label><div class="full image-field"><span class="field-label">Photo</span><div class="image-row"><div class="image-preview"><img id="pImgPreview" alt="" hidden><span id="pImgEmpty">No photo</span></div><div class="image-actions"><label class="btn upload-btn">Upload photo<input type="file" id="pImgFile" accept="image/jpeg,image/png,image/webp" hidden></label><input id="pImg" placeholder="…or paste an image link"><small id="pImgStatus" class="muted">JPG, PNG or WebP. Big photos are resized automatically.</small></div></div></div><label class="full">Short Description<input id="pDesc"></label><label class="full">Long Description<textarea id="pDescLong"></textarea></label><label class="full">Top / First Notes<input id="pTop"></label><label class="full">Heart Notes<input id="pHeart"></label><label class="full">Base Notes<input id="pBase"></label><label class="full">How to Apply<textarea id="pApplication"></textarea></label><label class="full">Profiles (comma separated)<input id="pProfiles" placeholder="Fresh, Woody"></label><label>Longevity<input id="pLongevity" type="number" min="1" max="10" value="7"></label><label>Projection<input id="pProjection" type="number" min="1" max="10" value="7"></label><label>Strength<select id="pStrength"><option value="subtle">Subtle</option><option value="moderate" selected>Moderate</option><option value="bold">Bold</option></select></label><label>Best Time<input id="pTime" placeholder="Day, Night"></label><label class="full">Occasion<input id="pOccasion"></label><fieldset class="full"><legend>Badges</legend><div class="checks"><label><input class="badge" value="BEST SELLER" type="checkbox"> Best Seller</label><label><input class="badge" value="FEATURED" type="checkbox"> Featured</label><label><input class="badge" value="NEW" type="checkbox"> New</label><label><input class="badge" value="LIMITED" type="checkbox"> Limited</label><label><input class="badge" value="SIGNATURE" type="checkbox"> Signature</label></div></fieldset><label class="full inline-check"><input id="pActive" type="checkbox" checked> Active / visible on website</label><div class="form-actions full"><button class="btn primary" type="submit">Save Product</button><button class="btn danger" type="button" id="deleteProduct">Delete</button></div></form></div></section>
+    <section id="promotionsView" class="view hidden"><div class="toolbar"><button class="btn primary" id="newPromo">+ Add Promotion</button></div><div id="promosList" class="list"></div><div id="promoEditor" class="editor hidden"><div class="panel-head"><h3>Promotion</h3><button class="btn ghost" id="closePromo">Close</button></div><form id="promoForm" class="form-grid"><input type="hidden" id="promoId"><label>Name<input id="promoName" required></label><label>Type<select id="promoType"><option value="fixed_total">Fixed Total</option><option value="percent">Percent Off</option></select></label><label>Minimum Quantity<input id="promoQty" type="number" min="1" value="2"></label><label>Fixed Total<input id="promoFixed" type="number" min="0" value="840"></label><label>Percent Off<input id="promoPercent" type="number" min="0" max="100" value="0"></label><label class="inline-check"><input id="promoActive" type="checkbox" checked> Active</label><div class="form-actions full"><button class="btn primary">Save Promotion</button></div></form></div></section>
+    <section id="homepageView" class="view hidden"><div class="panel"><div class="panel-head"><h3>Homepage Controls</h3><span>Control what customers see</span></div><form id="settingsForm" class="form-grid"><label>Low Stock Threshold<input id="setLowStock" type="number" min="0" value="5"></label><label>Email me when stock reaches<input id="setAlertAt" type="number" min="0" value="1"><small class="muted">Sent to your order email when a product drops to this number.</small></label><label class="inline-check"><input id="setBest" type="checkbox" checked> Show Best Sellers</label><label class="inline-check"><input id="setFeatured" type="checkbox" checked> Show Featured</label><label class="inline-check"><input id="setNew" type="checkbox" checked> Show New Arrivals</label><label class="inline-check"><input id="setSignature" type="checkbox" checked> Show Signature Collection</label><div class="form-actions full"><button class="btn primary">Save Settings</button></div></form></div></section>
+    <section id="reviewsView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div><div class="table-wrap"><table><thead><tr><th>Photo</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead><tbody id="reviewsRows"></tbody></table></div></section>
+    <section id="auditView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshAudit">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th></tr></thead><tbody id="auditRows"></tbody></table></div></section>
+  </main>
+</div>
+<script type="module" src="assets/js/admin.js"></script>
+</body>
 </html>

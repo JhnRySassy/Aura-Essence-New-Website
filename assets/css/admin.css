@@ -463,3 +463,129 @@ td small {
     flex: 1;
   }
 }
+.field-label {
+  color: var(--muted);
+  font-size: 11px;
+  display: block;
+  margin-bottom: 7px;
+}
+.image-row {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+.image-preview {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 96px;
+  border: 1px solid var(--line);
+  background: #0c0c0c;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+}
+.image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.image-actions {
+  flex: 1;
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.upload-btn {
+  justify-self: start;
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.stock-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.stock-cell b {
+  min-width: 22px;
+  text-align: center;
+}
+.stock-cell b.zero {
+  color: var(--red);
+}
+.mini-btn {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  width: 26px;
+  height: 26px;
+  cursor: pointer;
+  line-height: 1;
+}
+.mini-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.mini-btn.text {
+  width: auto;
+  padding: 0 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.chart-panel {
+  margin-bottom: 16px;
+  position: relative;
+}
+.chart {
+  width: 100%;
+  min-height: 220px;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: 240px;
+  overflow: visible;
+}
+.chart .grid {
+  stroke: #232323;
+  stroke-width: 1;
+}
+.chart .axis-text {
+  fill: var(--muted);
+  font-size: 10px;
+}
+.chart .bar {
+  fill: var(--gold);
+}
+.chart .bar.dim {
+  opacity: 0.35;
+}
+.chart .hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.chart-empty {
+  color: var(--muted);
+  padding: 40px 0;
+  text-align: center;
+}
+.chart-tip {
+  position: absolute;
+  pointer-events: none;
+  background: #1b1b1b;
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  font-size: 11px;
+  white-space: nowrap;
+  z-index: 3;
+}
+.chart-tip b {
+  display: block;
+  font-size: 13px;
+  margin-top: 2px;
+}
+.side-bottom #backupBtn {
+  color: var(--gold);
+}

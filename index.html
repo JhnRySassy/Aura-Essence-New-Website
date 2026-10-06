@@ -14,7 +14,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/styles.css" />
-    <link rel="stylesheet" href="assets/css/profile-sync.css"/>
+    <link rel="stylesheet" href="assets/css/profile-sync.css" />
   </head>
   <body>
     <header class="nav">
@@ -103,35 +103,49 @@
           Browse by category — swipe through each line to find your scent.
         </p>
         <div class="collection-tools">
-          <input id="productSearch" class="collection-search" type="search" placeholder="Search a fragrance…" aria-label="Search fragrances">
-          <select id="profileFilter" class="collection-filter" aria-label="Filter by scent character">
+          <input
+            id="productSearch"
+            class="collection-search"
+            type="search"
+            placeholder="Search a fragrance…"
+            aria-label="Search fragrances"
+          />
+          <select
+            id="profileFilter"
+            class="collection-filter"
+            aria-label="Filter by scent character"
+          >
             <option value="all">All scent profiles</option>
 
-  <option value="fresh">Fresh</option>
-  <option value="spicy">Spicy</option>
-  <option value="citrus">Citrus</option>
-  <option value="amber">Amber</option>
-  <option value="woody">Woody</option>
-  <option value="aquatic">Aquatic</option>
-  <option value="sweet">Sweet</option>
-  <option value="warm">Warm</option>
-  <option value="vanilla">Vanilla</option>
-  <option value="chestnut">Chestnut</option>
-  <option value="marine">Marine</option>
-  <option value="aromatic">Aromatic</option>
-  <option value="minty">Minty</option>
-  <option value="floral">Floral</option>
-  <option value="rose">Rose</option>
-  <option value="powdery">Powdery</option>
-  <option value="coffee">Coffee</option>
-  <option value="musky">Musky</option>
-  <option value="fruity">Fruity</option>
+            <option value="fresh">Fresh</option>
+            <option value="spicy">Spicy</option>
+            <option value="citrus">Citrus</option>
+            <option value="amber">Amber</option>
+            <option value="woody">Woody</option>
+            <option value="aquatic">Aquatic</option>
+            <option value="sweet">Sweet</option>
+            <option value="warm">Warm</option>
+            <option value="vanilla">Vanilla</option>
+            <option value="chestnut">Chestnut</option>
+            <option value="marine">Marine</option>
+            <option value="aromatic">Aromatic</option>
+            <option value="minty">Minty</option>
+            <option value="floral">Floral</option>
+            <option value="rose">Rose</option>
+            <option value="powdery">Powdery</option>
+            <option value="coffee">Coffee</option>
+            <option value="musky">Musky</option>
+            <option value="fruity">Fruity</option>
           </select>
-          <button type="button" class="ghost-btn" id="wishlistToggle">♡ Favorites</button>
+          <button type="button" class="ghost-btn" id="wishlistToggle">
+            ♡ Favorites
+          </button>
         </div>
         <div class="wishlist-panel" id="wishlistPanel">
           <div class="wishlist-items" id="wishlistItems"></div>
-          <p id="wishlistEmpty" class="note-small">No favorites yet. Tap the ♡ on a perfume card to save one.</p>
+          <p id="wishlistEmpty" class="note-small">
+            No favorites yet. Tap the ♡ on a perfume card to save one.
+          </p>
         </div>
         <div class="tabs">
           <button class="tab active" data-cat="men">
@@ -148,7 +162,9 @@
             id="carouselPrev"
             aria-label="Previous perfumes"
             title="Previous"
-          >&#10094;</button>
+          >
+            &#10094;
+          </button>
 
           <div class="carousel" id="carousel"></div>
 
@@ -158,7 +174,9 @@
             id="carouselNext"
             aria-label="Next perfumes"
             title="Next"
-          >&#10095;</button>
+          >
+            &#10095;
+          </button>
         </div>
       </div>
     </section>
@@ -166,195 +184,128 @@
     <section class="feature-section" id="scentFinder">
       <div class="wrap">
         <h2 class="sec-title">Find Your Scent</h2>
-        <p class="sec-lede">Answer three quick questions and get a fragrance suggestion based on your preferred vibe, occasion, and scent character.</p>
+        <p class="sec-lede">
+          Answer three quick questions and get a fragrance suggestion based on
+          your preferred vibe, occasion, and scent character.
+        </p>
         <div class="feature-grid">
           <div class="feature-card">
             <h3>1. Occasion</h3>
             <div class="quiz-options" data-question="occasion">
               <button class="quiz-option" data-value="day">Daytime</button>
-              <button class="quiz-option" data-value="night">Date / Night</button>
+              <button class="quiz-option" data-value="night">
+                Date / Night
+              </button>
               <button class="quiz-option" data-value="office">Office</button>
               <button class="quiz-option" data-value="outdoor">Outdoor</button>
             </div>
           </div>
           <div class="feature-card">
-  <h3>2. Character</h3>
+            <h3>2. Character</h3>
 
-  <p class="quiz-helper">
-    Select all that apply
-  </p>
+            <p class="quiz-helper">Select all that apply</p>
 
-  <div
-    class="quiz-options quiz-multi"
-    data-question="profile"
-  >
+            <div class="quiz-options quiz-multi" data-question="profile">
+              <button type="button" class="quiz-option" data-value="fresh">
+                Fresh
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="fresh"
-    >
-      Fresh
-    </button>
+              <button type="button" class="quiz-option" data-value="spicy">
+                Spicy
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="spicy"
-    >
-      Spicy
-    </button>
+              <button type="button" class="quiz-option" data-value="citrus">
+                Citrus
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="citrus"
-    >
-      Citrus
-    </button>
+              <button type="button" class="quiz-option" data-value="amber">
+                Amber
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="amber"
-    >
-      Amber
-    </button>
+              <button type="button" class="quiz-option" data-value="woody">
+                Woody
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="woody"
-    >
-      Woody
-    </button>
+              <button type="button" class="quiz-option" data-value="aquatic">
+                Aquatic
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="aquatic"
-    >
-      Aquatic
-    </button>
+              <button type="button" class="quiz-option" data-value="sweet">
+                Sweet
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="sweet"
-    >
-      Sweet
-    </button>
+              <button type="button" class="quiz-option" data-value="warm">
+                Warm
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="warm"
-    >
-      Warm
-    </button>
+              <button type="button" class="quiz-option" data-value="vanilla">
+                Vanilla
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="vanilla"
-    >
-      Vanilla
-    </button>
+              <button type="button" class="quiz-option" data-value="chestnut">
+                Chestnut
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="chestnut"
-    >
-      Chestnut
-    </button>
+              <button type="button" class="quiz-option" data-value="marine">
+                Marine
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="marine"
-    >
-      Marine
-    </button>
+              <button type="button" class="quiz-option" data-value="aromatic">
+                Aromatic
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="aromatic"
-    >
-      Aromatic
-    </button>
+              <button type="button" class="quiz-option" data-value="minty">
+                Minty
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="minty"
-    >
-      Minty
-    </button>
+              <button type="button" class="quiz-option" data-value="floral">
+                Floral
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="floral"
-    >
-      Floral
-    </button>
+              <button type="button" class="quiz-option" data-value="rose">
+                Rose
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="rose"
-    >
-      Rose
-    </button>
+              <button type="button" class="quiz-option" data-value="powdery">
+                Powdery
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="powdery"
-    >
-      Powdery
-    </button>
+              <button type="button" class="quiz-option" data-value="coffee">
+                Coffee
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="coffee"
-    >
-      Coffee
-    </button>
+              <button type="button" class="quiz-option" data-value="musky">
+                Musky
+              </button>
 
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="musky"
-    >
-      Musky
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="fruity"
-    >
-      Fruity
-    </button>
-
-  </div>
-</div>
+              <button type="button" class="quiz-option" data-value="fruity">
+                Fruity
+              </button>
+            </div>
+          </div>
           <div class="feature-card">
             <h3>3. Strength</h3>
             <div class="quiz-options" data-question="strength">
               <button class="quiz-option" data-value="subtle">Subtle</button>
-              <button class="quiz-option" data-value="moderate">Moderate</button>
+              <button class="quiz-option" data-value="moderate">
+                Moderate
+              </button>
               <button class="quiz-option" data-value="bold">Bold</button>
             </div>
-            <button type="button" class="btn-primary" id="findScentBtn" style="margin-top:16px">Find My Scent</button>
+            <button
+              type="button"
+              class="btn-primary"
+              id="findScentBtn"
+              style="margin-top: 16px"
+            >
+              Find My Scent
+            </button>
             <div class="quiz-result" id="quizResult">
               <h4 id="quizResultName"></h4>
               <p id="quizResultText"></p>
-              <button type="button" class="ghost-btn" id="quizOrderBtn">Order This Scent</button>
+              <button type="button" class="ghost-btn" id="quizOrderBtn">
+                Order This Scent
+              </button>
             </div>
           </div>
         </div>
@@ -364,14 +315,24 @@
     <section class="feature-section">
       <div class="wrap">
         <h2 class="sec-title">Build Your Duo</h2>
-        <p class="sec-lede">Choose two fragrances for a simple two-bottle set. Current collection price is ₱430 per bottle.</p>
-        <div class="feature-card" style="margin-top:28px">
+        <p class="sec-lede">
+          Choose two fragrances for a simple two-bottle set. Current collection
+          price is ₱430 per bottle.
+        </p>
+        <div class="feature-card" style="margin-top: 28px">
           <div class="duo-selects">
             <select id="duoOne" class="collection-filter"></select>
             <select id="duoTwo" class="collection-filter"></select>
           </div>
           <div class="duo-total" id="duoTotal">2 bottles • ₱860</div>
-          <button type="button" class="btn-primary" id="duoOrderBtn" style="margin-top:14px">Order This Duo</button>
+          <button
+            type="button"
+            class="btn-primary"
+            id="duoOrderBtn"
+            style="margin-top: 14px"
+          >
+            Order This Duo
+          </button>
         </div>
       </div>
     </section>
@@ -379,13 +340,27 @@
     <section class="feature-section">
       <div class="wrap">
         <h2 class="sec-title">How to Choose</h2>
-        <p class="sec-lede">A quick guide if you already know the kind of scent you want.</p>
+        <p class="sec-lede">
+          A quick guide if you already know the kind of scent you want.
+        </p>
         <div class="guide-list">
-          <div class="guide-item"><span>Fresh &amp; Clean</span><span>Aqua Di Gio • Sauvage</span></div>
-          <div class="guide-item"><span>Sweet &amp; Warm</span><span>Stronger With You • Black Opium</span></div>
-          <div class="guide-item"><span>Fresh &amp; Energetic</span><span>Eros • Invictus</span></div>
-          <div class="guide-item"><span>Floral &amp; Elegant</span><span>Miss Dior • Valaya • Eclat</span></div>
-          <div class="guide-item"><span>Modern &amp; Amber</span><span>Paradoxe • Black Opium</span></div>
+          <div class="guide-item">
+            <span>Fresh &amp; Clean</span><span>Aqua Di Gio • Sauvage</span>
+          </div>
+          <div class="guide-item">
+            <span>Sweet &amp; Warm</span
+            ><span>Stronger With You • Black Opium</span>
+          </div>
+          <div class="guide-item">
+            <span>Fresh &amp; Energetic</span><span>Eros • Invictus</span>
+          </div>
+          <div class="guide-item">
+            <span>Floral &amp; Elegant</span
+            ><span>Miss Dior • Valaya • Eclat</span>
+          </div>
+          <div class="guide-item">
+            <span>Modern &amp; Amber</span><span>Paradoxe • Black Opium</span>
+          </div>
         </div>
       </div>
     </section>
@@ -393,12 +368,27 @@
     <section class="feature-section" id="tracking">
       <div class="wrap">
         <h2 class="sec-title">Track Your Order</h2>
-        <p class="sec-lede">Enter the Order ID from your confirmation and the contact number used when ordering.</p>
+        <p class="sec-lede">
+          Enter the Order ID from your confirmation and the contact number used
+          when ordering.
+        </p>
         <div class="tracking-box">
           <div class="tracking-form">
-            <input id="trackingOrderId" class="collection-search" placeholder="AE-20260928-123456-123" autocomplete="off">
-            <input id="trackingContact" class="collection-search" placeholder="Contact number" autocomplete="tel">
-            <button type="button" class="btn-primary" id="trackOrderBtn">Track Order</button>
+            <input
+              id="trackingOrderId"
+              class="collection-search"
+              placeholder="AE-20260928-123456-123"
+              autocomplete="off"
+            />
+            <input
+              id="trackingContact"
+              class="collection-search"
+              placeholder="Contact number"
+              autocomplete="tel"
+            />
+            <button type="button" class="btn-primary" id="trackOrderBtn">
+              Track Order
+            </button>
           </div>
           <div class="tracking-result" id="trackingResult">
             <div class="tracking-id" id="trackingResultId"></div>
@@ -560,23 +550,56 @@
               <div class="field">
                 <label for="qtyNumber">Quantity</label>
                 <div class="qty-control">
-                  <button type="button" id="qtyMinus" aria-label="Decrease quantity">−</button>
-                  <input id="qtyNumber" type="number" min="1" max="10" value="1" inputmode="numeric" aria-label="Quantity">
-                  <button type="button" id="qtyPlus" aria-label="Increase quantity">+</button>
+                  <button
+                    type="button"
+                    id="qtyMinus"
+                    aria-label="Decrease quantity"
+                  >
+                    −
+                  </button>
+                  <input
+                    id="qtyNumber"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value="1"
+                    inputmode="numeric"
+                    aria-label="Quantity"
+                  />
+                  <button
+                    type="button"
+                    id="qtyPlus"
+                    aria-label="Increase quantity"
+                  >
+                    +
+                  </button>
                 </div>
-                <input type="hidden" id="qty" name="qty" value="1 bottle">
-                <div class="live-total" id="liveTotal">Estimated total: ₱430</div>
+                <input type="hidden" id="qty" name="qty" value="1 bottle" />
+                <div class="live-total" id="liveTotal">
+                  Estimated total: ₱430
+                </div>
               </div>
             </div>
             <div class="field">
               <label for="scent">Preferred Scent</label>
               <select id="scent" name="scent"></select>
             </div>
-            <button type="button" class="add-cart-btn" id="addSelectedToCart">+ ADD SELECTED SCENT TO CART</button>
+            <button type="button" class="add-cart-btn" id="addSelectedToCart">
+              + ADD SELECTED SCENT TO CART
+            </button>
             <div class="cart-box">
-              <div class="cart-head"><h4>Your Cart</h4><span class="cart-count" id="cartCount">0 items</span></div>
-              <div id="cartItems"><div class="cart-empty">Your cart is empty. Add one or more fragrances above.</div></div>
-              <div class="cart-total"><span>Estimated Total</span><strong id="cartTotal">₱0</strong></div>
+              <div class="cart-head">
+                <h4>Your Cart</h4>
+                <span class="cart-count" id="cartCount">0 items</span>
+              </div>
+              <div id="cartItems">
+                <div class="cart-empty">
+                  Your cart is empty. Add one or more fragrances above.
+                </div>
+              </div>
+              <div class="cart-total">
+                <span>Estimated Total</span><strong id="cartTotal">₱0</strong>
+              </div>
             </div>
             <div class="field">
               <label for="address">Delivery / Meetup Location</label>
@@ -646,14 +669,25 @@
     </section>
 
     <div class="confirmation-modal" id="confirmationModal" aria-hidden="true">
-      <div class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle">
+      <div
+        class="confirmation-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirmationTitle"
+      >
         <div class="confirmation-check">✓</div>
         <h3 id="confirmationTitle">Order Received</h3>
-        <p id="confirmationMessage">Thank you. Your order has been received and saved.</p>
+        <p id="confirmationMessage">
+          Thank you. Your order has been received and saved.
+        </p>
         <div class="confirmation-order-id" id="confirmationOrderId"></div>
         <div class="confirmation-actions">
-          <button type="button" class="btn-primary" id="confirmationTrackBtn">Track Order</button>
-          <button type="button" class="ghost-btn" id="confirmationCloseBtn">Continue Shopping</button>
+          <button type="button" class="btn-primary" id="confirmationTrackBtn">
+            Track Order
+          </button>
+          <button type="button" class="ghost-btn" id="confirmationCloseBtn">
+            Continue Shopping
+          </button>
         </div>
       </div>
     </div>
@@ -708,7 +742,6 @@
         </div>
       </div>
     </div>
-
 
     <footer>
       <div class="mark">A &amp; E</div>

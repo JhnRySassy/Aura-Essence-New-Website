@@ -14,6 +14,7 @@ import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabase-config.js";
 
 const REVIEW_BUCKET = "review-photos";
+const PRODUCT_BUCKET = "product-images";
 
 /* ---------------------------------------------------------
    CONNECTION
@@ -262,6 +263,7 @@ function settingsOut(data = {}) {
 function settingsIn(data = {}) {
   return {
     lowStockThreshold: Math.max(0, toInt(data.lowStockThreshold, 5)),
+    lowStockAlertAt: Math.max(0, toInt(data.lowStockAlertAt, 1)),
     showBestSellers: toBool(data.showBestSellers),
     showFeatured: toBool(data.showFeatured),
     showNewArrivals: toBool(data.showNewArrivals),
@@ -544,6 +546,69 @@ const actions = {
         message: "Settings row is missing. Re-run supabase/schema.sql.",
       };
     return ok({ settings: settingsOut(data) });
+  },
+
+  // Uploads a product photo (already resized in the browser) and returns its public URL.
+  async adminUploadProductImage(db, p) {
+    const file = p.file;
+    if (!file) return { success: false, message: "Choose a photo first." };
+
+    const type = file.type || "image/jpeg";
+    const ext = { "image/png": "png", "image/webp": "webp" }[type] || "jpg";
+    const base =
+      String(p.productId || "product")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") || "product";
+    const path = `${base}-${randomId().slice(0, 10)}.${ext}`;
+
+    must(
+      await db.storage
+        .from(PRODUCT_BUCKET)
+        .upload(path, file, { contentType: type, upsert: false }),
+    );
+    return ok({
+      url: db.storage.from(PRODUCT_BUCKET).getPublicUrl(path).data.publicUrl,
+    });
+  },
+
+  async adminAdjustStock(db, p) {
+    const args = { p_id: String(p.id) };
+    if (p.set !== undefined && p.set !== null && p.set !== "")
+      args.p_set = toInt(p.set, 0);
+    else args.p_delta = toInt(p.delta, 0);
+    return must(await db.rpc("admin_adjust_stock", args));
+  },
+
+  // Everything, for the "Download backup" button.
+  async adminBackup(db) {
+    const all = async (table, order) => {
+      const rows = [];
+      for (let from = 0; ; from += 1000) {
+        const batch = must(
+          await db
+            .from(table)
+            .select("*")
+            .order(order, { ascending: true })
+            .range(from, from + 999),
+        );
+        rows.push(...batch);
+        if (batch.length < 1000) break;
+      }
+      return rows;
+    };
+
+    const [orders, products, promotions, reviews, audit, settings] =
+      await Promise.all([
+        all("orders", "created_at"),
+        all("products", "sort_order"),
+        all("promotions", "min_qty"),
+        all("reviews", "created_at"),
+        all("audit_log", "id"),
+        all("site_settings", "id"),
+      ]);
+
+    return ok({ orders, products, promotions, reviews, audit, settings });
   },
 
   async adminAudit(db) {

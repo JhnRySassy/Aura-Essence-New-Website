@@ -721,3 +721,124 @@ create policy "review photos upload" on storage.objects for insert to anon, auth
 drop policy if exists "review photos admin delete" on storage.objects;
 create policy "review photos admin delete" on storage.objects for delete to authenticated
   using (bucket_id = 'review-photos' and public.is_admin());
+
+-- =====================================================================
+-- ADMIN TOOLS
+-- Product photo uploads, quick stock buttons, low-stock email alerts.
+-- =====================================================================
+
+-- ---------- Product photos (uploaded from the admin panel) ----------
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('product-images', 'product-images', true, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+  set public = excluded.public,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists "product images admin upload" on storage.objects;
+create policy "product images admin upload" on storage.objects for insert to authenticated
+  with check (bucket_id = 'product-images' and public.is_admin());
+
+drop policy if exists "product images admin update" on storage.objects;
+create policy "product images admin update" on storage.objects for update to authenticated
+  using (bucket_id = 'product-images' and public.is_admin())
+  with check (bucket_id = 'product-images' and public.is_admin());
+
+drop policy if exists "product images admin delete" on storage.objects;
+create policy "product images admin delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'product-images' and public.is_admin());
+
+-- ---------- Quick stock buttons (+1 / -1 / restock) ----------
+-- p_set: set an exact number; otherwise p_delta is added (never below 0).
+create or replace function public.admin_adjust_stock(p_id text, p_delta integer default 0, p_set integer default null)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_stock integer;
+begin
+  if not public.is_admin() then
+    raise exception 'Not authorized' using errcode = '42501';
+  end if;
+
+  update public.products
+     set stock = case when p_set is not null then greatest(0, p_set)
+                      else greatest(0, coalesce(stock, 0) + coalesce(p_delta, 0)) end
+   where id = p_id
+  returning stock into v_stock;
+
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Product not found.');
+  end if;
+
+  return jsonb_build_object('success', true, 'stock', v_stock);
+end $$;
+
+revoke execute on function public.admin_adjust_stock(text, integer, integer) from public, anon;
+grant execute on function public.admin_adjust_stock(text, integer, integer) to authenticated;
+
+-- ---------- Low-stock email alert ----------
+-- Emails you (through the same Apps Script mailer as new orders) when a
+-- product's stock DROPS to the "Email me when stock reaches" number
+-- on the admin Homepage tab (default 1), and again when it sells out (0).
+-- Not on every order.
+update public.site_settings
+   set data = data || '{"lowStockAlertAt": 1}'::jsonb
+ where id = 1 and not (data ? 'lowStockAlertAt');
+
+create or replace function public.notify_low_stock()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_url       text;
+  v_secret    text;
+  v_threshold integer;
+begin
+  if new.stock is null then
+    return new;
+  end if;
+
+  select coalesce((data ->> 'lowStockAlertAt')::int, 1) into v_threshold
+    from public.site_settings where id = 1;
+  v_threshold := coalesce(v_threshold, 1);
+
+  -- only when it crosses the line going down, plus once more when it sells out
+  if not (
+       (new.stock <= v_threshold and (old.stock is null or old.stock > v_threshold))
+    or (new.stock = 0 and coalesce(old.stock, 1) > 0)
+  ) then
+    return new;
+  end if;
+
+  select value into v_url    from private.config where key = 'order_email_webhook_url';
+  select value into v_secret from private.config where key = 'order_email_webhook_secret';
+  if coalesce(v_url, '') = '' then
+    return new;
+  end if;
+
+  begin
+    perform net.http_post(
+      url     := v_url,
+      body    := jsonb_build_object(
+                   'secret',    coalesce(v_secret, ''),
+                   'type',      'low_stock',
+                   'productId', new.id,
+                   'name',      new.name,
+                   'stock',     new.stock,
+                   'threshold', v_threshold),
+      headers := '{"Content-Type": "application/json"}'::jsonb,
+      timeout_milliseconds := 10000
+    );
+  exception when others then
+    raise warning 'Low-stock email failed: %', sqlerrm;
+  end;
+
+  return new;
+end $$;
+
+revoke execute on function public.notify_low_stock() from public, anon, authenticated;
+
+drop trigger if exists products_low_stock on public.products;
+create trigger products_low_stock after update of stock on public.products
+  for each row execute function public.notify_low_stock();
