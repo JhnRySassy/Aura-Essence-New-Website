@@ -36,7 +36,10 @@
       <button data-view="dashboard" class="nav-item active">Dashboard</button>
       <button data-view="orders" class="nav-item">Orders</button>
       <button data-view="products" class="nav-item">Products</button>
+      <button data-view="inventory" class="nav-item">Restocks</button>
       <button data-view="promotions" class="nav-item">Promotions</button>
+      <button data-view="vouchers" class="nav-item">Vouchers</button>
+      <button data-view="reports" class="nav-item">Profit &amp; Reports</button>
       <button data-view="homepage" class="nav-item">Homepage</button>
       <button data-view="reviews" class="nav-item">Reviews</button>
       <button data-view="audit" class="nav-item">Audit Log</button>
@@ -160,6 +163,75 @@
       </form>
     </section>
 
+
+    <!-- ---------- Restocks / inventory ---------- -->
+    <section id="inventoryView" class="view hidden">
+      <div class="cards inv-cards" id="invCards"></div>
+      <div class="grid-2 inv-grid">
+        <form class="panel" id="restockForm" autocomplete="off">
+          <div class="panel-head"><h3>Record a restock</h3><span>Adds to stock + updates average cost</span></div>
+          <div class="form-grid">
+            <label class="full">Product<select id="rProduct" required></select></label>
+            <label>Bottles received<input id="rQty" type="number" min="1" step="1" inputmode="numeric" required placeholder="e.g. 10"></label>
+            <label>Cost per bottle (₱)<input id="rCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 250"></label>
+            <label>Date received<input id="rDate" type="date"></label>
+            <label>Supplier <small class="muted">(optional)</small><input id="rSupplier" maxlength="120" list="supplierList"></label>
+            <label class="full">Note <small class="muted">(optional)</small><input id="rNote" maxlength="500" placeholder="e.g. batch 3, paid via GCash"></label>
+          </div>
+          <datalist id="supplierList"></datalist>
+          <p class="restock-preview" id="rPreview"></p>
+          <div class="form-actions"><button class="btn primary" type="submit">Save restock</button></div>
+        </form>
+        <div class="panel">
+          <div class="panel-head"><h3>Stock &amp; cost</h3><span>Current average cost per bottle</span></div>
+          <div class="table-wrap slim"><table class="responsive inv-table"><thead><tr><th>Product</th><th>Stock</th><th>Avg. cost</th><th>Price</th><th>Margin</th></tr></thead><tbody id="invRows"></tbody></table></div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h3>Restock history</h3><span id="restockCount"></span></div>
+        <div class="toolbar"><input id="restockSearch" placeholder="Search product, supplier, note…" aria-label="Search restocks"><button class="btn" id="refreshRestocks">Refresh</button></div>
+        <div class="table-wrap"><table class="responsive"><thead><tr><th>Date</th><th>Product</th><th>Bottles</th><th>Cost / bottle</th><th>Total</th><th>Supplier / note</th><th></th></tr></thead><tbody id="restockRows"></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ---------- Vouchers ---------- -->
+    <section id="vouchersView" class="view hidden">
+      <div class="toolbar">
+        <button class="btn primary" id="newVoucher" type="button">+ New voucher</button>
+        <input id="voucherSearch" placeholder="Search code or note…" aria-label="Search vouchers">
+        <select id="voucherFilter" aria-label="Filter vouchers"><option value="">All vouchers</option><option value="live">Active now</option><option value="off">Turned off</option><option value="ended">Expired / used up</option></select>
+      </div>
+      <div class="cards voucher-stats" id="voucherStats"></div>
+      <div id="vouchersList" class="promo-list voucher-list"></div>
+    </section>
+
+    <!-- ---------- Profit & reports ---------- -->
+    <section id="reportsView" class="view hidden">
+      <div class="toolbar date-range report-bar">
+        <select id="reportRange" aria-label="Period"><option value="month">Month</option><option value="year">Whole year</option><option value="all">All time</option></select>
+        <input type="month" id="reportMonth" aria-label="Month">
+        <span id="reportLabel" class="muted filter-count"></span>
+        <button class="btn" id="reportExcel" type="button">⬇ Excel</button>
+        <button class="btn primary" id="reportPdf" type="button">⬇ PDF report</button>
+      </div>
+      <div class="cards profit-cards" id="profitCards"></div>
+      <p class="pay-note warn" id="profitWarn" hidden></p>
+      <div class="panel">
+        <div class="panel-head"><h3>Profit per product</h3><span>Sales after discounts − cost of bottles sold</span></div>
+        <div class="table-wrap"><table class="responsive"><thead><tr><th>Product</th><th>Bottles</th><th>Sales</th><th>Cost</th><th>Profit</th><th>Margin</th></tr></thead><tbody id="profitRows"></tbody></table></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel">
+          <div class="panel-head"><h3>Discounts given</h3><span>Promos &amp; vouchers</span></div>
+          <div id="discountList" class="mini-list"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Monthly summary</h3><span id="monthlyHint">Last 12 months</span></div>
+          <div class="table-wrap slim"><table class="responsive"><thead><tr><th>Month</th><th>Orders</th><th>Sales</th><th>Profit</th></tr></thead><tbody id="monthlyRows"></tbody></table></div>
+        </div>
+      </div>
+    </section>
+
     <!-- ---------- Reviews ---------- -->
     <section id="reviewsView" class="view hidden">
       <div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div>
@@ -171,7 +243,7 @@
     <section id="auditView" class="view hidden">
       <div class="toolbar">
         <input id="auditSearch" placeholder="Search the log (e.g. sauvage, AE-2026…)" aria-label="Search audit log">
-        <select id="auditFilter" aria-label="Type"><option value="">Everything</option><option value="order">Orders</option><option value="payment">Payments</option><option value="product">Products &amp; stock</option><option value="promotion">Promotions</option><option value="review">Reviews</option><option value="homepage settings">Settings</option></select>
+        <select id="auditFilter" aria-label="Type"><option value="">Everything</option><option value="order">Orders</option><option value="payment">Payments</option><option value="product">Products &amp; stock</option><option value="promotion">Promotions</option><option value="voucher">Vouchers</option><option value="stock">Restocks</option><option value="review">Reviews</option><option value="homepage settings">Settings</option></select>
         <button class="btn" id="refreshAudit">Refresh</button>
       </div>
       <div id="auditList" class="audit-list"></div>
@@ -200,6 +272,7 @@
             <label>ID <small class="muted">(used in links; change with care)</small><input id="pId" required></label>
             <label>Category<select id="pCat"><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select></label>
             <label>Price (₱)<input id="pPrice" type="number" min="0" value="430" inputmode="decimal"></label>
+            <label>Cost / puhunan (₱) <small class="muted">(auto-updated by restocks)</small><input id="pCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 250"></label>
             <label>Stock <small class="muted">(blank = unlimited)</small><input id="pStock" type="number" min="0" value="10" inputmode="numeric"></label>
             <label>Display order<input id="pSort" type="number" value="0" inputmode="numeric"></label>
             <label class="switch-row full"><span><b>Visible on website</b><small>Hidden products can't be ordered</small></span><input id="pActive" type="checkbox" class="switch" checked></label>
@@ -275,6 +348,41 @@
     </aside>
   </div>
 
+
+  <!-- Voucher editor (side panel) -->
+  <div id="voucherEditor" class="drawer side-editor hidden" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-editor></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="voucherTitle">
+      <div class="drawer-head"><div><p class="eyebrow">VOUCHER</p><h3 id="voucherTitle">New voucher</h3></div><button class="btn ghost" type="button" id="closeVoucher">Close</button></div>
+      <form id="voucherForm" class="editor-form" autocomplete="off">
+        <input type="hidden" id="vOriginal">
+        <fieldset class="form-sec">
+          <legend>Code &amp; discount</legend>
+          <div class="form-grid">
+            <label class="full">Code <small class="muted">(what customers type — letters/numbers, no spaces)</small><div class="code-row"><input id="vCode" required maxlength="30" placeholder="e.g. SUKI50" autocapitalize="characters" spellcheck="false"><button class="btn ghost" type="button" id="vRandom">Generate</button></div></label>
+            <label>Type<select id="vType"><option value="percent">% off</option><option value="amount">₱ off (fixed amount)</option></select></label>
+            <label><span id="vValueLabel">Percent off (%)</span><input id="vValue" type="number" min="0" step="0.01" required inputmode="decimal" placeholder="e.g. 10"></label>
+            <label data-vfield="percent">Maximum discount (₱) <small class="muted">(blank = no cap)</small><input id="vMax" type="number" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 100"></label>
+            <label>Minimum order (₱) <small class="muted">(before discounts)</small><input id="vMin" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label>
+          </div>
+        </fieldset>
+        <fieldset class="form-sec">
+          <legend>When &amp; how many</legend>
+          <div class="form-grid">
+            <label>Starts <small class="muted">(blank = now)</small><input id="vStart" type="date"></label>
+            <label>Ends <small class="muted">(blank = no expiry)</small><input id="vEnd" type="date"></label>
+            <label>Total uses <small class="muted">(blank = unlimited)</small><input id="vLimit" type="number" min="1" step="1" inputmode="numeric" placeholder="e.g. 50"></label>
+            <label>Uses per customer<select id="vPer"><option value="">Unlimited</option><option value="1">Once per customer</option><option value="2">2 times</option><option value="3">3 times</option></select></label>
+            <label class="full">Note <small class="muted">(only you see this)</small><input id="vNote" maxlength="300" placeholder="e.g. Payday promo on FB"></label>
+            <label class="switch-row full"><span><b>Active</b><small>Customers can use it at checkout</small></span><input id="vActive" type="checkbox" class="switch" checked></label>
+          </div>
+          <p class="promo-preview" id="vPreview"></p>
+        </fieldset>
+        <div class="form-actions sticky-actions"><button class="btn danger" type="button" id="deleteVoucher">Delete</button><button class="btn primary" type="submit">Save voucher</button></div>
+      </form>
+    </aside>
+  </div>
+
   <!-- Mobile bottom navigation -->
   <nav class="mobile-nav" aria-label="Admin sections">
     <button type="button" data-view="dashboard" class="m-nav active"><span aria-hidden="true">▦</span>Dashboard</button>
@@ -285,6 +393,9 @@
   <div class="more-sheet hidden" id="moreSheet">
     <div class="drawer-backdrop" data-close-more></div>
     <div class="more-panel">
+      <button type="button" data-view="reports">Profit &amp; Reports</button>
+      <button type="button" data-view="inventory">Restocks</button>
+      <button type="button" data-view="vouchers">Vouchers</button>
       <button type="button" data-view="promotions">Promotions</button>
       <button type="button" data-view="homepage">Homepage</button>
       <button type="button" data-view="reviews">Reviews <b class="count-badge" id="mReviewsBadge" hidden>0</b></button>

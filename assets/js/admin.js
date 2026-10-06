@@ -2523,6 +2523,11 @@ class AdminApp {
     );
 
     set(
+      "pCost",
+      product?.cost ?? ""
+    );
+
+    set(
       "pSort",
       product?.sortOrder || 0
     );
@@ -2710,6 +2715,9 @@ class AdminApp {
 
         stock:
           value("pStock"),
+
+        cost:
+          value("pCost"),
 
         sortOrder:
           value("pSort"),
@@ -3856,6 +3864,7 @@ Object.assign(AdminApp.prototype, {
           "Payment Ref": o.payment_ref || "",
           "Payment Note": o.payment_note || "",
           "Promo": o.promotion_name || "",
+          "Voucher": o.voucher_code || "",
           "Delivery / Meetup": o.address,
           "Payment": o.payment,
           "Notes": o.notes,
@@ -3863,6 +3872,7 @@ Object.assign(AdminApp.prototype, {
         })),
         Products: data.products.map(p => ({
           "ID": p.id, "Name": p.name, "Category": p.cat, "Price": Number(p.price),
+          "Cost": p.cost == null ? "" : Number(p.cost),
           "Stock": p.stock ?? "unlimited", "Active": p.active ? "TRUE" : "FALSE",
           "Badges": list(p.badges), "Sort Order": p.sort_order, "Image URL": p.img,
           "Description": p.descr, "Long Description": p.desc_long,
@@ -3880,6 +3890,19 @@ Object.assign(AdminApp.prototype, {
           "Status": r.approved ? "Approved" : "Pending"
         })),
         "Audit Log": data.audit.map(a => ({ "Date": when(a.created_at), "Actor": a.actor, "Action": a.action })),
+        Vouchers: (data.vouchers || []).map(v => ({
+          "Code": v.code, "Type": v.type, "Value": Number(v.value),
+          "Max Discount": v.max_discount == null ? "" : Number(v.max_discount),
+          "Min Order": Number(v.min_order), "Starts": when(v.starts_at), "Expires": when(v.expires_at),
+          "Usage Limit": v.usage_limit ?? "", "Per Customer": v.per_customer ?? "",
+          "Active": v.active ? "TRUE" : "FALSE", "Note": v.note
+        })),
+        Restocks: (data.restocks || []).map(r => ({
+          "Date Received": r.received_at, "Product": r.product_name, "Product ID": r.product_id || "",
+          "Qty": r.qty, "Unit Cost": r.unit_cost == null ? "" : Number(r.unit_cost),
+          "Total Cost": r.unit_cost == null ? "" : Number(r.unit_cost) * r.qty,
+          "Supplier": r.supplier, "Note": r.note, "Recorded By": r.created_by
+        })),
         Settings: Object.entries(data.settings[0]?.data || {}).map(([Key, Value]) => ({ Key, Value: String(Value) }))
       };
 
@@ -4571,7 +4594,7 @@ Object.assign(AdminApp.prototype, {
     this.dom.auditSearch?.addEventListener("input", debounce(() => this.renderAudit(), 150));
 
     /* Body class while a side panel is open (moves pop-ups out of the way) */
-    const drawers = ["orderDrawer", "productEditor", "promoEditor"].map(id => document.getElementById(id)).filter(Boolean);
+    const drawers = ["orderDrawer", "productEditor", "promoEditor", "voucherEditor"].map(id => document.getElementById(id)).filter(Boolean);
     const syncDrawerClass = () =>
       document.body.classList.toggle("has-drawer", drawers.some(d => !d.classList.contains("hidden")));
     const observer = new MutationObserver(syncDrawerClass);
@@ -5571,6 +5594,1012 @@ Object.assign(AdminApp.prototype, {
           }).join("")}
         </div>`;
     }).join("");
+  }
+});
+
+
+/* =========================================================
+   BUSINESS TOOLS (v3)
+   Vouchers · Restock log · Profit report · Monthly Excel/PDF
+========================================================= */
+
+const _orig3 = {
+  bind: AdminApp.prototype.bind,
+  showView: AdminApp.prototype.showView,
+  closeEditors: AdminApp.prototype.closeEditors,
+  loadOrders: AdminApp.prototype.loadOrders,
+  loadProducts: AdminApp.prototype.loadProducts
+};
+
+MORE_VIEWS.push("reports", "inventory", "vouchers");
+
+const byId = id => document.getElementById(id);
+const MANILA = "Asia/Manila";
+
+// ₱1,234 or ₱1,234.50
+function peso2(value) {
+  const n = Math.round(Number(value || 0) * 100) / 100;
+  return "₱" + n.toLocaleString(undefined, { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
+}
+
+// Same for the PDF (the built-in PDF font has no ₱ sign)
+function phpText(value) {
+  const n = Math.round(Number(value || 0) * 100) / 100;
+  return "PHP " + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function pctText(n) {
+  return Number.isFinite(n) ? `${Math.round(n * 10) / 10}%` : "—";
+}
+
+// YYYY-MM-DD of a moment, in Manila time
+function manilaDay(value) {
+  if (!value) return "";
+  return new Intl.DateTimeFormat("en-CA", { timeZone: MANILA, year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(new Date(value));
+}
+
+function niceDate(value) {
+  if (!value) return "";
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value + "T12:00:00+08:00") : new Date(value);
+  return d.toLocaleDateString(undefined, { timeZone: MANILA, month: "short", day: "numeric", year: "numeric" });
+}
+
+function monthKeyOf(value) {
+  return manilaDay(value).slice(0, 7);
+}
+
+function monthName(key) {
+  const [y, m] = key.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
+}
+
+function orderSales(o) {
+  return o.amountPaid != null ? Number(o.amountPaid) : Number(o.total || 0);
+}
+
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[data-src="${src}"]`)?.dataset.loaded) return resolve();
+    const s = document.createElement("script");
+    s.src = src;
+    s.dataset.src = src;
+    s.onload = () => { s.dataset.loaded = "1"; resolve(); };
+    s.onerror = () => reject(new Error("Could not load the PDF tool. Check your internet connection."));
+    document.head.appendChild(s);
+  });
+}
+
+function voucherDiscountText(v) {
+  if (v.type === "percent") {
+    return `${Number(v.value)}% off` + (v.maxDiscount ? ` (up to ${peso2(v.maxDiscount)})` : "");
+  }
+  return `${peso2(v.value)} off`;
+}
+
+function voucherRulesText(v) {
+  const parts = [voucherDiscountText(v)];
+  if (Number(v.minOrder) > 0) parts.push(`min. order ${peso2(v.minOrder)}`);
+  if (v.perCustomer === 1) parts.push("once per customer");
+  else if (v.perCustomer) parts.push(`${v.perCustomer}× per customer`);
+  if (v.usageLimit) parts.push(`first ${v.usageLimit} uses`);
+  if (v.startsAt && new Date(v.startsAt) > new Date()) parts.push(`starts ${niceDate(v.startsAt)}`);
+  if (v.expiresAt) parts.push(`until ${niceDate(v.expiresAt)}`);
+  return parts.join(" · ");
+}
+
+Object.assign(AdminApp.prototype, {
+
+  /* ---------------------------------------------------
+     Setup
+  --------------------------------------------------- */
+
+  bind() {
+    _orig3.bind.call(this);
+
+    ["inventory", "vouchers", "reports"].forEach(v => { if (!this.views.includes(v)) this.views.push(v); });
+    this.vouchers = [];
+    this.restocks = [];
+
+    /* Vouchers */
+    byId("newVoucher")?.addEventListener("click", () => this.editVoucher(null));
+    byId("closeVoucher")?.addEventListener("click", () => this.closeEditors());
+    byId("voucherForm")?.addEventListener("submit", e => { e.preventDefault(); this.saveVoucher(); });
+    byId("deleteVoucher")?.addEventListener("click", () => this.deleteVoucher(byId("vOriginal").value));
+    byId("voucherSearch")?.addEventListener("input", debounce(() => this.renderVouchers(), 150));
+    byId("voucherFilter")?.addEventListener("change", () => this.renderVouchers());
+    byId("vRandom")?.addEventListener("click", () => {
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+      const bytes = crypto.getRandomValues(new Uint8Array(6));
+      byId("vCode").value = "AE" + Array.from(bytes, b => chars[b % chars.length]).join("");
+      this.updateVoucherPreview();
+    });
+    ["vCode", "vType", "vValue", "vMax", "vMin", "vStart", "vEnd", "vLimit", "vPer", "vActive"].forEach(id =>
+      byId(id)?.addEventListener(id === "vType" || id === "vPer" || id === "vActive" ? "change" : "input", () => this.updateVoucherPreview()));
+    byId("vCode")?.addEventListener("blur", e => { e.target.value = e.target.value.trim().toUpperCase().replace(/\s+/g, ""); });
+
+    byId("vouchersList")?.addEventListener("click", e => {
+      const edit = e.target.closest("[data-vedit]");
+      if (edit) return this.editVoucher(this.vouchers.find(v => v.code === edit.dataset.vedit));
+      const copy = e.target.closest("[data-vcopy]");
+      if (copy) return this.copyVoucherLink(copy.dataset.vcopy);
+      const del = e.target.closest("[data-vdel]");
+      if (del) return this.deleteVoucher(del.dataset.vdel);
+    });
+    byId("vouchersList")?.addEventListener("change", e => {
+      const t = e.target.closest("[data-vtoggle]");
+      if (t) this.setVoucherActive(t.dataset.vtoggle, t.checked, t);
+    });
+
+    /* Restocks */
+    byId("restockForm")?.addEventListener("submit", e => { e.preventDefault(); this.saveRestock(); });
+    ["rProduct", "rQty", "rCost"].forEach(id =>
+      byId(id)?.addEventListener(id === "rProduct" ? "change" : "input", () => this.updateRestockPreview()));
+    byId("restockSearch")?.addEventListener("input", debounce(() => this.renderRestocks(), 150));
+    byId("refreshRestocks")?.addEventListener("click", () => this.loadRestocks());
+    byId("restockRows")?.addEventListener("click", e => {
+      const del = e.target.closest("[data-rdel]");
+      if (del) this.deleteRestock(del.dataset.rdel);
+    });
+    byId("invRows")?.addEventListener("click", e => {
+      const pick = e.target.closest("[data-restock]");
+      if (!pick) return;
+      byId("rProduct").value = pick.dataset.restock;
+      this.updateRestockPreview();
+      byId("rQty")?.focus();
+      byId("restockForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+
+    /* Reports */
+    const month = byId("reportMonth");
+    if (month) month.value = manilaDay(new Date()).slice(0, 7);
+    byId("reportRange")?.addEventListener("change", () => this.renderReports());
+    month?.addEventListener("change", () => this.renderReports());
+    byId("reportExcel")?.addEventListener("click", () => this.downloadReportExcel());
+    byId("reportPdf")?.addEventListener("click", () => this.downloadReportPdf());
+  },
+
+
+  showView(view) {
+    _orig3.showView.call(this, view);
+
+    const titles = { inventory: "Restocks & Cost", vouchers: "Vouchers", reports: "Profit & Reports" };
+    if (this.dom.viewTitle && titles[view]) this.dom.viewTitle.textContent = titles[view];
+
+    if (view === "vouchers") this.loadVouchers();
+    if (view === "inventory") this.loadRestocks();
+    if (view === "reports") {
+      this.renderReports();
+      if (!this.restocksLoaded) this.loadRestocks(true);
+    }
+  },
+
+
+  closeEditors() {
+    _orig3.closeEditors.call(this);
+    const el = byId("voucherEditor");
+    el?.classList.add("hidden");
+    el?.setAttribute("aria-hidden", "true");
+  },
+
+
+  async loadOrders(silent = false) {
+    await _orig3.loadOrders.call(this, silent);
+    const visible = v => !byId(v + "View")?.classList.contains("hidden");
+    if (visible("vouchers")) this.renderVouchers();
+    if (visible("reports")) this.renderReports();
+  },
+
+
+  async loadProducts() {
+    await _orig3.loadProducts.call(this);
+    this.fillRestockProducts();
+    if (!byId("inventoryView")?.classList.contains("hidden")) this.renderInventory();
+    if (!byId("reportsView")?.classList.contains("hidden")) this.renderReports();
+  },
+
+
+  /* ---------------------------------------------------
+     VOUCHERS
+  --------------------------------------------------- */
+
+  async loadVouchers() {
+    try {
+      const res = await this.request("GET", { action: "adminVouchers" });
+      this.vouchers = res.vouchers || [];
+      this.renderVouchers();
+    } catch (error) {
+      this.setStatus("Could not load vouchers: " + error.message, true);
+    }
+  },
+
+
+  voucherUsage(code) {
+    const orders = (this.orders || []).filter(o => o.voucherCode === code && o.status !== "Cancelled");
+    return {
+      uses: orders.length,
+      discount: orders.reduce((s, o) => s + Number(o.discount || 0), 0),
+      sales: orders.reduce((s, o) => s + orderSales(o), 0),
+      last: orders.reduce((m, o) => (!m || o.timestamp > m ? o.timestamp : m), "")
+    };
+  },
+
+
+  voucherState(v, usage) {
+    const now = new Date();
+    if (!v.active) return { key: "off", label: "Off" };
+    if (v.expiresAt && new Date(v.expiresAt) < now) return { key: "ended", label: "Expired" };
+    if (v.usageLimit && usage.uses >= v.usageLimit) return { key: "ended", label: "Used up" };
+    if (v.startsAt && new Date(v.startsAt) > now) return { key: "scheduled", label: "Scheduled" };
+    return { key: "live", label: "Active" };
+  },
+
+
+  renderVouchers() {
+    const box = byId("vouchersList");
+    if (!box) return;
+
+    const q = (byId("voucherSearch")?.value || "").trim().toLowerCase();
+    const filter = byId("voucherFilter")?.value || "";
+
+    const rows = this.vouchers.map(v => {
+      const usage = this.voucherUsage(v.code);
+      return { v, usage, state: this.voucherState(v, usage) };
+    });
+
+    // Summary cards
+    const stats = byId("voucherStats");
+    if (stats) {
+      const live = rows.filter(r => r.state.key === "live").length;
+      const uses = rows.reduce((s, r) => s + r.usage.uses, 0);
+      const disc = rows.reduce((s, r) => s + r.usage.discount, 0);
+      const sales = rows.reduce((s, r) => s + r.usage.sales, 0);
+      const card = (label, value, sub) => `<div class="stat"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+      stats.innerHTML = [
+        card("Active vouchers", String(live), `${rows.length} total`),
+        card("Times used", String(uses), "orders, excl. cancelled"),
+        card("Discounts given", peso2(disc), "through vouchers"),
+        card("Sales with vouchers", peso2(sales), "after discount")
+      ].join("");
+    }
+
+    const list = rows.filter(({ v, state }) => {
+      if (filter && filter !== state.key) return false;
+      if (q && !`${v.code} ${v.note}`.toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    if (!this.vouchers.length) {
+      box.innerHTML = `<p class="empty-note">No vouchers yet. Create one — e.g. <b>SUKI50</b> for ₱50 off — and share the code on Facebook or with loyal customers.</p>`;
+      return;
+    }
+    if (!list.length) {
+      box.innerHTML = `<p class="empty-note">No vouchers match.</p>`;
+      return;
+    }
+
+    box.innerHTML = list.map(({ v, usage, state }) => {
+      const code = escapeHTML(v.code);
+      const limit = v.usageLimit ? ` of ${v.usageLimit}` : "";
+      const bar = v.usageLimit
+        ? `<span class="v-bar"><i style="width:${Math.min(100, Math.round(usage.uses / v.usageLimit * 100))}%"></i></span>`
+        : "";
+      return `
+        <div class="promo-card voucher-card ${state.key}">
+          <div class="v-code"><b>${code}</b><span class="v-state ${state.key}">${state.label}</span></div>
+          <div class="promo-main">
+            <span>${escapeHTML(voucherRulesText(v))}</span>
+            <small>Used ${usage.uses}${limit} time${usage.uses === 1 && !limit ? "" : "s"} · ${peso2(usage.discount)} discounts · ${peso2(usage.sales)} sales${usage.last ? ` · last used ${niceDate(usage.last)}` : ""}</small>
+            ${bar}
+            ${v.note ? `<small class="v-note">${escapeHTML(v.note)}</small>` : ""}
+          </div>
+          <div class="promo-actions">
+            <label class="switch-row" style="border:0;padding:0"><span class="muted" style="font-size:11px">${v.active ? "On" : "Off"}</span><input type="checkbox" class="switch" data-vtoggle="${code}" ${v.active ? "checked" : ""} aria-label="Turn ${code} on or off"></label>
+            <button class="btn" type="button" data-vcopy="${code}" title="Copy a link that fills in the code">Copy link</button>
+            <button class="btn" type="button" data-vedit="${code}">Edit</button>
+          </div>
+        </div>`;
+    }).join("");
+  },
+
+
+  editVoucher(v) {
+    const el = byId("voucherEditor");
+    if (!el) return;
+    const set = (id, value) => { const f = byId(id); if (f) f.value = value ?? ""; };
+
+    byId("voucherTitle").textContent = v ? `Edit ${v.code}` : "New voucher";
+    set("vOriginal", v?.code || "");
+    set("vCode", v?.code || "");
+    set("vType", v?.type || "percent");
+    set("vValue", v ? v.value : "");
+    set("vMax", v?.maxDiscount ?? "");
+    set("vMin", v ? v.minOrder : 0);
+    set("vStart", v?.startsAt ? manilaDay(v.startsAt) : "");
+    set("vEnd", v?.expiresAt ? manilaDay(v.expiresAt) : "");
+    set("vLimit", v?.usageLimit ?? "");
+    set("vPer", v?.perCustomer ? String(Math.min(3, v.perCustomer)) : "");
+    set("vNote", v?.note || "");
+    byId("vActive").checked = v ? v.active : true;
+    byId("deleteVoucher").hidden = !v;
+
+    this.updateVoucherPreview();
+    el.classList.remove("hidden");
+    el.setAttribute("aria-hidden", "false");
+    setTimeout(() => byId(v ? "vValue" : "vCode")?.focus(), 50);
+  },
+
+
+  voucherFormData() {
+    const val = id => byId(id)?.value ?? "";
+    return {
+      code: val("vCode").trim().toUpperCase().replace(/\s+/g, ""),
+      originalCode: val("vOriginal"),
+      type: val("vType"),
+      value: val("vValue"),
+      maxDiscount: val("vMax"),
+      minOrder: val("vMin") || 0,
+      startsAt: val("vStart"),
+      expiresAt: val("vEnd"),
+      usageLimit: val("vLimit"),
+      perCustomer: val("vPer"),
+      note: val("vNote"),
+      active: byId("vActive")?.checked ?? true
+    };
+  },
+
+
+  updateVoucherPreview() {
+    const type = byId("vType")?.value || "percent";
+    document.querySelectorAll("[data-vfield]").forEach(el => { el.hidden = el.dataset.vfield !== type; });
+    const label = byId("vValueLabel");
+    if (label) label.textContent = type === "percent" ? "Percent off (%)" : "Amount off (₱)";
+
+    const f = this.voucherFormData();
+    const preview = byId("vPreview");
+    if (!preview) return;
+    if (!(Number(f.value) > 0)) {
+      preview.textContent = "Enter the discount to see a preview.";
+      return;
+    }
+    const v = {
+      type: f.type, value: Number(f.value), maxDiscount: Number(f.maxDiscount) || null, minOrder: Number(f.minOrder) || 0,
+      perCustomer: f.perCustomer ? Number(f.perCustomer) : null, usageLimit: f.usageLimit ? Number(f.usageLimit) : null,
+      startsAt: f.startsAt ? f.startsAt + "T00:00:00+08:00" : null, expiresAt: f.expiresAt ? f.expiresAt + "T23:59:59+08:00" : null
+    };
+    const example = Math.max(860, v.minOrder);
+    const disc = v.type === "percent"
+      ? Math.min(Math.round(example * v.value) / 100, v.maxDiscount || Infinity)
+      : Math.min(v.value, example);
+    preview.textContent = `${f.code || "CODE"}: ${voucherRulesText(v)}. Example: a ${peso2(example)} order saves ${peso2(disc)}. If a promo gives more, the promo is used instead.`;
+  },
+
+
+  async saveVoucher() {
+    const data = this.voucherFormData();
+    try {
+      const res = await this.request("POST", { action: "adminSaveVoucher", ...data });
+      this.toast(`Voucher ${res.code} saved`);
+      this.closeEditors();
+      await this.loadVouchers();
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  async setVoucherActive(code, active, toggle) {
+    toggle.disabled = true;
+    try {
+      const res = await this.request("POST", { action: "adminSetVoucherActive", code, active });
+      const v = this.vouchers.find(x => x.code === code);
+      if (v) v.active = res.active;
+      this.toast(`${code} turned ${res.active ? "on" : "off"}`);
+      this.renderVouchers();
+    } catch (error) {
+      toggle.checked = !active;
+      this.setStatus(error.message, true);
+    } finally {
+      toggle.disabled = false;
+    }
+  },
+
+
+  async deleteVoucher(code) {
+    if (!code) return;
+    const used = this.voucherUsage(code).uses;
+    const ok = await this.ask({
+      title: `Delete ${code}?`,
+      message: used
+        ? `It was used in ${used} order${used === 1 ? "" : "s"}. Those orders keep their discount, but the code stops working. Tip: turn it off instead to keep the history here.`
+        : "Customers will no longer be able to use this code.",
+      okText: "Delete", danger: true
+    });
+    if (!ok) return;
+    try {
+      await this.request("POST", { action: "adminDeleteVoucher", code });
+      this.toast(`Deleted ${code}`);
+      this.closeEditors();
+      await this.loadVouchers();
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  async copyVoucherLink(code) {
+    const url = new URL("index.html", location.href);
+    url.searchParams.set("voucher", code);
+    url.hash = "order";
+    const text = url.toString();
+    try {
+      await navigator.clipboard.writeText(text);
+      this.toast(`Link copied — opening it fills in ${code} at checkout`);
+    } catch {
+      await this.ask({ title: "Copy this link", message: text, okText: "Done", cancelText: "Close" });
+    }
+  },
+
+
+  /* ---------------------------------------------------
+     RESTOCKS & COST
+  --------------------------------------------------- */
+
+  async loadRestocks(quiet = false) {
+    try {
+      const res = await this.request("GET", { action: "adminRestocks" });
+      this.restocks = res.restocks || [];
+      this.restocksLoaded = true;
+      this.fillRestockProducts();
+      this.renderInventory();
+      this.renderRestocks();
+      if (!byId("reportsView")?.classList.contains("hidden")) this.renderReports();
+    } catch (error) {
+      if (!quiet) this.setStatus("Could not load restocks: " + error.message, true);
+    }
+  },
+
+
+  fillRestockProducts() {
+    const select = byId("rProduct");
+    if (!select) return;
+    const current = select.value;
+    const products = [...(this.products || [])].sort((a, b) => a.name.localeCompare(b.name));
+    select.innerHTML = `<option value="">Choose a product…</option>` + products.map(p =>
+      `<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)}${p.stock == null ? " (unlimited)" : ` — ${p.stock} in stock`}</option>`).join("");
+    if (current && products.some(p => p.id === current)) select.value = current;
+
+    const date = byId("rDate");
+    if (date && !date.value) date.value = manilaDay(new Date());
+
+    const suppliers = [...new Set((this.restocks || []).map(r => r.supplier).filter(Boolean))];
+    const dl = byId("supplierList");
+    if (dl) dl.innerHTML = suppliers.map(s => `<option value="${escapeHTML(s)}">`).join("");
+
+    this.updateRestockPreview();
+  },
+
+
+  updateRestockPreview() {
+    const out = byId("rPreview");
+    if (!out) return;
+    const p = (this.products || []).find(x => x.id === byId("rProduct")?.value);
+    const qty = parseInt(byId("rQty")?.value, 10);
+    const costText = byId("rCost")?.value ?? "";
+    if (!p) { out.textContent = "Choose a product to see the new stock and average cost."; return; }
+    if (!(qty > 0)) { out.textContent = `${p.name}: ${p.stock == null ? "unlimited stock" : `${p.stock} in stock`} · average cost ${p.cost == null ? "not set yet" : peso2(p.cost)}.`; return; }
+
+    const onHand = Math.max(0, Number(p.stock || 0));
+    const unit = costText === "" ? null : Number(costText);
+    let newCost = p.cost;
+    if (unit != null) newCost = p.cost == null || onHand === 0 ? unit : (p.cost * onHand + unit * qty) / (onHand + qty);
+
+    const stockText = p.stock == null ? "stays unlimited" : `${p.stock} → ${p.stock + qty}`;
+    const costLine = unit == null
+      ? `cost stays ${p.cost == null ? "not set" : peso2(p.cost)} (no cost entered)`
+      : `average cost ${p.cost == null ? "—" : peso2(p.cost)} → ${peso2(Math.round(newCost * 100) / 100)}`;
+    out.textContent = `Stock ${stockText} · ${costLine}${unit != null ? ` · total ${peso2(unit * qty)}` : ""}`;
+  },
+
+
+  async saveRestock() {
+    const productId = byId("rProduct")?.value;
+    const qty = byId("rQty")?.value;
+    if (!productId) return this.setStatus("Choose a product first.", true);
+    if (!(Number(qty) > 0)) return this.setStatus("Enter how many bottles arrived.", true);
+
+    const product = (this.products || []).find(p => p.id === productId);
+    try {
+      const res = await this.request("POST", {
+        action: "adminRestock",
+        productId,
+        qty,
+        unitCost: byId("rCost")?.value ?? "",
+        supplier: byId("rSupplier")?.value || "",
+        note: byId("rNote")?.value || "",
+        date: byId("rDate")?.value || ""
+      });
+      if (product) { product.stock = res.stock; product.cost = res.cost; }
+      this.toast(`${product?.name || "Product"}: +${qty} bottles${res.stock != null ? ` (now ${res.stock})` : ""}${res.cost != null ? ` · avg cost ${peso2(res.cost)}` : ""}`);
+      ["rQty", "rCost", "rNote"].forEach(id => { const f = byId(id); if (f) f.value = ""; });
+      await Promise.all([this.loadRestocks(true), this.loadProducts()]);
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  async deleteRestock(id) {
+    const r = this.restocks.find(x => String(x.id) === String(id));
+    if (!r) return;
+    const ok = await this.ask({
+      title: "Undo this restock?",
+      message: `Removes "${r.productName} +${r.qty}" from the history and takes ${r.qty} bottle${r.qty === 1 ? "" : "s"} back out of stock. The average cost stays as is (you can edit it in the product).`,
+      okText: "Undo restock", danger: true
+    });
+    if (!ok) return;
+    try {
+      await this.request("POST", { action: "adminDeleteRestock", id });
+      this.toast(`Removed restock: ${r.productName} +${r.qty}`);
+      await Promise.all([this.loadRestocks(true), this.loadProducts()]);
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  renderInventory() {
+    const products = [...(this.products || [])].sort((a, b) => a.name.localeCompare(b.name));
+    const thisMonth = manilaDay(new Date()).slice(0, 7);
+
+    const onHand = products.reduce((s, p) => s + (p.stock == null ? 0 : Math.max(0, p.stock)), 0);
+    const value = products.reduce((s, p) => s + (p.stock == null || p.cost == null ? 0 : Math.max(0, p.stock) * p.cost), 0);
+    const spent = (this.restocks || []).filter(r => String(r.receivedAt).slice(0, 7) === thisMonth)
+      .reduce((s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty), 0);
+    const noCost = products.filter(p => p.cost == null).length;
+
+    const cards = byId("invCards");
+    if (cards) {
+      const card = (label, value, sub, cls = "") => `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+      cards.innerHTML = [
+        card("Bottles on hand", onHand.toLocaleString(), `${products.length} products`),
+        card("Stock value", peso2(value), "at average cost"),
+        card("Spent on restocks", peso2(spent), "this month"),
+        card("Missing cost", String(noCost), noCost ? "set a cost to see profit" : "all products have a cost", noCost ? "warn" : "")
+      ].join("");
+    }
+
+    const rows = byId("invRows");
+    if (rows) {
+      rows.innerHTML = products.map(p => {
+        const margin = p.cost == null || !p.price ? null : (p.price - p.cost) / p.price * 100;
+        return `<tr>
+          <td data-label="Product" class="td-main"><button type="button" class="link-btn" data-restock="${escapeHTML(p.id)}" title="Record a restock">${escapeHTML(p.name)}</button></td>
+          <td data-label="Stock">${p.stock == null ? "∞" : p.stock}</td>
+          <td data-label="Avg. cost">${p.cost == null ? `<span class="muted">not set</span>` : peso2(p.cost)}</td>
+          <td data-label="Price">${peso2(p.price)}</td>
+          <td data-label="Margin">${margin == null ? "—" : `<span class="${margin < 20 ? "neg" : "pos"}">${pctText(margin)}</span>`}</td>
+        </tr>`;
+      }).join("");
+    }
+  },
+
+
+  renderRestocks() {
+    const tbody = byId("restockRows");
+    if (!tbody) return;
+    const q = (byId("restockSearch")?.value || "").trim().toLowerCase();
+    const list = (this.restocks || []).filter(r =>
+      !q || `${r.productName} ${r.supplier} ${r.note} ${r.createdBy}`.toLowerCase().includes(q));
+
+    const count = byId("restockCount");
+    if (count) {
+      const total = list.reduce((s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty), 0);
+      count.textContent = `${list.length} entr${list.length === 1 ? "y" : "ies"} · ${peso2(total)}`;
+    }
+
+    tbody.innerHTML = list.length ? list.map(r => `
+      <tr>
+        <td data-label="Date">${escapeHTML(niceDate(r.receivedAt))}</td>
+        <td data-label="Product" class="td-main"><b>${escapeHTML(r.productName)}</b><small>by ${escapeHTML(r.createdBy)}</small></td>
+        <td data-label="Bottles">+${r.qty}</td>
+        <td data-label="Cost / bottle">${r.unitCost == null ? "—" : peso2(r.unitCost)}</td>
+        <td data-label="Total">${r.unitCost == null ? "—" : peso2(r.unitCost * r.qty)}</td>
+        <td data-label="Supplier / note">${escapeHTML([r.supplier, r.note].filter(Boolean).join(" · ")) || `<span class="muted">—</span>`}</td>
+        <td data-label=""><button class="btn ghost small" type="button" data-rdel="${r.id}" title="Undo this restock">Undo</button></td>
+      </tr>`).join("")
+      : `<tr><td colspan="7" class="muted">${q ? "No restocks match." : "No restocks recorded yet. Use the form above when a new batch arrives."}</td></tr>`;
+  },
+
+
+  /* ---------------------------------------------------
+     PROFIT & REPORTS
+  --------------------------------------------------- */
+
+  reportPeriod() {
+    const range = byId("reportRange")?.value || "month";
+    const month = byId("reportMonth")?.value || manilaDay(new Date()).slice(0, 7);
+    if (range === "all") return { key: "all", label: "All time", match: () => true, file: "all-time" };
+    if (range === "year") {
+      const y = month.slice(0, 4);
+      return { key: y, label: `Year ${y}`, match: d => d.startsWith(y), file: y };
+    }
+    return { key: month, label: monthName(month), match: d => d.startsWith(month), file: month };
+  },
+
+
+  // Everything the report needs, for one period
+  computeProfit(period) {
+    const productMap = new Map((this.products || []).map(p => [p.id, p]));
+    const orders = (this.orders || []).filter(o => o.status !== "Cancelled" && period.match(manilaDay(o.timestamp)));
+
+    const perProduct = new Map();
+    const discounts = new Map();
+    let sales = 0, cost = 0, missingBottles = 0, bottles = 0, gross = 0, discountTotal = 0, collected = 0, unpaid = 0;
+
+    const orderRows = orders.map(o => {
+      const oSales = orderSales(o);
+      const lines = Array.isArray(o.items) && o.items.length ? o.items : [];
+      // Older (imported) orders may not have a price per line: use the product price, else an even split
+      const totalQty = lines.reduce((s, i) => s + Number(i.qty || 0), 0) || 1;
+      const unitPrice = i => i.price != null && i.price !== ""
+        ? Number(i.price)
+        : productMap.get(i.id)?.price ?? Number(o.subtotal || 0) / totalQty;
+      const lineGross = lines.reduce((s, i) => s + unitPrice(i) * Number(i.qty || 0), 0) || 1;
+      let oCost = 0, oMissing = false;
+
+      lines.forEach(i => {
+        const qty = Number(i.qty || 0);
+        const unit = i.cost != null ? Number(i.cost) : productMap.get(i.id)?.cost ?? null;
+        const share = (unitPrice(i) * qty) / lineGross;
+        const lineSales = oSales * share;
+        const key = i.id || i.name;
+        const row = perProduct.get(key) || { id: i.id, name: productMap.get(i.id)?.name || i.name || i.id, bottles: 0, sales: 0, cost: 0, missing: 0 };
+        row.bottles += qty;
+        row.sales += lineSales;
+        if (unit == null) { row.missing += qty; missingBottles += qty; oMissing = true; }
+        else { row.cost += unit * qty; oCost += unit * qty; }
+        perProduct.set(key, row);
+        bottles += qty;
+      });
+
+      if (Number(o.discount) > 0) {
+        const label = o.voucherCode ? `Voucher ${o.voucherCode}` : (o.promotion || "Discount");
+        const d = discounts.get(label) || { label, orders: 0, amount: 0, voucher: Boolean(o.voucherCode) };
+        d.orders += 1;
+        d.amount += Number(o.discount);
+        discounts.set(label, d);
+      }
+      // money taken off outside the system (amount paid lower than the order total)
+      if (o.amountPaid != null && Number(o.amountPaid) < Number(o.total) && o.paymentStatus === "Paid") {
+        const label = "Extra discounts (paid less than total)";
+        const d = discounts.get(label) || { label, orders: 0, amount: 0 };
+        d.orders += 1;
+        d.amount += Number(o.total) - Number(o.amountPaid);
+        discounts.set(label, d);
+      }
+
+      sales += oSales;
+      cost += oCost;
+      gross += Number(o.subtotal || 0);
+      discountTotal += Number(o.discount || 0);
+      if (o.paymentStatus === "Paid") collected += oSales;
+      else unpaid += Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0));
+
+      return { o, sales: oSales, cost: oCost, profit: oSales - oCost, missing: oMissing };
+    });
+
+    const restocks = (this.restocks || []).filter(r => period.match(String(r.receivedAt)));
+    const restockSpend = restocks.reduce((s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty), 0);
+
+    const products = [...perProduct.values()]
+      .map(r => ({ ...r, profit: r.sales - r.cost, margin: r.sales ? (r.sales - r.cost) / r.sales * 100 : NaN }))
+      .sort((a, b) => b.profit - a.profit || b.bottles - a.bottles);
+
+    return {
+      period, orders, orderRows, products, restocks, restockSpend,
+      discounts: [...discounts.values()].sort((a, b) => b.amount - a.amount),
+      sales, cost, profit: sales - cost, margin: sales ? (sales - cost) / sales * 100 : NaN,
+      bottles, missingBottles, gross, discountTotal, collected, unpaid
+    };
+  },
+
+
+  monthlySummary(limit = 12) {
+    const map = new Map();
+    const productMap = new Map((this.products || []).map(p => [p.id, p]));
+    (this.orders || []).filter(o => o.status !== "Cancelled").forEach(o => {
+      const key = monthKeyOf(o.timestamp);
+      const row = map.get(key) || { key, orders: 0, sales: 0, cost: 0 };
+      row.orders += 1;
+      row.sales += orderSales(o);
+      (o.items || []).forEach(i => {
+        const unit = i.cost != null ? Number(i.cost) : productMap.get(i.id)?.cost;
+        if (unit != null) row.cost += unit * Number(i.qty || 0);
+      });
+      map.set(key, row);
+    });
+    return [...map.values()].sort((a, b) => b.key.localeCompare(a.key)).slice(0, limit);
+  },
+
+
+  renderReports() {
+    if (!byId("profitCards")) return;
+    const month = byId("reportMonth");
+    const range = byId("reportRange")?.value || "month";
+    if (month) month.hidden = range === "all";
+
+    const r = this.computeProfit(this.reportPeriod());
+    this.lastReport = r;
+
+    byId("reportLabel").textContent = `${r.period.label} · ${r.orders.length} order${r.orders.length === 1 ? "" : "s"} · ${r.bottles} bottle${r.bottles === 1 ? "" : "s"}`;
+
+    const card = (label, value, sub, cls = "") => `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+    byId("profitCards").innerHTML = [
+      card("Sales", peso2(r.sales), "after all discounts"),
+      card("Cost of bottles sold", peso2(r.cost), `${r.bottles - r.missingBottles} of ${r.bottles} bottles have a cost`),
+      card("Gross profit", peso2(r.profit), "sales − cost", r.profit >= 0 ? "highlight" : "warn"),
+      card("Margin", pctText(r.margin), "profit ÷ sales"),
+      card("Discounts given", peso2(r.discountTotal), "promos + vouchers"),
+      card("Spent on restocks", peso2(r.restockSpend), `${r.restocks.length} restock${r.restocks.length === 1 ? "" : "s"} this period`)
+    ].join("");
+
+    const warn = byId("profitWarn");
+    if (warn) {
+      warn.hidden = !r.missingBottles;
+      warn.textContent = r.missingBottles
+        ? `${r.missingBottles} bottle${r.missingBottles === 1 ? "" : "s"} sold have no cost yet, so profit looks higher than it really is. Set the cost in Products, or record a restock with the cost per bottle.`
+        : "";
+    }
+
+    byId("profitRows").innerHTML = r.products.length ? r.products.map(p => `
+      <tr>
+        <td data-label="Product" class="td-main"><b>${escapeHTML(p.name)}</b>${p.missing ? `<small class="neg">${p.missing} without cost</small>` : ""}</td>
+        <td data-label="Bottles">${p.bottles}</td>
+        <td data-label="Sales">${peso2(p.sales)}</td>
+        <td data-label="Cost">${p.missing && !p.cost ? "—" : peso2(p.cost)}</td>
+        <td data-label="Profit">${p.missing === p.bottles ? `<span class="muted">needs cost</span>` : `<b class="${p.profit < 0 ? "neg" : ""}">${peso2(p.profit)}</b>`}</td>
+        <td data-label="Margin">${p.missing === p.bottles ? "—" : pctText(p.margin)}</td>
+      </tr>`).join("")
+      : `<tr><td colspan="6" class="muted">No sales in this period.</td></tr>`;
+
+    byId("discountList").innerHTML = r.discounts.length ? r.discounts.map(d => `
+      <div class="mini"><span>${escapeHTML(d.label)} <small class="muted">· ${d.orders} order${d.orders === 1 ? "" : "s"}</small></span><b>${peso2(d.amount)}</b></div>`).join("")
+      : `<p class="muted">No discounts in this period.</p>`;
+
+    const months = this.monthlySummary(12);
+    byId("monthlyRows").innerHTML = months.length ? months.map(m => `
+      <tr data-month="${m.key}" class="clickable">
+        <td data-label="Month" class="td-main">${escapeHTML(monthName(m.key))}</td>
+        <td data-label="Orders">${m.orders}</td>
+        <td data-label="Sales">${peso2(m.sales)}</td>
+        <td data-label="Profit">${peso2(m.sales - m.cost)}</td>
+      </tr>`).join("")
+      : `<tr><td colspan="4" class="muted">No orders yet.</td></tr>`;
+
+    byId("monthlyRows").querySelectorAll("[data-month]").forEach(tr => tr.addEventListener("click", () => {
+      byId("reportRange").value = "month";
+      byId("reportMonth").value = tr.dataset.month;
+      this.renderReports();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }));
+  },
+
+
+  async downloadReportExcel() {
+    const r = this.lastReport || this.computeProfit(this.reportPeriod());
+    try {
+      const XLSX = await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
+      const round = n => Math.round(Number(n || 0) * 100) / 100;
+      const book = XLSX.utils.book_new();
+
+      const summary = [
+        ["AURA & ESSENCE — Sales Report"],
+        ["Period", r.period.label],
+        ["Generated", new Date().toLocaleString()],
+        [],
+        ["Orders (excl. cancelled)", r.orders.length],
+        ["Bottles sold", r.bottles],
+        ["Sales before discounts", round(r.gross)],
+        ["Discounts (promos + vouchers)", round(r.discountTotal)],
+        ["Sales (after all discounts)", round(r.sales)],
+        ["Collected (paid orders)", round(r.collected)],
+        ["Still to collect", round(r.unpaid)],
+        ["Cost of bottles sold", round(r.cost)],
+        ["Gross profit", round(r.profit)],
+        ["Margin %", Number.isFinite(r.margin) ? round(r.margin) : ""],
+        ["Spent on restocks", round(r.restockSpend)],
+        ...(r.missingBottles ? [[], [`Note: ${r.missingBottles} bottle(s) have no cost — profit is overstated.`]] : [])
+      ];
+      const s1 = XLSX.utils.aoa_to_sheet(summary);
+      s1["!cols"] = [{ wch: 34 }, { wch: 22 }];
+      XLSX.utils.book_append_sheet(book, s1, "Summary");
+
+      const s2 = XLSX.utils.json_to_sheet(r.products.map(p => ({
+        "Product": p.name, "Bottles": p.bottles, "Sales": round(p.sales), "Cost": round(p.cost),
+        "Profit": round(p.profit), "Margin %": Number.isFinite(p.margin) ? round(p.margin) : "",
+        "Bottles without cost": p.missing || ""
+      })));
+      XLSX.utils.book_append_sheet(book, s2, "Per Product");
+
+      const s3 = XLSX.utils.json_to_sheet(r.orderRows.map(({ o, sales, cost, profit, missing }) => ({
+        "Date": new Date(o.timestamp).toLocaleString(undefined, { timeZone: MANILA }),
+        "Order ID": o.orderId, "Customer": o.fullname, "Contact": o.contact,
+        "Items": (o.items || []).map(i => `${i.name} × ${i.qty}`).join(" | "),
+        "Bottles": o.qty, "Subtotal": round(o.subtotal), "Discount": round(o.discount),
+        "Promo / Voucher": o.voucherCode ? `Voucher ${o.voucherCode}` : (o.promotion || ""),
+        "Total": round(o.total), "Amount Paid": o.amountPaid == null ? "" : round(o.amountPaid),
+        "Payment Status": o.paymentStatus, "Status": o.status,
+        "Sales": round(sales), "Cost": missing && !cost ? "" : round(cost), "Profit": round(profit)
+      })));
+      XLSX.utils.book_append_sheet(book, s3, "Orders");
+
+      const s4 = XLSX.utils.json_to_sheet(r.discounts.map(d => ({ "Discount": d.label, "Orders": d.orders, "Amount": round(d.amount) })));
+      XLSX.utils.book_append_sheet(book, r.discounts.length ? s4 : XLSX.utils.aoa_to_sheet([["No discounts"]]), "Discounts");
+
+      const s5 = XLSX.utils.json_to_sheet(r.restocks.map(x => ({
+        "Date": x.receivedAt, "Product": x.productName, "Bottles": x.qty,
+        "Cost / bottle": x.unitCost == null ? "" : round(x.unitCost),
+        "Total": x.unitCost == null ? "" : round(x.unitCost * x.qty), "Supplier": x.supplier, "Note": x.note
+      })));
+      XLSX.utils.book_append_sheet(book, r.restocks.length ? s5 : XLSX.utils.aoa_to_sheet([["No restocks"]]), "Restocks");
+
+      XLSX.writeFile(book, `aura-essence-report-${r.period.file}.xlsx`);
+      this.toast(`Excel report downloaded (${r.period.label})`);
+    } catch (error) {
+      this.setStatus("Excel report failed: " + error.message, true);
+    }
+  },
+
+
+  async downloadReportPdf() {
+    const r = this.lastReport || this.computeProfit(this.reportPeriod());
+    const btn = byId("reportPdf");
+    const label = btn?.textContent;
+    try {
+      if (btn) { btn.disabled = true; btn.textContent = "Preparing PDF…"; }
+      await loadScriptOnce("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js");
+      await loadScriptOnce("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const W = doc.internal.pageSize.getWidth();
+      const gold = [176, 141, 79], ink = [24, 22, 20], muted = [120, 112, 100];
+      const M = 40;
+
+      // Header
+      doc.setFillColor(...ink);
+      doc.rect(0, 0, W, 86, "F");
+      doc.setTextColor(216, 189, 114);
+      doc.setFont("times", "normal");
+      doc.setFontSize(22);
+      doc.text("AURA & ESSENCE", M, 42);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(235, 228, 214);
+      doc.text(`Sales & Profit Report  ·  ${r.period.label}`, M, 62);
+      doc.setTextColor(170, 160, 143);
+      doc.text(`Generated ${new Date().toLocaleString("en-PH", { timeZone: MANILA })}`, W - M, 62, { align: "right" });
+
+      // Summary boxes
+      const boxes = [
+        ["Sales", phpText(r.sales)],
+        ["Cost of goods", phpText(r.cost)],
+        ["Gross profit", phpText(r.profit)],
+        ["Margin", pctText(r.margin)]
+      ];
+      const bw = (W - M * 2 - 30) / 4;
+      boxes.forEach(([k, v], i) => {
+        const x = M + i * (bw + 10);
+        doc.setDrawColor(...gold);
+        doc.setLineWidth(0.6);
+        doc.rect(x, 104, bw, 54);
+        doc.setFontSize(8);
+        doc.setTextColor(...muted);
+        doc.text(k.toUpperCase(), x + 10, 120);
+        doc.setFontSize(13);
+        doc.setTextColor(...ink);
+        doc.text(v, x + 10, 143);
+      });
+
+      const tableStyle = {
+        theme: "grid",
+        headStyles: { fillColor: ink, textColor: [216, 189, 114], fontStyle: "normal", fontSize: 8.5 },
+        styles: { fontSize: 8.5, cellPadding: 5, lineColor: [225, 218, 205], lineWidth: 0.5, textColor: [40, 36, 32] },
+        alternateRowStyles: { fillColor: [250, 247, 241] },
+        margin: { left: M, right: M }
+      };
+      const heading = (text, y) => {
+        doc.setFontSize(12);
+        doc.setTextColor(...ink);
+        doc.setFont("times", "normal");
+        doc.text(text, M, y);
+        doc.setFont("helvetica", "normal");
+        return y + 8;
+      };
+
+      let y = heading("Summary", 186);
+      doc.autoTable({
+        ...tableStyle,
+        startY: y,
+        head: [["", "Amount"]],
+        body: [
+          ["Orders (excl. cancelled)", String(r.orders.length)],
+          ["Bottles sold", String(r.bottles)],
+          ["Sales before discounts", phpText(r.gross)],
+          ["Discounts (promos + vouchers)", "- " + phpText(r.discountTotal)],
+          ["Sales after all discounts", phpText(r.sales)],
+          ["Collected (paid orders)", phpText(r.collected)],
+          ["Still to collect", phpText(r.unpaid)],
+          ["Cost of bottles sold", phpText(r.cost)],
+          ["Gross profit", phpText(r.profit)],
+          ["Spent on restocks", phpText(r.restockSpend)]
+        ],
+        columnStyles: { 1: { halign: "right" } }
+      });
+
+      y = heading("Profit per product", doc.lastAutoTable.finalY + 26);
+      doc.autoTable({
+        ...tableStyle,
+        startY: y,
+        head: [["Product", "Bottles", "Sales", "Cost", "Profit", "Margin"]],
+        body: r.products.length
+          ? r.products.map(p => [p.name + (p.missing ? " *" : ""), String(p.bottles), phpText(p.sales), phpText(p.cost), phpText(p.profit), p.missing === p.bottles ? "-" : pctText(p.margin)])
+          : [["No sales in this period", "", "", "", "", ""]],
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } }
+      });
+
+      if (r.discounts.length) {
+        y = heading("Discounts given", doc.lastAutoTable.finalY + 26);
+        doc.autoTable({
+          ...tableStyle,
+          startY: y,
+          head: [["Discount", "Orders", "Amount"]],
+          body: r.discounts.map(d => [d.label, String(d.orders), phpText(d.amount)]),
+          columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } }
+        });
+      }
+
+      y = heading("Orders", doc.lastAutoTable.finalY + 26);
+      doc.autoTable({
+        ...tableStyle,
+        startY: y,
+        head: [["Date", "Order ID", "Customer", "Items", "Total", "Paid", "Profit"]],
+        body: r.orderRows.length
+          ? r.orderRows.map(({ o, profit }) => [
+              new Date(o.timestamp).toLocaleDateString("en-PH", { timeZone: MANILA, month: "short", day: "numeric" }),
+              o.orderId, o.fullname,
+              (o.items || []).map(i => `${i.name} x${i.qty}`).join(", ") + (o.voucherCode ? ` (${o.voucherCode})` : ""),
+              phpText(o.total), o.paymentStatus, phpText(profit)
+            ])
+          : [["No orders in this period", "", "", "", "", "", ""]],
+        styles: { ...tableStyle.styles, fontSize: 7.5 },
+        columnStyles: { 1: { cellWidth: 92 }, 4: { halign: "right" }, 6: { halign: "right" } }
+      });
+
+      if (r.missingBottles) {
+        const yy = doc.lastAutoTable.finalY + 18;
+        doc.setFontSize(8);
+        doc.setTextColor(170, 90, 60);
+        doc.text(`* ${r.missingBottles} bottle(s) sold have no cost recorded, so profit is overstated.`, M, yy);
+      }
+
+      // Page numbers
+      const pages = doc.getNumberOfPages();
+      for (let i = 1; i <= pages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setTextColor(...muted);
+        doc.text(`Aura & Essence · ${r.period.label} · Page ${i} of ${pages}`, W / 2, doc.internal.pageSize.getHeight() - 20, { align: "center" });
+      }
+
+      doc.save(`aura-essence-report-${r.period.file}.pdf`);
+      this.toast(`PDF report downloaded (${r.period.label})`);
+    } catch (error) {
+      this.setStatus("PDF report failed: " + error.message, true);
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = label; }
+    }
   }
 });
 

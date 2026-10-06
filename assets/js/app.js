@@ -720,6 +720,7 @@ const cartTotalElement =
 
 function renderCart() {
   updateHeaderCart();
+  scheduleVoucherRefresh();
 
   const wrap =
     cartItemsElement;
@@ -1220,62 +1221,8 @@ function scrollCarousel(
 // ============================================================
 
 function updateWishlistPanel() {
-  if (
-    !wishlistItems ||
-    !wishlistEmpty
-  ) {
-    return;
-  }
-
-  wishlistItems.innerHTML =
-    "";
-
-  const savedProducts =
-    catalog
-      .all()
-      .filter((p) =>
-        favorites.includes(
-          p.id,
-        ),
-      );
-
-  wishlistEmpty.style.display =
-    savedProducts.length
-      ? "none"
-      : "block";
-
-  if (!savedProducts.length) {
-    return;
-  }
-
-  const fragment =
-    document.createDocumentFragment();
-
-  savedProducts.forEach((p) => {
-    const b =
-      document.createElement(
-        "button",
-      );
-
-    b.type = "button";
-
-    b.className =
-      "wishlist-item";
-
-    b.textContent =
-      p.name;
-
-    b.dataset.wishlistJump =
-      p.id;
-
-    fragment.appendChild(
-      b,
-    );
-  });
-
-  wishlistItems.appendChild(
-    fragment,
-  );
+  // The favorites drawer (see FAVORITES DRAWER at the end of this file)
+  renderFavorites();
 }
 
 function toggleFavorite(id) {
@@ -1284,6 +1231,7 @@ function toggleFavorite(id) {
       id,
     );
 
+  onFavoritesChanged(id);
   updateWishlistPanel();
 
   renderCarousel(
@@ -1378,13 +1326,7 @@ profileFilter?.addEventListener(
 
 wishlistToggle?.addEventListener(
   "click",
-  () => {
-    wishlistPanel?.classList.toggle(
-      "show",
-    );
-
-    updateWishlistPanel();
-  },
+  () => openFavorites(),
 );
 
 wishlistItems?.addEventListener(
@@ -1604,6 +1546,8 @@ function openFragranceDetails(
 
   fragranceModalTitle.textContent =
     product.name;
+
+  syncModalFav(product.id);
 
   fragranceModalCategory.textContent =
     product.cat === "men"
@@ -3883,8 +3827,10 @@ ${p.name} × ${item.qty} — ₱${(
       "Total items: " +
         quantityNumber,
 
+      ...voucherSummaryLines(),
+
       "Estimated total: ₱" +
-        orderTotal.toLocaleString(),
+        estimatedOrderTotal(orderTotal).toLocaleString(),
     ].join("\n");
 
     summaryLines.textContent =
@@ -3990,6 +3936,9 @@ ${p.name} × ${item.qty} — ₱${(
           price:
             "430",
 
+          voucher:
+            getAppliedVoucherCode(),
+
           total:
             String(
               orderTotal,
@@ -4037,7 +3986,17 @@ ${p.name} × ${item.qty} — ₱${(
           response.total != null
             ? ` (total ₱${Number(response.total).toLocaleString()})`
             : ""
-        }. We will contact you regarding confirmation and delivery or meetup details.`;
+        }. We will contact you regarding confirmation and delivery or meetup details.${
+          response.voucher
+            ? ` Voucher ${response.voucher} applied.`
+            : ""
+        }${
+          response.voucherNote
+            ? ` ${response.voucherNote}`
+            : ""
+        }`;
+
+      clearVoucher();
 
       document
         .getElementById(
@@ -4742,3 +4701,439 @@ renderStoreContent();
 renderPromoBar();
 updateHeaderCart();
 loadStoreSettings();
+
+// ============================================================
+// VOUCHER CODES (checkout)
+// The discount is checked on the server with real prices.
+// A voucher is never combined with a promo — the bigger one wins.
+// (var + function declarations: renderCart() runs before this
+//  part of the file, so nothing here may be in a TDZ.)
+// ============================================================
+
+var voucherState = null;   // { code, result, error }
+var voucherTimer = null;
+var voucherSeq = 0;
+
+function getAppliedVoucherCode() {
+  return voucherState && voucherState.result && voucherState.result.applies === "voucher"
+    ? voucherState.code
+    : "";
+}
+
+function voucherWins() {
+  return Boolean(getAppliedVoucherCode());
+}
+
+function estimatedOrderTotal(fallback) {
+  return voucherWins() ? Number(voucherState.result.total) : fallback;
+}
+
+function voucherSummaryLines() {
+  if (!voucherWins()) return [];
+  return [`Voucher: ${voucherState.code} (−₱${Number(voucherState.result.voucherDiscount).toLocaleString()})`];
+}
+
+function scheduleVoucherRefresh() {
+  clearTimeout(voucherTimer);
+  voucherTimer = setTimeout(() => {
+    if (voucherState && voucherState.code) checkVoucherCode(voucherState.code, true);
+    else renderCartLines();
+  }, 250);
+}
+
+function clearVoucher() {
+  voucherState = null;
+  voucherSeq++;
+  const input = document.getElementById("voucherInput");
+  if (input) input.value = "";
+  renderVoucher();
+}
+
+async function checkVoucherCode(rawCode, quiet) {
+  const code = String(rawCode || "").trim().toUpperCase().replace(/\s+/g, "");
+  if (!code) {
+    clearVoucher();
+    return;
+  }
+
+  if (!cart || !cart.length) {
+    voucherState = { code, result: null, error: null, waiting: true };
+    renderVoucher();
+    return;
+  }
+
+  if (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured()) {
+    voucherState = { code, result: null, error: "Vouchers need the online store connection." };
+    renderVoucher();
+    return;
+  }
+
+  const seq = ++voucherSeq;
+  const button = document.getElementById("voucherApply");
+  if (button && !quiet) { button.disabled = true; button.textContent = "Checking…"; }
+
+  try {
+    const res = await apiClient.post({
+      action: "checkVoucher",
+      code,
+      items: JSON.stringify(cart.map((i) => ({ id: i.id, qty: i.qty }))),
+      contact: document.getElementById("contact")?.value || "",
+    });
+    if (seq !== voucherSeq) return;
+    voucherState = res && res.success
+      ? { code: res.code || code, result: res, error: null }
+      : { code, result: null, error: (res && res.message) || "Voucher code not found." };
+  } catch (err) {
+    if (seq !== voucherSeq) return;
+    voucherState = { code, result: null, error: (err && err.message) || "Could not check the voucher. Please try again." };
+  } finally {
+    if (button) button.disabled = false;
+  }
+
+  renderVoucher();
+}
+
+function renderVoucher() {
+  const input = document.getElementById("voucherInput");
+  const status = document.getElementById("voucherStatus");
+  const button = document.getElementById("voucherApply");
+  const box = document.getElementById("voucherBox");
+
+  if (status) {
+    let text = "";
+    let kind = "";
+    if (voucherState && voucherState.result) {
+      const r = voucherState.result;
+      if (r.applies === "voucher") {
+        text = `✓ ${r.code}: ${r.label} — you save ₱${Number(r.voucherDiscount).toLocaleString()}`;
+        kind = "ok";
+      } else {
+        text = `${r.promo || "Your promo"} already gives a bigger discount (₱${Number(r.promoDiscount).toLocaleString()}), so we'll use that instead of ${r.code}.`;
+        kind = "info";
+      }
+    } else if (voucherState && voucherState.waiting) {
+      text = `Voucher ${voucherState.code} is ready — add a scent and it will be applied.`;
+      kind = "info";
+    } else if (voucherState && voucherState.error) {
+      text = voucherState.error;
+      kind = "error";
+    }
+    status.textContent = text;
+    status.className = "voucher-status" + (kind ? " " + kind : "");
+  }
+
+  const applied = Boolean(voucherState && (voucherState.result || voucherState.waiting));
+  if (input && voucherState && applied) input.value = voucherState.code;
+  if (button) button.textContent = applied ? "Remove" : "Apply";
+  box?.classList.toggle("applied", voucherWins());
+
+  renderCartLines();
+}
+
+function renderCartLines() {
+  const lines = document.getElementById("cartLines");
+  const totalEl = document.getElementById("cartTotal");
+  if (!lines || !totalEl || typeof getCartSubtotal !== "function") return;
+
+  const subtotal = cart && cart.length ? getCartSubtotal() : 0;
+  let discount = 0;
+  let label = "Discount";
+  let total = subtotal;
+
+  if (voucherWins()) {
+    discount = Number(voucherState.result.voucherDiscount);
+    label = `Voucher ${voucherState.code}`;
+    total = Number(voucherState.result.total);
+  } else if (subtotal > 0) {
+    const promo = calculatePromotionDiscount(subtotal);
+    discount = Number(promo.discount || 0);
+    label = promo.promotion ? promo.promotion.name : "Discount";
+    total = Number(promo.total);
+  }
+
+  lines.hidden = !(discount > 0);
+  const sub = document.getElementById("cartSubtotal");
+  const dl = document.getElementById("cartDiscountLabel");
+  const d = document.getElementById("cartDiscount");
+  if (sub) sub.textContent = "₱" + subtotal.toLocaleString();
+  if (dl) dl.textContent = label;
+  if (d) d.textContent = "−₱" + discount.toLocaleString();
+  totalEl.textContent = "₱" + Math.max(0, total).toLocaleString();
+}
+
+document.getElementById("voucherApply")?.addEventListener("click", () => {
+  if (voucherState && (voucherState.result || voucherState.waiting)) {
+    clearVoucher();
+    return;
+  }
+  checkVoucherCode(document.getElementById("voucherInput")?.value);
+});
+
+document.getElementById("voucherInput")?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();   // don't submit the order
+    checkVoucherCode(e.currentTarget.value);
+  }
+});
+
+document.getElementById("voucherInput")?.addEventListener("input", (e) => {
+  const typed = e.currentTarget.value.trim().toUpperCase();
+  if (voucherState && typed !== voucherState.code) {
+    voucherState = null;
+    voucherSeq++;
+    renderVoucher();
+  }
+});
+
+// "Once per customer" vouchers depend on the contact number
+document.getElementById("contact")?.addEventListener("change", () => {
+  if (voucherState && voucherState.code) checkVoucherCode(voucherState.code, true);
+});
+
+// Share links like  https://yoursite/?voucher=SUKI50#order
+(function readVoucherFromLink() {
+  try {
+    const code = new URLSearchParams(location.search).get("voucher");
+    if (code) {
+      const input = document.getElementById("voucherInput");
+      if (input) input.value = code.toUpperCase();
+      checkVoucherCode(code, true);
+    }
+  } catch { /* ignore */ }
+})();
+
+// ============================================================
+// FAVORITES DRAWER (wishlist)
+// Saved on this device. Can be shared as a link (?favs=id1,id2).
+// ============================================================
+
+var favSharedIds = null;   // set while viewing a list someone shared
+
+function favDrawerEl() {
+  return document.getElementById("favDrawer");
+}
+
+function openFavorites() {
+  const drawer = favDrawerEl();
+  if (!drawer) return;
+  renderFavorites();
+  drawer.classList.add("show");
+  drawer.setAttribute("aria-hidden", "false");
+  document.body.classList.add("fav-open");
+  setTimeout(() => drawer.querySelector(".fav-close")?.focus(), 50);
+}
+
+function closeFavorites() {
+  const drawer = favDrawerEl();
+  if (!drawer) return;
+  drawer.classList.remove("show");
+  drawer.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("fav-open");
+}
+
+function favStockInfo(p) {
+  if (p.active === false) return { ok: false, text: "Not available right now", cls: "out" };
+  const stock = p.stock == null || p.stock === "" ? null : Number(p.stock);
+  if (stock === null) return { ok: true, text: "In stock", cls: "" };
+  if (stock <= 0) return { ok: false, text: "Sold out", cls: "out" };
+  if (stock <= 2) return { ok: true, text: `Only ${stock} left`, cls: "low" };
+  return { ok: true, text: "In stock", cls: "" };
+}
+
+function updateFavCount() {
+  const n = (favorites || []).length;
+  const badge = document.getElementById("headerFavCount");
+  if (badge) { badge.textContent = n; badge.hidden = n === 0; }
+  document.getElementById("headerFav")?.setAttribute("aria-label", `Favorites, ${n} saved`);
+  const toggle = document.getElementById("wishlistToggle");
+  if (toggle) toggle.textContent = n ? `♡ Favorites (${n})` : "♡ Favorites";
+}
+
+function renderFavorites() {
+  updateFavCount();
+  const list = document.getElementById("favList");
+  if (!list || typeof catalog === "undefined") return;
+
+  const shared = Array.isArray(favSharedIds);
+  const ids = shared ? favSharedIds : (favorites || []);
+  const items = ids.map((id) => catalog.find(id)).filter(Boolean);
+
+  document.getElementById("favShared").hidden = !shared;
+  document.getElementById("favTitle").textContent = shared ? "Shared list" : "Favorites";
+  document.getElementById("favEyebrow").textContent =
+    items.length ? `${items.length} perfume${items.length === 1 ? "" : "s"}` : "Your list";
+  document.getElementById("favEmpty").hidden = items.length > 0;
+  document.getElementById("favFoot").hidden = items.length === 0;
+  document.getElementById("favShare").hidden = shared;
+
+  list.innerHTML = items.map((p) => {
+    const info = favStockInfo(p);
+    const id = escapeHTML(p.id);
+    const tag = p.cat === "women" ? "For Her" : p.cat === "unisex" ? "Unisex" : "For Him";
+    return `
+      <div class="fav-item">
+        <button type="button" class="fav-thumb" data-fav-details="${id}" aria-label="Details of ${escapeHTML(p.name)}">
+          <img src="${escapeHTML(p.img || "")}" alt="" loading="lazy" onerror="this.remove()">
+        </button>
+        <div class="fav-info">
+          <small>${tag}</small>
+          <b>${escapeHTML(p.name)}</b>
+          <span class="fav-price">₱${Number(p.price || PRODUCT_PRICE).toLocaleString()}</span>
+          <span class="fav-stock ${info.cls}">${info.text}</span>
+        </div>
+        <div class="fav-actions">
+          <button type="button" class="fav-add" data-fav-add="${id}" ${info.ok ? "" : "disabled"}>${info.ok ? "Add" : "—"}</button>
+          ${shared ? "" : `<button type="button" class="fav-remove" data-fav-remove="${id}" aria-label="Remove ${escapeHTML(p.name)} from favorites">♥</button>`}
+        </div>
+      </div>`;
+  }).join("");
+
+  const available = items.filter((p) => favStockInfo(p).ok).length;
+  const addAll = document.getElementById("favAddAll");
+  if (addAll) {
+    addAll.disabled = available === 0;
+    addAll.textContent = available ? `Add ${available === 1 ? "it" : `all ${available}`} to cart` : "Nothing available";
+  }
+}
+
+// Called by toggleFavorite(): update hearts everywhere without re-rendering
+function onFavoritesChanged(id) {
+  const saved = (favorites || []).includes(id);
+  const product = typeof catalog !== "undefined" ? catalog.find(id) : null;
+  const name = product ? product.name : "";
+
+  document.querySelectorAll(".wishlist-btn").forEach((btn) => {
+    if (btn.dataset.wishlistId !== id) return;
+    btn.classList.toggle("active", saved);
+    btn.textContent = saved ? "♥" : "♡";
+    btn.setAttribute("aria-label", `${saved ? "Remove" : "Add"} ${name} ${saved ? "from" : "to"} favorites`);
+  });
+
+  syncModalFav(document.getElementById("fragranceModal")?.dataset.productId);
+
+  if (product && typeof showToast === "function" && !document.body.classList.contains("fav-open")) {
+    showToast(saved
+      ? `Saved <b>${escapeHTML(name)}</b> to favorites ♥ <a href="#" data-open-favs>View</a>`
+      : `Removed <b>${escapeHTML(name)}</b> from favorites`);
+  }
+}
+
+function syncModalFav(id) {
+  const modal = document.getElementById("fragranceModal");
+  const btn = document.getElementById("fragranceFav");
+  if (!modal || !btn || !id) return;
+  modal.dataset.productId = id;
+  const saved = (favorites || []).includes(id);
+  btn.textContent = saved ? "♥ Saved" : "♡ Save";
+  btn.classList.toggle("active", saved);
+  btn.setAttribute("aria-pressed", String(saved));
+}
+
+function addProductsToCart(ids) {
+  let added = 0;
+  let skipped = 0;
+  ids.forEach((id) => {
+    const p = getProductById(id);
+    if (!p || !favStockInfo(p).ok) { skipped++; return; }
+    const inCart = cartManager.find(id)?.qty || 0;
+    if (p.stock != null && inCart + 1 > Number(p.stock)) { skipped++; return; }
+    if (cartManager.add(p, 1)) added++;
+  });
+  cart = cartManager.items;
+  renderCart();
+  if (added) bumpCart();
+  showToast(
+    added
+      ? `Added ${added} perfume${added === 1 ? "" : "s"} to your cart ✓${skipped ? ` (${skipped} not available)` : ""}`
+      : "Those perfumes are not available right now.",
+    { link: Boolean(added), warn: !added },
+  );
+}
+
+document.getElementById("headerFav")?.addEventListener("click", openFavorites);
+
+document.getElementById("fragranceFav")?.addEventListener("click", () => {
+  const id = document.getElementById("fragranceModal")?.dataset.productId;
+  if (id) toggleFavorite(id);
+});
+
+document.getElementById("toast")?.addEventListener("click", (e) => {
+  if (e.target.closest("[data-open-favs]")) {
+    e.preventDefault();
+    openFavorites();
+  }
+});
+
+favDrawerEl()?.addEventListener("click", (e) => {
+  if (e.target.closest("[data-fav-close]")) {
+    closeFavorites();
+    return;
+  }
+  const add = e.target.closest("[data-fav-add]");
+  if (add) { addToCart(add.dataset.favAdd, 1); return; }
+
+  const remove = e.target.closest("[data-fav-remove]");
+  if (remove) { toggleFavorite(remove.dataset.favRemove); return; }
+
+  const details = e.target.closest("[data-fav-details]");
+  if (details) {
+    closeFavorites();
+    openFragranceDetails(details.dataset.favDetails);
+  }
+});
+
+document.getElementById("favAddAll")?.addEventListener("click", () => {
+  addProductsToCart(Array.isArray(favSharedIds) ? favSharedIds : favorites);
+});
+
+document.getElementById("favShare")?.addEventListener("click", async () => {
+  const ids = (favorites || []).filter((id) => catalog.find(id));
+  if (!ids.length) return;
+  const url = `${location.origin}${location.pathname}?favs=${ids.map(encodeURIComponent).join(",")}#collection`;
+  const text = "My Aura & Essence favorites ♡";
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: text, text, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    showToast("Link copied — send it to anyone ♡");
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    window.prompt("Copy this link:", url);
+  }
+});
+
+document.getElementById("favSaveShared")?.addEventListener("click", () => {
+  (favSharedIds || []).forEach((id) => {
+    if (!(favorites || []).includes(id) && catalog.find(id)) favorites = wishlistManager.toggle(id);
+  });
+  favSharedIds = null;
+  favorites.forEach((id) => onFavoritesChanged(id));
+  renderFavorites();
+  showToast("Saved to your favorites ♥");
+});
+
+document.getElementById("favShowMine")?.addEventListener("click", () => {
+  favSharedIds = null;
+  renderFavorites();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && favDrawerEl()?.classList.contains("show")) closeFavorites();
+});
+
+// Someone opened a shared favorites link
+(function readSharedFavorites() {
+  try {
+    const raw = new URLSearchParams(location.search).get("favs");
+    if (!raw) return;
+    const ids = raw.split(",").map((s) => decodeURIComponent(s).trim()).filter(Boolean).slice(0, 30);
+    if (!ids.length) return;
+    favSharedIds = ids;
+    // wait a moment so live products/stock from the database are loaded
+    setTimeout(openFavorites, 900);
+  } catch { /* ignore */ }
+})();
+
+updateFavCount();

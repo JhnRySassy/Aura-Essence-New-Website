@@ -247,3 +247,68 @@ input.switch:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px
   body.has-drawer .mobile-nav { display: none; }
   body.has-drawer .toast-stack { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
 }
+
+/* =====================================================
+   Business tools: vouchers, restocks, profit & reports
+===================================================== */
+.cards.voucher-stats, .cards.inv-cards { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.cards.profit-cards { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.stat.warn { border-color: #5e4222; }
+.stat.warn strong { color: var(--amber); }
+.neg { color: var(--red); }
+.pos { color: var(--green); }
+td small.neg { display: block; }
+.btn.small { padding: 6px 10px; font-size: 11px; }
+tr.clickable { cursor: pointer; }
+tr.clickable:hover td { background: #151515; }
+.table-wrap.slim table { min-width: 0; }
+.mini-list .mini small { font-size: 11px; }
+
+/* Vouchers */
+.voucher-list { display: grid; gap: 10px; }
+.voucher-card { align-items: center; }
+.voucher-card.ended { opacity: .62; }
+.v-code { display: grid; gap: 6px; min-width: 150px; }
+.v-code b {
+  font: 600 16px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; letter-spacing: .08em;
+  color: var(--gold); border: 1px dashed #5a4c2c; padding: 8px 10px; text-align: center; background: #12100b;
+}
+.v-state { justify-self: start; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; padding: 2px 7px; border: 1px solid var(--line); color: var(--muted); }
+.v-state.live { color: var(--green); border-color: #2f4a34; }
+.v-state.scheduled { color: var(--amber); border-color: #5e4222; }
+.v-state.ended { color: var(--red); border-color: #5a2f2f; }
+.voucher-card .promo-main { display: grid; gap: 4px; flex: 1; min-width: 0; }
+.voucher-card .promo-main span { color: var(--text); }
+.voucher-card .promo-main small { color: var(--muted); }
+.v-note { font-style: italic; }
+.v-bar { display: block; height: 4px; background: #222; margin-top: 4px; max-width: 260px; }
+.v-bar i { display: block; height: 100%; background: var(--gold); }
+.code-row { display: flex; gap: 8px; }
+.code-row input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .08em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+/* Restocks */
+.inv-grid { margin-bottom: 16px; align-items: start; }
+.restock-preview { margin: 14px 0; padding: 10px 12px; border: 1px dashed var(--line); color: var(--gold); font-size: 12.5px; line-height: 1.5; }
+#restockForm select, #restockForm input { width: 100%; }
+#invRows .link-btn { font-size: 13px; padding: 0; text-align: left; }
+
+/* Reports */
+.report-bar input[type=month] { flex: 0 0 auto; min-width: 170px; color-scheme: dark; background: #0c0c0c; border: 1px solid var(--line); color: var(--text); padding: 9px 10px; }
+.report-bar input[type=month][hidden] { display: none; }
+#profitWarn { margin: 0 0 16px; }
+#reportsView .grid-2 { margin-top: 16px; }
+
+@media (max-width: 1200px) {
+  .cards.profit-cards { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 900px) {
+  .cards.voucher-stats, .cards.inv-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .cards.profit-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .voucher-card { flex-direction: column; align-items: stretch; }
+  .v-code { min-width: 0; }
+  .voucher-card .promo-actions { justify-content: flex-start; flex-wrap: wrap; }
+  .report-bar .filter-count { order: 5; width: 100%; margin: 0; }
+  .report-bar .btn { flex: 1; }
+}

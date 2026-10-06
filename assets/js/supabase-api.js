@@ -122,6 +122,8 @@ function friendlyError(error) {
    (database uses snake_case, the site uses camelCase)
 --------------------------------------------------------- */
 
+const PUBLIC_PRODUCT_COLUMNS = "id,name,cat,price,stock,sort_order,img,descr,desc_long,top_notes,heart_notes,base_notes,application,profiles,longevity,projection,strength,time,occasion,badges,active,created_at,updated_at";
+
 function productFromRow(r) {
   return {
     id: r.id,
@@ -144,7 +146,8 @@ function productFromRow(r) {
     time: r.time || [],
     occasion: r.occasion,
     badges: r.badges || [],
-    active: r.active
+    active: r.active,
+    cost: r.cost == null ? null : Number(r.cost)
   };
 }
 
@@ -171,7 +174,8 @@ function productToRow(p) {
     time: toList(p.time),
     occasion: String(p.occasion || ""),
     badges: toList(p.badges).map(b => b.toUpperCase()),
-    active: toBool(p.active, true)
+    active: toBool(p.active, true),
+    ...(p.cost === undefined ? {} : { cost: String(p.cost ?? "").trim() === "" ? null : Math.max(0, toNum(p.cost, 0)) })
   };
 }
 
@@ -209,8 +213,48 @@ function orderFromRow(r) {
     paymentRef: r.payment_ref || "",
     paymentNote: r.payment_note || "",
     paidAt: r.paid_at,
-    history: Array.isArray(r.status_history) ? r.status_history : []
+    history: Array.isArray(r.status_history) ? r.status_history : [],
+    voucherCode: r.voucher_code || ""
   };
+}
+
+function voucherFromRow(r) {
+  return {
+    code: r.code,
+    type: r.type,
+    value: Number(r.value),
+    maxDiscount: r.max_discount == null ? null : Number(r.max_discount),
+    minOrder: Number(r.min_order || 0),
+    startsAt: r.starts_at,
+    expiresAt: r.expires_at,
+    usageLimit: r.usage_limit,
+    perCustomer: r.per_customer,
+    note: r.note || "",
+    active: r.active,
+    createdAt: r.created_at
+  };
+}
+
+function restockFromRow(r) {
+  return {
+    id: r.id,
+    productId: r.product_id,
+    productName: r.product_name,
+    qty: r.qty,
+    unitCost: r.unit_cost == null ? null : Number(r.unit_cost),
+    supplier: r.supplier || "",
+    note: r.note || "",
+    receivedAt: r.received_at,
+    createdBy: r.created_by,
+    createdAt: r.created_at
+  };
+}
+
+// "2026-10-31" (date input) → end of that day in Manila; "" → null
+function manilaDateToISO(value, endOfDay) {
+  const text = String(value || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return null;
+  return `${text}T${endOfDay ? "23:59:59.999" : "00:00:00"}+08:00`;
 }
 
 function reviewFromRow(r) {
@@ -275,7 +319,8 @@ const actions = {
   /* ===== Storefront (public) ===== */
 
   async products(db) {
-    const rows = must(await db.from("products").select("*")
+    // "cost" (puhunan) is admin-only, so list the public columns explicitly
+    const rows = must(await db.from("products").select(PUBLIC_PRODUCT_COLUMNS)
       .order("sort_order").order("name"));
     return ok({ products: rows.map(productFromRow) });
   },
@@ -316,7 +361,19 @@ const actions = {
       p_items: items,
       p_address: String(p.address || ""),
       p_payment: String(p.payment || ""),
-      p_notes: String(p.notes || "")
+      p_notes: String(p.notes || ""),
+      p_voucher: String(p.voucher || "").trim().toUpperCase() || null
+    }));
+  },
+
+  async checkVoucher(db, p) {
+    const items = parseJSON(p.items, [])
+      .map(i => ({ id: String(i.id || ""), qty: toInt(i.qty, 0) }))
+      .filter(i => i.id && i.qty > 0);
+    return must(await db.rpc("check_voucher", {
+      p_code: String(p.code || "").trim().toUpperCase(),
+      p_items: items,
+      p_contact: String(p.contact || "")
     }));
   },
 
@@ -344,6 +401,87 @@ const actions = {
   },
 
   /* ===== Admin (requires a signed-in admin) ===== */
+
+  /* ----- Vouchers ----- */
+
+  async adminVouchers(db) {
+    const rows = must(await db.from("vouchers").select("*").order("created_at", { ascending: false }));
+    return ok({ vouchers: rows.map(voucherFromRow) });
+  },
+
+  async adminSaveVoucher(db, p) {
+    const code = String(p.code || "").trim().toUpperCase().replace(/\s+/g, "");
+    if (!/^[A-Z0-9_-]{3,30}$/.test(code)) {
+      return { success: false, message: "Code must be 3–30 letters/numbers (dash or underscore allowed), no spaces." };
+    }
+    const type = p.type === "amount" ? "amount" : "percent";
+    const value = toNum(p.value, 0);
+    if (!(value > 0)) return { success: false, message: "Enter the discount amount." };
+    if (type === "percent" && value > 100) return { success: false, message: "Percent off can't be more than 100." };
+    const optNum = v => (String(v ?? "").trim() === "" ? null : Math.max(0, toNum(v, 0)) || null);
+    const optInt = v => (String(v ?? "").trim() === "" ? null : Math.max(1, toInt(v, 1)));
+    const row = {
+      code,
+      type,
+      value,
+      max_discount: type === "percent" ? optNum(p.maxDiscount) : null,
+      min_order: Math.max(0, toNum(p.minOrder, 0)),
+      starts_at: manilaDateToISO(p.startsAt, false),
+      expires_at: manilaDateToISO(p.expiresAt, true),
+      usage_limit: optInt(p.usageLimit),
+      per_customer: optInt(p.perCustomer),
+      note: String(p.note || "").trim().slice(0, 300),
+      active: toBool(p.active, true)
+    };
+    const original = String(p.originalCode || "").trim();
+    if (original && original !== code) {
+      const rows = must(await db.from("vouchers").update(row).eq("code", original).select("code"));
+      if (!rows.length) return { success: false, message: "Original voucher not found." };
+    } else if (original) {
+      must(await db.from("vouchers").update(row).eq("code", original));
+    } else {
+      const { error } = await db.from("vouchers").insert(row);
+      if (error && error.code === "23505") return { success: false, message: `The code ${code} already exists.` };
+      must({ data: null, error });
+    }
+    return ok({ code });
+  },
+
+  async adminSetVoucherActive(db, p) {
+    const rows = must(await db.from("vouchers").update({ active: toBool(p.active, true) })
+      .eq("code", String(p.code)).select("code, active"));
+    if (!rows.length) return { success: false, message: "Voucher not found." };
+    return ok({ active: rows[0].active });
+  },
+
+  async adminDeleteVoucher(db, p) {
+    must(await db.from("vouchers").delete().eq("code", String(p.code)));
+    return ok();
+  },
+
+  /* ----- Restock log ----- */
+
+  async adminRestocks(db) {
+    const rows = must(await db.from("restocks").select("*")
+      .order("received_at", { ascending: false }).order("id", { ascending: false }).limit(1000));
+    return ok({ restocks: rows.map(restockFromRow) });
+  },
+
+  async adminRestock(db, p) {
+    const costText = String(p.unitCost ?? "").trim();
+    return must(await db.rpc("admin_restock", {
+      p_id: String(p.productId || ""),
+      p_qty: toInt(p.qty, 0),
+      p_unit_cost: costText === "" ? null : toNum(costText, 0),
+      p_supplier: String(p.supplier || ""),
+      p_note: String(p.note || ""),
+      p_date: /^\d{4}-\d{2}-\d{2}$/.test(String(p.date || "")) ? p.date : null
+    }));
+  },
+
+  async adminDeleteRestock(db, p) {
+    return must(await db.rpc("admin_delete_restock", { p_id: toInt(p.id, 0) }));
+  },
 
   async adminLogin(db, p) {
     const email = String(p.identifier || p.email || "").trim();
@@ -408,7 +546,9 @@ const actions = {
   },
 
   async adminProducts(db) {
-    return actions.products(db);
+    const rows = must(await db.from("products").select("*")
+      .order("sort_order").order("name"));
+    return ok({ products: rows.map(productFromRow) });
   },
 
   async adminSeedProducts(db, p) {
@@ -526,16 +666,18 @@ const actions = {
       return rows;
     };
 
-    const [orders, products, promotions, reviews, audit, settings] = await Promise.all([
+    const [orders, products, promotions, reviews, audit, settings, vouchers, restocks] = await Promise.all([
       all("orders", "created_at"),
       all("products", "sort_order"),
       all("promotions", "min_qty"),
       all("reviews", "created_at"),
       all("audit_log", "id"),
-      all("site_settings", "id")
+      all("site_settings", "id"),
+      all("vouchers", "created_at"),
+      all("restocks", "id")
     ]);
 
-    return ok({ orders, products, promotions, reviews, audit, settings });
+    return ok({ orders, products, promotions, reviews, audit, settings, vouchers, restocks });
   },
 
   async adminAudit(db) {

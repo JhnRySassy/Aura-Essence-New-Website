@@ -44,6 +44,10 @@
           <a href="#tracking">Track Order</a>
         </nav>
         <div class="nav-actions">
+          <button type="button" class="cart-btn fav-btn" id="headerFav" aria-label="Favorites, 0 saved" aria-controls="favDrawer">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/></svg>
+            <span class="cart-badge" id="headerFavCount" hidden>0</span>
+          </button>
           <a class="cart-btn" href="#order" id="headerCart" aria-label="Cart, 0 items">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>
             <span class="cart-badge" id="headerCartCount" hidden>0</span>
@@ -149,10 +153,6 @@
   <option value="fruity">Fruity</option>
           </select>
           <button type="button" class="ghost-btn" id="wishlistToggle">♡ Favorites</button>
-        </div>
-        <div class="wishlist-panel" id="wishlistPanel">
-          <div class="wishlist-items" id="wishlistItems"></div>
-          <p id="wishlistEmpty" class="note-small">No favorites yet. Tap the ♡ on a perfume card to save one.</p>
         </div>
         <div id="featuredRows" class="featured-rows"></div>
         <div class="tabs">
@@ -598,6 +598,18 @@
             <div class="cart-box">
               <div class="cart-head"><h4>Your Cart</h4><span class="cart-count" id="cartCount">0 items</span></div>
               <div id="cartItems"><div class="cart-empty">Your cart is empty. Add one or more fragrances above.</div></div>
+              <div class="voucher-box" id="voucherBox">
+                <label for="voucherInput">Voucher code</label>
+                <div class="voucher-row">
+                  <input id="voucherInput" type="text" placeholder="e.g. SUKI50" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30">
+                  <button type="button" id="voucherApply">Apply</button>
+                </div>
+                <p class="voucher-status" id="voucherStatus" aria-live="polite"></p>
+              </div>
+              <div class="cart-lines" id="cartLines" hidden>
+                <div><span>Subtotal</span><span id="cartSubtotal">₱0</span></div>
+                <div class="disc"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">−₱0</span></div>
+              </div>
               <div class="cart-total"><span>Estimated Total</span><strong id="cartTotal">₱0</strong></div>
             </div>
             <div class="field">
@@ -690,6 +702,7 @@
             <h3 id="fragranceModalTitle">Fragrance Details</h3>
             <p id="fragranceModalCategory"></p>
           </div>
+          <button type="button" class="fragrance-fav" id="fragranceFav" aria-pressed="false">♡ Save</button>
           <button
             type="button"
             class="fragrance-close"
@@ -734,6 +747,34 @@
       <div class="mark">A &amp; E</div>
       <p>Aura &amp; Essence &middot; Extrait de Parfum &middot; &#8369;430</p>
     </footer>
+
+    <div class="fav-drawer" id="favDrawer" aria-hidden="true">
+      <div class="fav-backdrop" data-fav-close></div>
+      <aside class="fav-panel" role="dialog" aria-modal="true" aria-labelledby="favTitle">
+        <div class="fav-head">
+          <div>
+            <p class="fav-eyebrow" id="favEyebrow">Your list</p>
+            <h3 id="favTitle">Favorites</h3>
+          </div>
+          <button type="button" class="fav-close" data-fav-close aria-label="Close favorites">&times;</button>
+        </div>
+        <div class="fav-shared" id="favShared" hidden>
+          <p>Someone shared this list with you.</p>
+          <div><button type="button" id="favSaveShared">♡ Save to my favorites</button><button type="button" id="favShowMine">Show my list</button></div>
+        </div>
+        <div class="fav-list" id="favList"></div>
+        <div class="fav-empty" id="favEmpty">
+          <div class="fav-empty-icon">♡</div>
+          <p>No favorites yet.</p>
+          <small>Tap the ♡ on any perfume to save it here — handy for comparing, or for sending your wishlist to someone.</small>
+          <a href="#collection" data-fav-close>Browse the collection</a>
+        </div>
+        <div class="fav-foot" id="favFoot" hidden>
+          <button type="button" class="fav-share" id="favShare">Share list</button>
+          <button type="button" class="fav-addall" id="favAddAll">Add all to cart</button>
+        </div>
+      </aside>
+    </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 

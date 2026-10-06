@@ -167,6 +167,14 @@ After updating, run `supabase/schema.sql` once more. It's safe, and it adds the 
 - **Payment:** set **Unpaid / Partial / Paid / Refunded**, the **amount received**, the GCash reference and a note. If a customer paid less than the total (for example a suki discount given outside the website), enter what they actually paid. The difference shows as a discount, and the Dashboard **Revenue** counts the real amount received. **To collect** shows money still owed.
 - **New-order alert:** when a new order arrives while the admin is open, you hear a chime, the **Orders** tab shows a badge with the number of New orders, and the browser tab title shows a count.
 
+## Vouchers, restocks and profit
+
+- **Vouchers** (admin → Vouchers): % off (with an optional ₱ cap) or ₱ off, minimum order, start/end date, total uses, uses per customer. A voucher is never combined with a promo — the customer automatically gets whichever discount is bigger. "Copy link" gives a link like `…/index.html?voucher=SUKI50#order` that fills in the code.
+- **Restocks** (admin → Restocks): record each batch that arrives (bottles, cost per bottle, supplier). Stock goes up and the product's average cost (puhunan) is updated automatically. "Undo" removes a wrong entry and takes the bottles back out.
+- **Profit & Reports**: sales after discounts − cost of bottles sold, per product and per month. Download the month as Excel or PDF. Each new order remembers the cost at the time it was placed; older orders use the product's current cost.
+- **Favorites** (customer site): the ♡ in the header opens the saved list, with "Add all to cart" and "Share list".
+- Cost is admin-only. Keep **Authentication → Sign In / Providers → Allow new users to sign up** turned OFF so only your admin accounts exist.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

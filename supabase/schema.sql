@@ -148,6 +148,51 @@ create table if not exists public.audit_log (
 );
 create index if not exists audit_log_created_at_idx on public.audit_log (created_at desc);
 
+-- ---------- Vouchers, product cost and restock log (added later) ----------
+
+-- Puhunan per bottle. Kept up to date automatically as a weighted average
+-- every time you record a restock; you can also type it in the product editor.
+alter table public.products add column if not exists cost numeric(10,2);
+alter table public.products drop constraint if exists products_cost_check;
+alter table public.products add constraint products_cost_check check (cost is null or cost >= 0);
+
+alter table public.orders add column if not exists voucher_code text;
+create index if not exists orders_voucher_code_idx on public.orders (voucher_code) where voucher_code is not null;
+
+create table if not exists public.vouchers (
+  code          text primary key,
+  type          text not null default 'percent' check (type in ('percent', 'amount')),
+  value         numeric(10,2) not null check (value > 0),
+  max_discount  numeric(10,2) check (max_discount is null or max_discount > 0),  -- cap for % vouchers
+  min_order     numeric(10,2) not null default 0 check (min_order >= 0),
+  starts_at     timestamptz,
+  expires_at    timestamptz,
+  usage_limit   integer check (usage_limit is null or usage_limit > 0),          -- total uses
+  per_customer  integer check (per_customer is null or per_customer > 0),        -- uses per contact number
+  note          text not null default '',
+  active        boolean not null default true,
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+alter table public.vouchers drop constraint if exists vouchers_code_check;
+alter table public.vouchers add constraint vouchers_code_check check (code ~ '^[A-Z0-9_-]{3,30}$');
+alter table public.vouchers drop constraint if exists vouchers_percent_check;
+alter table public.vouchers add constraint vouchers_percent_check check (type <> 'percent' or value <= 100);
+
+create table if not exists public.restocks (
+  id            bigint generated always as identity primary key,
+  product_id    text references public.products (id) on update cascade on delete set null,
+  product_name  text not null default '',
+  qty           integer not null check (qty > 0),
+  unit_cost     numeric(10,2) check (unit_cost is null or unit_cost >= 0),
+  supplier      text not null default '',
+  note          text not null default '',
+  received_at   date not null default (now() at time zone 'Asia/Manila')::date,
+  created_by    text not null default 'system',
+  created_at    timestamptz not null default now()
+);
+create index if not exists restocks_received_idx on public.restocks (received_at desc, id desc);
+
 -- ---------------------------------------------------------------------
 -- HELPERS
 -- ---------------------------------------------------------------------
@@ -181,6 +226,9 @@ create trigger promotions_touch before update on public.promotions
   for each row execute function public.touch_updated_at();
 drop trigger if exists orders_touch on public.orders;
 create trigger orders_touch before update on public.orders
+  for each row execute function public.touch_updated_at();
+drop trigger if exists vouchers_touch on public.vouchers;
+create trigger vouchers_touch before update on public.vouchers
   for each row execute function public.touch_updated_at();
 drop trigger if exists settings_touch on public.site_settings;
 create trigger settings_touch before update on public.site_settings
@@ -237,6 +285,9 @@ begin
         if new.badges is distinct from old.badges then
           changes := changes || format('badges %s', coalesce(nullif(array_to_string(new.badges, ', '), ''), 'none'));
         end if;
+        if new.cost is distinct from old.cost then
+          changes := changes || format('cost ₱%s → ₱%s', coalesce(public.peso_text(old.cost), '—'), coalesce(public.peso_text(new.cost), '—'));
+        end if;
         if new.img is distinct from old.img then
           changes := changes || 'new photo'::text;
         end if;
@@ -249,6 +300,24 @@ begin
       target := coalesce(new.name, old.name);
       if tg_op = 'UPDATE' and new.active is distinct from old.active then
         verb := case when new.active then 'Turned on' else 'Turned off' end;
+      end if;
+    when 'vouchers' then
+      label  := 'voucher';
+      target := coalesce(new.code, old.code);
+      if tg_op = 'UPDATE' and new.active is distinct from old.active then
+        verb := case when new.active then 'Turned on' else 'Turned off' end;
+      end if;
+    when 'restocks' then
+      label  := 'restock';
+      if tg_op = 'INSERT' then
+        verb   := 'Received';
+        label  := 'stock';
+        target := format('%s +%s%s', new.product_name, new.qty,
+                         coalesce(' @ ₱' || public.peso_text(new.unit_cost), ''));
+      else
+        verb   := 'Removed restock';
+        label  := 'entry';
+        target := format('%s +%s', old.product_name, old.qty);
       end if;
     when 'site_settings' then
       label  := 'homepage settings';
@@ -285,7 +354,8 @@ begin
     public.current_actor(),
     trim(verb || ' ' || label || coalesce(' ' || target, '') ||
          case when array_length(changes, 1) > 0 then ': ' || array_to_string(changes, ', ') else '' end),
-    details || jsonb_build_object('table', tg_table_name, 'op', lower(tg_op), 'kind', label)
+    details || jsonb_build_object('table', tg_table_name, 'op', lower(tg_op),
+                                'kind', case when tg_table_name = 'restocks' then 'stock' else label end)
   );
 
   return coalesce(new, old);
@@ -296,6 +366,12 @@ create trigger products_audit after insert or update or delete on public.product
   for each row execute function public.audit_admin_change();
 drop trigger if exists promotions_audit on public.promotions;
 create trigger promotions_audit after insert or update or delete on public.promotions
+  for each row execute function public.audit_admin_change();
+drop trigger if exists vouchers_audit on public.vouchers;
+create trigger vouchers_audit after insert or update or delete on public.vouchers
+  for each row execute function public.audit_admin_change();
+drop trigger if exists restocks_audit on public.restocks;
+create trigger restocks_audit after insert or delete on public.restocks
   for each row execute function public.audit_admin_change();
 drop trigger if exists settings_audit on public.site_settings;
 create trigger settings_audit after update on public.site_settings
@@ -382,13 +458,85 @@ create trigger orders_restock after update of status on public.orders
 -- total can't be changed from the browser.
 -- ---------------------------------------------------------------------
 
+-- Voucher check shared by checkout preview and place_order.
+-- p_digits = customer's contact number digits ('' = skip the per-customer check).
+create or replace function public.voucher_discount(p_code text, p_subtotal numeric, p_digits text default '', p_lock boolean default false)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v      public.vouchers%rowtype;
+  v_code text := upper(trim(coalesce(p_code, '')));
+  v_used integer;
+  v_disc numeric(10,2);
+  v_label text;
+begin
+  if v_code = '' then
+    return jsonb_build_object('ok', false, 'message', 'Enter a voucher code.');
+  end if;
+
+  if p_lock then
+    select * into v from public.vouchers where code = v_code for update;
+  else
+    select * into v from public.vouchers where code = v_code;
+  end if;
+
+  if not found or not v.active then
+    return jsonb_build_object('ok', false, 'message', 'Voucher code not found.');
+  end if;
+  if v.starts_at is not null and now() < v.starts_at then
+    return jsonb_build_object('ok', false, 'message', 'This voucher is not active yet.');
+  end if;
+  if v.expires_at is not null and now() > v.expires_at then
+    return jsonb_build_object('ok', false, 'message', 'This voucher has expired.');
+  end if;
+  if p_subtotal < v.min_order then
+    return jsonb_build_object('ok', false, 'message',
+      format('Minimum order for %s is ₱%s.', v.code, public.peso_text(v.min_order)));
+  end if;
+  if v.usage_limit is not null then
+    select count(*) into v_used from public.orders where voucher_code = v.code and status <> 'Cancelled';
+    if v_used >= v.usage_limit then
+      return jsonb_build_object('ok', false, 'message', 'This voucher has been fully used.');
+    end if;
+  end if;
+  if v.per_customer is not null and char_length(coalesce(p_digits, '')) >= 7 then
+    select count(*) into v_used from public.orders
+     where voucher_code = v.code and status <> 'Cancelled'
+       and right(contact_digits, 10) = right(p_digits, 10);
+    if v_used >= v.per_customer then
+      return jsonb_build_object('ok', false, 'message', 'You have already used this voucher.');
+    end if;
+  end if;
+
+  if v.type = 'percent' then
+    v_disc  := round(p_subtotal * v.value / 100, 2);
+    if v.max_discount is not null then
+      v_disc := least(v_disc, v.max_discount);
+    end if;
+    v_label := format('%s%% off', public.peso_text(v.value)) ||
+               coalesce(format(' (up to ₱%s)', public.peso_text(v.max_discount)), '');
+  else
+    v_disc  := least(v.value, p_subtotal);
+    v_label := format('₱%s off', public.peso_text(v.value));
+  end if;
+
+  return jsonb_build_object('ok', true, 'code', v.code, 'discount', v_disc, 'label', v_label);
+end $$;
+
+revoke execute on function public.voucher_discount(text, numeric, text, boolean) from public, anon, authenticated;
+
+-- Older version without the voucher parameter
+drop function if exists public.place_order(text, text, jsonb, text, text, text);
+
 create or replace function public.place_order(
   p_fullname text,
   p_contact  text,
   p_items    jsonb,
   p_address  text,
   p_payment  text,
-  p_notes    text default ''
+  p_notes    text default '',
+  p_voucher  text default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -402,8 +550,13 @@ declare
   v_qty      integer := 0;
   v_subtotal numeric(10,2) := 0;
   v_discount numeric(10,2) := 0;
+  v_promo_disc numeric(10,2) := 0;
   v_total    numeric(10,2);
   v_promo    public.promotions%rowtype;
+  v_voucher  jsonb;
+  v_vcode    text;
+  v_label    text;
+  v_note     text := '';
   v_order_id text;
 begin
   -- Basic validation
@@ -462,8 +615,10 @@ begin
         update public.products set stock = stock - v_line.qty where id = v_product.id;
       end if;
 
+      -- cost is saved with the order so the profit report stays correct even if the cost changes later
       v_items    := v_items || jsonb_build_object('id', v_product.id, 'name', v_product.name,
-                                                  'qty', v_line.qty, 'price', v_product.price);
+                                                  'qty', v_line.qty, 'price', v_product.price,
+                                                  'cost', v_product.cost);
       v_names    := v_names || v_product.name;
       v_qty      := v_qty + v_line.qty;
       v_subtotal := v_subtotal + v_product.price * v_line.qty;
@@ -479,13 +634,31 @@ begin
 
     if found then
       if v_promo.type = 'fixed_total' and v_promo.fixed_total > 0 and v_promo.fixed_total < v_subtotal then
-        v_discount := v_subtotal - v_promo.fixed_total;
+        v_promo_disc := v_subtotal - v_promo.fixed_total;
       elsif v_promo.type = 'percent' then
-        v_discount := round(v_subtotal * v_promo.percent_off / 100, 2);
+        v_promo_disc := round(v_subtotal * v_promo.percent_off / 100, 2);
       else
         v_promo := null;
       end if;
     end if;
+    v_discount := v_promo_disc;
+    v_label    := v_promo.name;
+
+    -- Voucher: never combined with a promo — the bigger discount wins.
+    if nullif(trim(coalesce(p_voucher, '')), '') is not null then
+      v_voucher := public.voucher_discount(p_voucher, v_subtotal, v_digits, true);
+      if not (v_voucher ->> 'ok')::boolean then
+        raise exception '%', v_voucher ->> 'message' using errcode = 'P0001';
+      end if;
+      if (v_voucher ->> 'discount')::numeric > v_promo_disc then
+        v_discount := (v_voucher ->> 'discount')::numeric;
+        v_vcode    := v_voucher ->> 'code';
+        v_label    := 'Voucher ' || v_vcode;
+      else
+        v_note := format('Your %s already gives a bigger discount, so the voucher was not used.', v_promo.name);
+      end if;
+    end if;
+
     v_total := greatest(0, v_subtotal - v_discount);
 
     -- Same format as the old Apps Script: AE-20261005-143012-7F3A9C
@@ -497,10 +670,10 @@ begin
     end loop;
 
     insert into public.orders (order_id, fullname, contact, items, scent, quantity, address, payment,
-                               notes, subtotal, discount, total, promotion_name)
+                               notes, subtotal, discount, total, promotion_name, voucher_code)
     values (v_order_id, trim(p_fullname), trim(p_contact), v_items, array_to_string(v_names, ', '),
             v_qty, trim(p_address), trim(p_payment), coalesce(trim(p_notes), ''),
-            v_subtotal, v_discount, v_total, v_promo.name);
+            v_subtotal, v_discount, v_total, v_label, v_vcode);
   exception
     when sqlstate 'P0001' then
       return jsonb_build_object('success', false, 'message', sqlerrm);
@@ -508,7 +681,72 @@ begin
 
   return jsonb_build_object('success', true, 'type', 'order', 'orderId', v_order_id,
                             'subtotal', v_subtotal, 'discount', v_discount, 'total', v_total,
-                            'promo', coalesce(v_promo.name, ''), 'message', 'Order saved successfully.');
+                            'promo', coalesce(v_label, ''), 'voucher', coalesce(v_vcode, ''),
+                            'voucherNote', v_note, 'message', 'Order saved successfully.');
+end $$;
+
+-- ---------------------------------------------------------------------
+-- CHECK VOUCHER (customers) — live preview at checkout.
+-- Uses the real prices from the database, same rules as place_order.
+-- ---------------------------------------------------------------------
+
+create or replace function public.check_voucher(p_code text, p_items jsonb, p_contact text default '')
+returns jsonb
+language plpgsql stable security definer set search_path = public
+as $$
+declare
+  v_digits     text := regexp_replace(coalesce(p_contact, ''), '\D', '', 'g');
+  v_subtotal   numeric(10,2) := 0;
+  v_qty        integer := 0;
+  v_promo      public.promotions%rowtype;
+  v_promo_disc numeric(10,2) := 0;
+  v_voucher    jsonb;
+  v_vdisc      numeric(10,2);
+begin
+  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    return jsonb_build_object('success', false, 'message', 'Add a scent to your cart first.');
+  end if;
+  if jsonb_array_length(p_items) > 30 then
+    return jsonb_build_object('success', false, 'message', 'Too many items.');
+  end if;
+
+  select coalesce(sum(p.price * least(100, greatest(0, coalesce((x ->> 'qty')::int, 0)))), 0),
+         coalesce(sum(least(100, greatest(0, coalesce((x ->> 'qty')::int, 0)))), 0)
+    into v_subtotal, v_qty
+    from jsonb_array_elements(p_items) x
+    join public.products p on p.id = x ->> 'id' and p.active;
+
+  select * into v_promo from public.promotions
+   where active
+     and ((type = 'fixed_total' and v_qty = min_qty) or (type = 'percent' and v_qty >= min_qty))
+   order by min_qty desc, created_at
+   limit 1;
+  if found then
+    if v_promo.type = 'fixed_total' and v_promo.fixed_total > 0 and v_promo.fixed_total < v_subtotal then
+      v_promo_disc := v_subtotal - v_promo.fixed_total;
+    elsif v_promo.type = 'percent' then
+      v_promo_disc := round(v_subtotal * v_promo.percent_off / 100, 2);
+    end if;
+  end if;
+
+  v_voucher := public.voucher_discount(p_code, v_subtotal, v_digits, false);
+  if not (v_voucher ->> 'ok')::boolean then
+    return jsonb_build_object('success', false, 'message', v_voucher ->> 'message');
+  end if;
+  v_vdisc := (v_voucher ->> 'discount')::numeric;
+
+  return jsonb_build_object(
+    'success',       true,
+    'code',          v_voucher ->> 'code',
+    'label',         v_voucher ->> 'label',
+    'subtotal',      v_subtotal,
+    'voucherDiscount', v_vdisc,
+    'promoDiscount', v_promo_disc,
+    'promo',         coalesce(v_promo.name, ''),
+    'applies',       case when v_vdisc > v_promo_disc then 'voucher' else 'promo' end,
+    'discount',      greatest(v_vdisc, v_promo_disc),
+    'total',         greatest(0, v_subtotal - greatest(v_vdisc, v_promo_disc))
+  );
 end $$;
 
 -- ---------------------------------------------------------------------
@@ -544,6 +782,9 @@ begin
     'quantity', o.quantity,
     'items', (select coalesce(jsonb_agg(jsonb_build_object('name', i ->> 'name', 'qty', (i ->> 'qty')::int)), '[]'::jsonb)
                 from jsonb_array_elements(o.items) i),
+    'subtotal', o.subtotal,
+    'discount', o.discount,
+    'promo', coalesce(o.promotion_name, ''),
     'total', o.total,
     'status', o.status,
     'timestamp', o.created_at,
@@ -807,13 +1048,15 @@ grant update, delete on public.reviews to authenticated;
 grant select, update, delete on public.orders to authenticated;
 grant select on public.audit_log, public.admins to authenticated;
 
-revoke execute on function public.place_order(text, text, jsonb, text, text, text) from public;
+revoke execute on function public.place_order(text, text, jsonb, text, text, text, text) from public;
+revoke execute on function public.check_voucher(text, jsonb, text) from public;
 revoke execute on function public.track_order(text, text) from public;
 revoke execute on function public.submit_review(text, text, text, integer, text, text) from public;
 revoke execute on function public.admin_dashboard() from public;
 revoke execute on function public.is_admin() from public;
 
-grant execute on function public.place_order(text, text, jsonb, text, text, text) to anon, authenticated;
+grant execute on function public.place_order(text, text, jsonb, text, text, text, text) to anon, authenticated;
+grant execute on function public.check_voucher(text, jsonb, text) to anon, authenticated;
 grant execute on function public.track_order(text, text) to anon, authenticated;
 grant execute on function public.submit_review(text, text, text, integer, text, text) to anon, authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
@@ -973,3 +1216,128 @@ revoke execute on function public.notify_low_stock() from public, anon, authenti
 drop trigger if exists products_low_stock on public.products;
 create trigger products_low_stock after update of stock on public.products
   for each row execute function public.notify_low_stock();
+
+-- =====================================================================
+-- VOUCHERS, RESTOCK LOG & PROFIT
+-- =====================================================================
+
+alter table public.vouchers enable row level security;
+alter table public.restocks enable row level security;
+
+-- Vouchers are secret codes: customers can't list them, only check one
+-- code at a time through check_voucher / place_order.
+drop policy if exists "vouchers admin all" on public.vouchers;
+create policy "vouchers admin all" on public.vouchers for all to authenticated
+  using (public.is_admin()) with check (public.is_admin());
+
+drop policy if exists "restocks admin read" on public.restocks;
+create policy "restocks admin read" on public.restocks for select to authenticated using (public.is_admin());
+
+revoke all on public.vouchers, public.restocks from anon;
+grant select, insert, update, delete on public.vouchers to authenticated;
+grant select on public.restocks to authenticated;
+
+-- Product cost is admin-only information: hide it from the public product list.
+revoke select on public.products from anon, authenticated;
+do $$
+declare cols text;
+begin
+  select string_agg(quote_ident(column_name), ', ' order by ordinal_position) into cols
+    from information_schema.columns
+   where table_schema = 'public' and table_name = 'products' and column_name <> 'cost';
+  execute format('grant select (%s) on public.products to anon, authenticated', cols);
+end $$;
+
+-- Signed-in admins can read cost (turn OFF "Allow new users to sign up" in
+-- Supabase → Authentication → Sign In / Providers so only your admins can sign in).
+grant select (cost) on public.products to authenticated;
+
+-- ---------- Record a restock ----------
+-- Adds the bottles to stock, writes the restock log, and updates the
+-- product's cost as a weighted average:
+--   (old cost × bottles on hand + new cost × bottles received) ÷ total bottles
+create or replace function public.admin_restock(
+  p_id        text,
+  p_qty       integer,
+  p_unit_cost numeric default null,
+  p_supplier  text default '',
+  p_note      text default '',
+  p_date      date default null
+)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v       public.products%rowtype;
+  v_cost  numeric(10,2);
+  v_onhand integer;
+  v_stock integer;
+begin
+  if not public.is_admin() then
+    raise exception 'Not authorized' using errcode = '42501';
+  end if;
+  if coalesce(p_qty, 0) < 1 or p_qty > 10000 then
+    return jsonb_build_object('success', false, 'message', 'Enter how many bottles arrived (1 or more).');
+  end if;
+  if p_unit_cost is not null and p_unit_cost < 0 then
+    return jsonb_build_object('success', false, 'message', 'Cost cannot be negative.');
+  end if;
+
+  select * into v from public.products where id = p_id for update;
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Product not found.');
+  end if;
+
+  v_onhand := greatest(coalesce(v.stock, 0), 0);
+  v_cost := case
+    when p_unit_cost is null then v.cost
+    when v.cost is null or v_onhand = 0 then p_unit_cost
+    else round((v.cost * v_onhand + p_unit_cost * p_qty) / (v_onhand + p_qty), 2)
+  end;
+
+  update public.products
+     set stock = case when stock is null then null else stock + p_qty end,
+         cost  = v_cost
+   where id = v.id
+  returning stock into v_stock;
+
+  insert into public.restocks (product_id, product_name, qty, unit_cost, supplier, note, received_at, created_by)
+  values (v.id, v.name, p_qty, p_unit_cost, left(trim(coalesce(p_supplier, '')), 120),
+          left(trim(coalesce(p_note, '')), 500),
+          coalesce(p_date, (now() at time zone 'Asia/Manila')::date), public.current_actor());
+
+  return jsonb_build_object('success', true, 'stock', v_stock, 'cost', v_cost);
+end $$;
+
+-- ---------- Undo a restock entry (wrong entry) ----------
+-- Takes the bottles back out of stock. The average cost is left as is
+-- (edit it in the product if needed).
+create or replace function public.admin_delete_restock(p_id bigint)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  r public.restocks%rowtype;
+  v_stock integer;
+begin
+  if not public.is_admin() then
+    raise exception 'Not authorized' using errcode = '42501';
+  end if;
+
+  delete from public.restocks where id = p_id returning * into r;
+  if not found then
+    return jsonb_build_object('success', false, 'message', 'Restock entry not found.');
+  end if;
+
+  update public.products
+     set stock = greatest(0, stock - r.qty)
+   where id = r.product_id and stock is not null
+  returning stock into v_stock;
+
+  return jsonb_build_object('success', true, 'stock', v_stock);
+end $$;
+
+revoke execute on function public.admin_restock(text, integer, numeric, text, text, date) from public, anon;
+revoke execute on function public.admin_delete_restock(bigint) from public, anon;
+grant execute on function public.admin_restock(text, integer, numeric, text, text, date) to authenticated;
+grant execute on function public.admin_delete_restock(bigint) to authenticated;
