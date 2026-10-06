@@ -417,3 +417,16 @@ select { color-scheme: dark; }
 select option, select optgroup { background-color: #15130f; color: #ede7da; }
 select option:disabled { color: #8a8170; }
 select option:checked { background-color: #2a2418; color: #d4b26a; }
+
+/* ---------- Prices & totals: clean lining figures ---------- */
+.pcard .pprice, .price-tag, .price-tag b, .cart-total strong, .fd-price, .fd-buybar b, .fav-price,
+.co-bar b, .sum-line b, .pay-row b, .duo-total, .cart-item-price, .fd-sim-open em {
+  font-family: "Jost", Arial, sans-serif !important;
+  font-weight: 300;
+  font-variant-numeric: lining-nums tabular-nums;
+  letter-spacing: 0;
+}
+.pcard .pprice { font-size: 18px; }
+.price-tag { font-size: 30px; }
+.cart-total strong { font-size: 24px; }
+.fd-price { font-size: 26px; }
