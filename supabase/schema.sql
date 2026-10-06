@@ -491,9 +491,19 @@ begin
     'fullname', split_part(o.fullname, ' ', 1),   -- first name only
     'scent', o.scent,
     'qty', o.quantity || case when o.quantity = 1 then ' bottle' else ' bottles' end,
+    'quantity', o.quantity,
+    'items', (select coalesce(jsonb_agg(jsonb_build_object('name', i ->> 'name', 'qty', (i ->> 'qty')::int)), '[]'::jsonb)
+                from jsonb_array_elements(o.items) i),
     'total', o.total,
     'status', o.status,
-    'timestamp', o.created_at
+    'timestamp', o.created_at,
+    -- when each status was set (without who set it)
+    'history', (select coalesce(jsonb_agg(jsonb_build_object('status', h ->> 'status', 'at', h ->> 'at')), '[]'::jsonb)
+                  from jsonb_array_elements(o.status_history) h),
+    'payment', o.payment,
+    'paymentStatus', o.payment_status,
+    'amountPaid', o.amount_paid,
+    'paidAt', o.paid_at
   );
 end $$;
 
