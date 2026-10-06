@@ -175,6 +175,16 @@ After updating, run `supabase/schema.sql` once more. It's safe, and it adds the 
 - **Favorites** (customer site): the ♡ in the header opens the saved list, with "Add all to cart" and "Share list".
 - Cost is admin-only. Keep **Authentication → Sign In / Providers → Allow new users to sign up** turned OFF so only your admin accounts exist.
 
+## Checkout, payment details and admin shortcuts
+
+- **Checkout** is now 3 steps: Cart → Details → Review. After ordering, GCash customers see the amount, the GCash number (with Copy buttons) and a **Send screenshot via Messenger** button. The same instructions show in Track Order while the order is unpaid.
+- Set the **GCash number, account name and Messenger link** in admin → *Homepage & Payment* → Payment details. Messenger link format: `https://m.me/yourpagename`.
+- **Ctrl+K** (or the Search button / `/` key) in the admin finds orders, customers, products, vouchers, pages and actions.
+- **Orders**: tick several orders to change their status or mark them as paid at once.
+- **Restocks → Stock & cost**: click a cost to edit it inline; Enter saves and jumps to the next product without a cost.
+- The admin remembers the last screen and filters on that device.
+- **Install the admin as an app**: on Android/desktop Chrome use "Install admin app" (sidebar or More menu); on iPhone use Safari → Share → Add to Home Screen. Works on the live https site (Vercel).
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

@@ -1263,6 +1263,12 @@ class AdminApp {
         this.settings.lowStockAlertAt ?? 1;
     }
 
+    [["setGcashNumber", "gcashNumber"], ["setGcashName", "gcashName"], ["setMessenger", "messengerUrl"]]
+      .forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = this.settings[key] ?? "";
+      });
+
 
     const signature =
       this.dom.setSignature;
@@ -3273,7 +3279,16 @@ class AdminApp {
         false,
 
       lowStockAlertAt:
-        this.dom.setAlertAt?.value ?? 1
+        this.dom.setAlertAt?.value ?? 1,
+
+      gcashNumber:
+        document.getElementById("setGcashNumber")?.value.trim() || "",
+
+      gcashName:
+        document.getElementById("setGcashName")?.value.trim() || "",
+
+      messengerUrl:
+        document.getElementById("setMessenger")?.value.trim() || ""
     };
 
 
@@ -6600,6 +6615,575 @@ Object.assign(AdminApp.prototype, {
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = label; }
     }
+  }
+});
+
+
+/* =========================================================
+   ADMIN UX (v4)
+   Ctrl+K search · bulk order actions · quick cost editing ·
+   tidier pop-ups · remembers your place · installable app
+========================================================= */
+
+const _orig4 = {
+  bind: AdminApp.prototype.bind,
+  showView: AdminApp.prototype.showView,
+  openApp: AdminApp.prototype.openApp,
+  renderOrders: AdminApp.prototype.renderOrders,
+  renderInventory: AdminApp.prototype.renderInventory
+};
+
+const STATE_KEY = "aeAdminState";
+// Filters that are remembered between visits (element ids)
+const REMEMBER_FIELDS = [
+  "orderPayFilter", "rangePreset", "rangeFrom", "rangeTo",
+  "filterCat", "filterStock", "filterBadge", "filterActive", "sortProducts",
+  "reportRange", "reportMonth", "voucherFilter", "auditFilter"
+];
+
+function readAdminState() {
+  try { return JSON.parse(localStorage.getItem(STATE_KEY) || "{}") || {}; } catch { return {}; }
+}
+function writeAdminState(patch) {
+  try { localStorage.setItem(STATE_KEY, JSON.stringify({ ...readAdminState(), ...patch })); } catch { /* private mode */ }
+}
+
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredInstall = e;
+  ["installBtn", "mInstallBtn"].forEach(id => { const b = byId(id); if (b) b.hidden = false; });
+});
+
+Object.assign(AdminApp.prototype, {
+
+  bind() {
+    _orig4.bind.call(this);
+    this.selectedOrders = new Set();
+
+    /* ----- Ctrl+K search ----- */
+    byId("paletteBtn")?.addEventListener("click", () => this.openPalette());
+    document.addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        if (byId("appView")?.classList.contains("hidden")) return;
+        e.preventDefault();
+        byId("palette")?.classList.contains("hidden") ? this.openPalette() : this.closePalette();
+      } else if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "") &&
+                 !byId("appView")?.classList.contains("hidden")) {
+        e.preventDefault();
+        this.openPalette();
+      }
+    });
+    byId("palette")?.querySelector("[data-close-palette]")?.addEventListener("click", () => this.closePalette());
+    byId("paletteInput")?.addEventListener("input", () => { this.paletteIndex = 0; this.renderPalette(); });
+    byId("paletteInput")?.addEventListener("keydown", e => {
+      const n = (this.paletteItems || []).length;
+      if (e.key === "ArrowDown") { e.preventDefault(); this.paletteIndex = (this.paletteIndex + 1) % Math.max(1, n); this.highlightPalette(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); this.paletteIndex = (this.paletteIndex - 1 + n) % Math.max(1, n); this.highlightPalette(); }
+      else if (e.key === "Enter") { e.preventDefault(); this.runPaletteItem(this.paletteIndex); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); this.closePalette(); }
+    });
+    byId("paletteList")?.addEventListener("click", e => {
+      const item = e.target.closest("[data-pi]");
+      if (item) this.runPaletteItem(Number(item.dataset.pi));
+    });
+    byId("paletteList")?.addEventListener("mousemove", e => {
+      const item = e.target.closest("[data-pi]");
+      if (item && Number(item.dataset.pi) !== this.paletteIndex) { this.paletteIndex = Number(item.dataset.pi); this.highlightPalette(); }
+    });
+
+    /* ----- Bulk order actions ----- */
+    // Capture phase: a checkbox click must not open the order drawer.
+    this.dom.ordersRows?.addEventListener("click", e => {
+      const box = e.target.closest("input[data-sel]");
+      const cell = e.target.closest("td.td-check");
+      if (!box && !cell) return;
+      e.stopPropagation();
+      if (!box && cell) {
+        const b = cell.querySelector("input[data-sel]");
+        if (b) { b.checked = !b.checked; this.toggleOrderSelection(b.dataset.sel, b.checked); }
+        return;
+      }
+      this.toggleOrderSelection(box.dataset.sel, box.checked);
+    }, true);
+    byId("selectAllOrders")?.addEventListener("change", e => {
+      document.querySelectorAll("#ordersRows input[data-sel]").forEach(b => {
+        b.checked = e.target.checked;
+        this.toggleOrderSelection(b.dataset.sel, b.checked, true);
+      });
+      this.updateBulkBar();
+    });
+    byId("bulkStatus")?.addEventListener("change", e => {
+      const status = e.target.value;
+      e.target.value = "";
+      if (status) this.bulkSetStatus(status);
+    });
+    byId("bulkPaid")?.addEventListener("click", () => this.bulkMarkPaid());
+    byId("bulkClear")?.addEventListener("click", () => { this.selectedOrders.clear(); this.renderOrders(); });
+
+    /* ----- Quick cost editing (Restocks → Stock & cost) ----- */
+    byId("invRows")?.addEventListener("click", e => {
+      const cell = e.target.closest("[data-cost-edit]");
+      if (cell && !cell.querySelector("input")) this.startCostEdit(cell);
+    });
+    byId("invCards")?.addEventListener("click", e => {
+      if (e.target.closest(".stat.warn")) this.focusMissingCost();
+    });
+
+    /* ----- Remember filters ----- */
+    document.addEventListener("change", e => {
+      const id = e.target?.id;
+      if (REMEMBER_FIELDS.includes(id)) {
+        const filters = readAdminState().filters || {};
+        filters[id] = e.target.value;
+        writeAdminState({ filters });
+      }
+    });
+    this.dom.orderTabs?.addEventListener("click", e => {
+      const tab = e.target.closest("[data-tab]");
+      if (tab) writeAdminState({ orderTab: tab.dataset.tab });
+    });
+
+    /* ----- Install as an app ----- */
+    const install = async () => {
+      if (deferredInstall) {
+        deferredInstall.prompt();
+        const choice = await deferredInstall.userChoice.catch(() => null);
+        if (choice?.outcome === "accepted") this.toast("Installed — find “A&E Admin” on your home screen");
+        deferredInstall = null;
+        ["installBtn", "mInstallBtn"].forEach(id => { const b = byId(id); if (b) b.hidden = true; });
+      }
+    };
+    byId("installBtn")?.addEventListener("click", install);
+    this.dom.moreSheet?.addEventListener("click", e => {
+      if (e.target.closest('[data-more-action="install"]')) { this.dom.moreSheet.classList.add("hidden"); install(); }
+    });
+    // iPhone/iPad: no install prompt — show how once, in the More menu
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
+    if (ios && byId("mInstallBtn")) {
+      byId("mInstallBtn").hidden = false;
+      byId("mInstallBtn").addEventListener("click", () =>
+        this.ask({ title: "Add to Home Screen", message: "In Safari, tap the Share button (square with an arrow), then “Add to Home Screen”. The admin will open like an app.", okText: "Got it", cancelText: "Close" }));
+    }
+
+    if ("serviceWorker" in navigator && location.protocol === "https:") {
+      navigator.serviceWorker.register("admin-sw.js", { scope: "./admin" }).catch(() => {});
+    }
+  },
+
+
+  async openApp() {
+    await _orig4.openApp.call(this);
+    this.restoreAdminState();
+  },
+
+
+  restoreAdminState() {
+    const state = readAdminState();
+    const filters = state.filters || {};
+    let touched = false;
+    REMEMBER_FIELDS.forEach(id => {
+      const el = byId(id);
+      if (!el || filters[id] == null) return;
+      if (el.tagName === "SELECT" && ![...el.options].some(o => o.value === filters[id])) return;
+      if (el.value !== filters[id]) { el.value = filters[id]; touched = true; }
+    });
+    if (state.orderTab) this.orderTab = state.orderTab;
+
+    if (touched || state.orderTab) {
+      // let each screen re-render with the remembered filters
+      ["rangePreset", "filterCat", "orderPayFilter", "reportRange", "voucherFilter", "auditFilter"].forEach(id => {
+        if (filters[id] != null) byId(id)?.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      if (filters.rangePreset === "custom") byId("rangeFrom")?.dispatchEvent(new Event("change", { bubbles: true }));
+      this.renderOrders?.();
+    }
+
+    if (state.view && state.view !== "dashboard" && this.views.includes(state.view)) this.showView(state.view);
+  },
+
+
+  showView(view) {
+    _orig4.showView.call(this, view);
+    if (view === "homepage" && this.dom.viewTitle) this.dom.viewTitle.textContent = "Homepage & Payment";
+    writeAdminState({ view });
+  },
+
+
+  /* ---------------------------------------------------
+     Pop-ups: max 3 at a time, repeats are merged ("×2")
+  --------------------------------------------------- */
+
+  toast(message, type = "ok", options = {}) {
+    const stack = this.dom.toastStack;
+    if (!stack || !message) return;
+
+    const key = `${type}|${options.title || ""}|${message}`;
+    const same = [...stack.children].find(el => el.dataset.key === key && !el.classList.contains("out"));
+    if (same) {
+      const n = Number(same.dataset.count || 1) + 1;
+      same.dataset.count = n;
+      let badge = same.querySelector(".t-count");
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "t-count";
+        same.querySelector("div")?.appendChild(badge);
+      }
+      badge.textContent = ` ×${n}`;
+      clearTimeout(same._timer);
+      same._timer = setTimeout(() => same.querySelector("button")?.click(), options.timeout || (type === "error" ? 7000 : 3500));
+      stack.prepend(same);
+      return;
+    }
+
+    const item = document.createElement("div");
+    item.className = `toast-item ${type}`;
+    item.dataset.key = key;
+    item.setAttribute("role", type === "error" ? "alert" : "status");
+    item.innerHTML = `
+      <span class="t-icon">${type === "error" ? "⚠" : type === "info" ? "🔔" : "✓"}</span>
+      <div>${options.title ? `<b>${escapeHTML(options.title)}</b>` : ""}${escapeHTML(message)}</div>
+      <button type="button" aria-label="Dismiss">×</button>`;
+
+    const remove = () => {
+      clearTimeout(item._timer);
+      item.classList.add("out");
+      setTimeout(() => item.remove(), 200);
+    };
+    item.querySelector("button").addEventListener("click", ev => { ev.stopPropagation(); remove(); });
+    if (options.onClick) item.addEventListener("click", () => { options.onClick(); remove(); });
+
+    stack.prepend(item);
+    const live = [...stack.children].filter(el => !el.classList.contains("out"));
+    live.slice(3).forEach(el => el.remove());
+    item._timer = setTimeout(remove, options.timeout || (type === "error" ? 7000 : 3500));
+  },
+
+
+  /* ---------------------------------------------------
+     Ctrl+K search
+  --------------------------------------------------- */
+
+  openPalette() {
+    const pal = byId("palette");
+    if (!pal) return;
+    pal.classList.remove("hidden");
+    const input = byId("paletteInput");
+    input.value = "";
+    this.paletteIndex = 0;
+    this.renderPalette();
+    setTimeout(() => input.focus(), 30);
+    if (!this.vouchers?.length && !this._vouchersRequested) {
+      this._vouchersRequested = true;
+      this.request("GET", { action: "adminVouchers" })
+        .then(res => { this.vouchers = res.vouchers || []; if (!pal.classList.contains("hidden")) this.renderPalette(); })
+        .catch(() => {});
+    }
+  },
+
+
+  closePalette() {
+    byId("palette")?.classList.add("hidden");
+  },
+
+
+  paletteResults(q) {
+    const query = normalize(q || "");
+    const digits = String(q || "").replace(/\D/g, "");
+    const has = text => normalize(text).includes(query);
+    const out = [];
+
+    const pages = [
+      ["dashboard", "Dashboard", "Sales"], ["orders", "Orders", "Sales"], ["reports", "Profit & Reports", "Sales"],
+      ["products", "Products", "Catalog"], ["inventory", "Restocks & cost", "Catalog"], ["promotions", "Promotions", "Catalog"],
+      ["vouchers", "Vouchers", "Catalog"], ["homepage", "Homepage & Payment settings", "Site"], ["reviews", "Reviews", "Site"], ["audit", "Audit Log", "Site"]
+    ];
+    const actions = [
+      ["New product", "Add a perfume", () => { this.showView("products"); this.editProduct(null); }],
+      ["New voucher", "Create a discount code", () => { this.showView("vouchers"); this.editVoucher(null); }],
+      ["Record a restock", "Add bottles + cost", () => { this.showView("inventory"); setTimeout(() => byId("rProduct")?.focus(), 80); }],
+      ["Download PDF report", "This month's sales & profit", () => { this.showView("reports"); this.downloadReportPdf(); }],
+      ["Download backup", "Everything as Excel", () => this.downloadBackup()],
+      ["Open customer site", "In a new tab", () => window.open("index.html", "_blank", "noopener")]
+    ];
+
+    if (!query) {
+      const fresh = (this.orders || []).filter(o => o.status === "New").slice(0, 5);
+      fresh.forEach(o => out.push(this.paletteOrderItem(o)));
+      actions.slice(0, 4).forEach(([t, s, run]) => out.push({ group: "Actions", icon: "＋", title: t, sub: s, run }));
+      pages.forEach(([v, t, g]) => out.push({ group: "Go to", icon: "→", title: t, sub: g, run: () => this.showView(v) }));
+      return out;
+    }
+
+    (this.orders || [])
+      .filter(o => has(o.orderId) || has(o.fullname) || (digits.length >= 4 && String(o.contact || "").replace(/\D/g, "").includes(digits)) ||
+                   (Array.isArray(o.items) && o.items.some(i => has(i.name))))
+      .slice(0, 8)
+      .forEach(o => out.push(this.paletteOrderItem(o)));
+
+    (this.products || [])
+      .filter(p => has(p.name) || has(p.id))
+      .slice(0, 6)
+      .forEach(p => out.push({
+        group: "Products", icon: "◇", title: p.name,
+        sub: `${p.stock == null ? "unlimited" : p.stock + " in stock"} · ${formatCurrency(p.price)}${p.cost == null ? " · no cost yet" : ""}`,
+        run: () => { this.showView("products"); this.editProduct(p); }
+      }));
+
+    (this.vouchers || [])
+      .filter(v => has(v.code) || has(v.note))
+      .slice(0, 4)
+      .forEach(v => out.push({
+        group: "Vouchers", icon: "%", title: v.code, sub: voucherRulesText(v),
+        run: () => { this.showView("vouchers"); this.editVoucher(v); }
+      }));
+
+    actions.filter(([t, s]) => has(t) || has(s))
+      .forEach(([t, s, run]) => out.push({ group: "Actions", icon: "＋", title: t, sub: s, run }));
+    pages.filter(([, t, g]) => has(t) || has(g))
+      .forEach(([v, t, g]) => out.push({ group: "Go to", icon: "→", title: t, sub: g, run: () => this.showView(v) }));
+
+    return out;
+  },
+
+
+  paletteOrderItem(o) {
+    return {
+      group: "Orders", icon: "☰",
+      title: `${o.fullname} · ${formatCurrency(o.total)}`,
+      sub: `${o.orderId} · ${o.status} · ${o.paymentStatus || "Unpaid"}`,
+      run: () => { this.showView("orders"); this.openOrder(o.orderId); }
+    };
+  },
+
+
+  renderPalette() {
+    const list = byId("paletteList");
+    if (!list) return;
+    const q = byId("paletteInput")?.value || "";
+    const items = this.paletteResults(q);
+    this.paletteItems = items;
+
+    if (!items.length) {
+      list.innerHTML = `<p class="palette-empty">No results for “${escapeHTML(q)}”.</p>`;
+      return;
+    }
+
+    let group = "";
+    list.innerHTML = items.map((it, i) => {
+      const head = it.group !== group ? `<p class="palette-group">${escapeHTML(it.group)}</p>` : "";
+      group = it.group;
+      return `${head}<button type="button" class="palette-item${i === this.paletteIndex ? " active" : ""}" data-pi="${i}" role="option" aria-selected="${i === this.paletteIndex}">
+        <span class="pi-icon">${escapeHTML(it.icon)}</span><span class="pi-text"><b>${escapeHTML(it.title)}</b><small>${escapeHTML(it.sub || "")}</small></span></button>`;
+    }).join("");
+  },
+
+
+  highlightPalette() {
+    document.querySelectorAll("#paletteList [data-pi]").forEach(el => {
+      const on = Number(el.dataset.pi) === this.paletteIndex;
+      el.classList.toggle("active", on);
+      el.setAttribute("aria-selected", String(on));
+      if (on) el.scrollIntoView({ block: "nearest" });
+    });
+  },
+
+
+  runPaletteItem(i) {
+    const item = (this.paletteItems || [])[i];
+    if (!item) return;
+    this.closePalette();
+    item.run();
+  },
+
+
+  /* ---------------------------------------------------
+     Bulk order actions
+  --------------------------------------------------- */
+
+  renderOrders() {
+    _orig4.renderOrders.call(this);
+    const rows = document.querySelectorAll("#ordersRows tr[data-order]");
+    const visible = new Set();
+    rows.forEach(tr => {
+      const id = tr.dataset.order;
+      visible.add(id);
+      const td = document.createElement("td");
+      td.className = "td-check";
+      td.innerHTML = `<input type="checkbox" data-sel="${escapeHTML(id)}" aria-label="Select ${escapeHTML(id)}" ${this.selectedOrders?.has(id) ? "checked" : ""}>`;
+      tr.prepend(td);
+      tr.classList.toggle("selected", Boolean(this.selectedOrders?.has(id)));
+    });
+    document.querySelectorAll("#ordersRows td[colspan]").forEach(td => { td.colSpan = 8; });
+    // forget selections that are no longer on screen (other tab / search)
+    [...(this.selectedOrders || [])].forEach(id => { if (!visible.has(id)) this.selectedOrders.delete(id); });
+    this.updateBulkBar();
+  },
+
+
+  toggleOrderSelection(id, on, skipBar) {
+    if (!this.selectedOrders) this.selectedOrders = new Set();
+    on ? this.selectedOrders.add(id) : this.selectedOrders.delete(id);
+    document.querySelector(`#ordersRows tr[data-order="${CSS.escape(id)}"]`)?.classList.toggle("selected", on);
+    if (!skipBar) this.updateBulkBar();
+  },
+
+
+  updateBulkBar() {
+    const bar = byId("bulkBar");
+    const n = this.selectedOrders?.size || 0;
+    if (bar) bar.hidden = n === 0;
+    const count = byId("bulkCount");
+    if (count) count.textContent = `${n} selected`;
+    const all = byId("selectAllOrders");
+    const boxes = document.querySelectorAll("#ordersRows input[data-sel]");
+    if (all) {
+      all.checked = boxes.length > 0 && n === boxes.length;
+      all.indeterminate = n > 0 && n < boxes.length;
+    }
+  },
+
+
+  selectedOrderList() {
+    const ids = this.selectedOrders || new Set();
+    return (this.orders || []).filter(o => ids.has(o.orderId));
+  },
+
+
+  async bulkSetStatus(status) {
+    const list = this.selectedOrderList().filter(o => o.status !== status);
+    if (!list.length) return this.toast(`Selected orders are already ${status}.`, "info");
+
+    const ok = await this.ask({
+      title: `Set ${list.length} order${list.length === 1 ? "" : "s"} to ${status}?`,
+      message: status === "Cancelled"
+        ? "Cancelled orders put their bottles back in stock. Customers see “Cancelled” in Track Order."
+        : `Customers will see “${status}” when they track their order.`,
+      okText: `Set ${status}`, danger: status === "Cancelled"
+    });
+    if (!ok) return;
+
+    let done = 0, failed = 0;
+    for (const o of list) {
+      try {
+        await this.request("POST", { action: "adminUpdateOrderStatus", orderId: o.orderId, status });
+        done++;
+      } catch { failed++; }
+    }
+    this.selectedOrders.clear();
+    await this.loadOrders(true);
+    this.toast(`${done} order${done === 1 ? "" : "s"} set to ${status}${failed ? ` · ${failed} failed` : ""}`, failed ? "error" : "ok");
+  },
+
+
+  async bulkMarkPaid() {
+    const list = this.selectedOrderList().filter(o => o.paymentStatus !== "Paid" && o.status !== "Cancelled");
+    if (!list.length) return this.toast("Selected orders are already paid (or cancelled).", "info");
+    const sum = list.reduce((s, o) => s + Number(o.total || 0), 0);
+
+    const ok = await this.ask({
+      title: `Mark ${list.length} order${list.length === 1 ? "" : "s"} as paid?`,
+      message: `Records the full order total as received (${formatCurrency(sum)} in all). If someone paid a different amount, open that order and enter it there.`,
+      okText: "Mark as paid"
+    });
+    if (!ok) return;
+
+    let done = 0, failed = 0;
+    for (const o of list) {
+      try {
+        await this.request("POST", {
+          action: "adminSavePayment", orderId: o.orderId, paymentStatus: "Paid", amountPaid: o.total,
+          paymentRef: o.paymentRef || "", paymentNote: o.paymentNote || ""
+        });
+        done++;
+      } catch { failed++; }
+    }
+    this.selectedOrders.clear();
+    await this.loadOrders(true);
+    this.toast(`${done} order${done === 1 ? "" : "s"} marked as paid${failed ? ` · ${failed} failed` : ""}`, failed ? "error" : "ok");
+  },
+
+
+  /* ---------------------------------------------------
+     Quick cost editing
+  --------------------------------------------------- */
+
+  renderInventory() {
+    _orig4.renderInventory.call(this);
+    document.querySelectorAll("#invRows tr").forEach(tr => {
+      const id = tr.querySelector("[data-restock]")?.dataset.restock;
+      const cell = tr.querySelector('td[data-label="Avg. cost"]');
+      if (!id || !cell) return;
+      cell.dataset.costEdit = id;
+      cell.classList.add("cost-cell");
+      cell.title = "Click to edit the cost";
+      cell.insertAdjacentHTML("beforeend", ` <span class="edit-hint" aria-hidden="true">✎</span>`);
+    });
+  },
+
+
+  startCostEdit(cell) {
+    const id = cell.dataset.costEdit;
+    const p = (this.products || []).find(x => x.id === id);
+    if (!p) return;
+    cell.innerHTML = `<input type="number" min="0" step="0.01" inputmode="decimal" class="cost-input" value="${p.cost ?? ""}" placeholder="₱ cost" aria-label="Cost per bottle for ${escapeHTML(p.name)}">`;
+    const input = cell.querySelector("input");
+    input.focus();
+    input.select();
+
+    let finished = false;
+    const finish = async save => {
+      if (finished) return;
+      finished = true;
+      const text = input.value.trim();
+      const next = text === "" ? null : Math.max(0, Number(text));
+      if (!save || next === p.cost || (text !== "" && !Number.isFinite(next))) { this.renderInventory(); return; }
+      try {
+        await this.request("POST", { action: "adminSaveProduct", ...this.productForSave(p), cost: text });
+        p.cost = next;
+        this.toast(`${p.name}: cost ${next == null ? "cleared" : peso2(next)}`);
+      } catch (error) {
+        this.setStatus(error.message, true);
+      }
+      this.renderInventory();
+      // jump to the next product without a cost
+      if (save === "next") this.focusMissingCost(id);
+    };
+
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); finish("next"); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
+    });
+    input.addEventListener("blur", () => finish(true));
+  },
+
+
+  // Same fields the product editor sends, so nothing else changes
+  productForSave(p) {
+    return {
+      originalId: p.id, id: p.id, name: p.name, cat: p.cat, price: p.price,
+      stock: p.stock ?? "", sortOrder: p.sortOrder ?? 0, img: p.img || "",
+      desc: p.desc || "", descLong: p.descLong || "",
+      topNotes: (p.topNotes || []).join(", "), heartNotes: (p.heartNotes || []).join(", "), baseNotes: (p.baseNotes || []).join(", "),
+      application: p.application || "", profiles: (p.profiles || []).join(", "),
+      longevity: p.longevity ?? 7, projection: p.projection ?? 7, strength: p.strength || "moderate",
+      time: (p.time || []).join(", "), occasion: p.occasion || "",
+      badges: (p.badges || []).join(", "), active: p.active !== false
+    };
+  },
+
+
+  focusMissingCost(afterId) {
+    const cells = [...document.querySelectorAll("#invRows [data-cost-edit]")];
+    const missing = cells.filter(c => (this.products || []).find(p => p.id === c.dataset.costEdit)?.cost == null);
+    if (!missing.length) { if (!afterId) this.toast("All products have a cost ✓"); return; }
+    let target = missing[0];
+    if (afterId) {
+      const idx = cells.findIndex(c => c.dataset.costEdit === afterId);
+      target = missing.find(c => cells.indexOf(c) > idx) || missing[0];
+    }
+    target.closest("tr")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    this.startCostEdit(target);
   }
 });
 

@@ -7,6 +7,12 @@
 <meta name="robots" content="noindex">
 <title>AURA & ESSENCE — Admin</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0a0a'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='30' text-anchor='middle' fill='%23d8bd72'%3EA%26amp;E%3C/text%3E%3C/svg%3E">
+<link rel="manifest" href="admin.webmanifest">
+<link rel="apple-touch-icon" href="assets/images/admin-icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="A&amp;E Admin">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="stylesheet" href="assets/css/admin.css">
 <link rel="stylesheet" href="assets/css/admin-ui.css">
 </head>
@@ -33,18 +39,22 @@
   <aside class="sidebar">
     <div class="side-brand"><span>A&nbsp;&amp;&nbsp;E</span><small>ADMIN</small></div>
     <nav class="side-nav">
+      <p class="nav-group">Sales</p>
       <button data-view="dashboard" class="nav-item active">Dashboard</button>
       <button data-view="orders" class="nav-item">Orders</button>
+      <button data-view="reports" class="nav-item">Profit &amp; Reports</button>
+      <p class="nav-group">Catalog</p>
       <button data-view="products" class="nav-item">Products</button>
       <button data-view="inventory" class="nav-item">Restocks</button>
       <button data-view="promotions" class="nav-item">Promotions</button>
       <button data-view="vouchers" class="nav-item">Vouchers</button>
-      <button data-view="reports" class="nav-item">Profit &amp; Reports</button>
-      <button data-view="homepage" class="nav-item">Homepage</button>
+      <p class="nav-group">Site</p>
+      <button data-view="homepage" class="nav-item">Homepage &amp; Payment</button>
       <button data-view="reviews" class="nav-item">Reviews</button>
       <button data-view="audit" class="nav-item">Audit Log</button>
     </nav>
     <div class="side-bottom">
+      <button id="installBtn" type="button" hidden>📲 Install admin app</button>
       <button id="backupBtn" type="button">⬇ Download backup</button>
       <a href="index.html" target="_blank" rel="noopener">↗ Customer Site</a>
       <button id="logoutBtn" type="button">Log out</button>
@@ -58,6 +68,7 @@
         <h2 id="viewTitle">Dashboard</h2>
       </div>
       <div class="topbar-actions">
+        <button type="button" class="search-btn" id="paletteBtn" aria-label="Search (Ctrl+K)"><svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span>Search</span><kbd>Ctrl K</kbd></button>
         <span id="globalStatus" class="conn" title="Connected to the database">●</span>
         <div class="notif-wrap">
           <button type="button" class="icon-btn" id="notifBtn" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">
@@ -114,7 +125,13 @@
         <button class="btn" id="exportOrders">Export CSV</button>
       </div>
       <div class="tabs" id="orderTabs" role="tablist"></div>
-      <div class="table-wrap"><table class="orders-table responsive"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead><tbody id="ordersRows"></tbody></table></div>
+      <div class="bulk-bar" id="bulkBar" hidden>
+        <b id="bulkCount">0 selected</b>
+        <select id="bulkStatus" aria-label="Set status for selected orders"><option value="">Set status…</option><option>Confirmed</option><option>Preparing</option><option>Out for Delivery</option><option>Completed</option><option>Cancelled</option></select>
+        <button class="btn" type="button" id="bulkPaid">Mark as paid</button>
+        <button class="btn ghost" type="button" id="bulkClear">Clear</button>
+      </div>
+      <div class="table-wrap"><table class="orders-table responsive"><thead><tr><th class="th-check"><input type="checkbox" id="selectAllOrders" aria-label="Select all orders on this tab"></th><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead><tbody id="ordersRows"></tbody></table></div>
     </section>
 
     <!-- ---------- Products ---------- -->
@@ -157,6 +174,14 @@
           <div class="form-grid one">
             <label>Low stock threshold<input id="setLowStock" type="number" min="0" value="5"><small class="muted">Products at or below this show in Low Stock on the Dashboard.</small></label>
             <label>Email &amp; notify me when stock reaches<input id="setAlertAt" type="number" min="0" value="1"><small class="muted">You also get a notification here in the admin.</small></label>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Payment details</h3><span>Shown to customers after they order</span></div>
+          <div class="form-grid one">
+            <label>GCash number<input id="setGcashNumber" type="tel" inputmode="tel" placeholder="09351936851" maxlength="15"></label>
+            <label>GCash account name <small class="muted">(as it appears in GCash, e.g. JO*N R. S.)</small><input id="setGcashName" maxlength="80" placeholder="Name on the GCash account"></label>
+            <label>Facebook Messenger link <small class="muted">(where customers send the payment screenshot)</small><input id="setMessenger" type="url" inputmode="url" placeholder="https://m.me/yourpagename"><small class="muted">Your page's link: <b>https://m.me/</b> + your page username.</small></label>
           </div>
         </div>
         <div class="form-actions full"><button class="btn primary" type="submit">Save Settings</button></div>
@@ -393,18 +418,32 @@
   <div class="more-sheet hidden" id="moreSheet">
     <div class="drawer-backdrop" data-close-more></div>
     <div class="more-panel">
+      <p class="nav-group">Sales</p>
       <button type="button" data-view="reports">Profit &amp; Reports</button>
+      <p class="nav-group">Catalog</p>
       <button type="button" data-view="inventory">Restocks</button>
-      <button type="button" data-view="vouchers">Vouchers</button>
       <button type="button" data-view="promotions">Promotions</button>
-      <button type="button" data-view="homepage">Homepage</button>
+      <button type="button" data-view="vouchers">Vouchers</button>
+      <p class="nav-group">Site</p>
+      <button type="button" data-view="homepage">Homepage &amp; Payment</button>
       <button type="button" data-view="reviews">Reviews <b class="count-badge" id="mReviewsBadge" hidden>0</b></button>
       <button type="button" data-view="audit">Audit Log</button>
       <hr>
+      <button type="button" data-more-action="install" id="mInstallBtn" hidden>📲 Install admin app</button>
       <button type="button" data-more-action="backup">⬇ Download backup</button>
       <a href="index.html" target="_blank" rel="noopener">↗ Customer Site</a>
       <button type="button" data-more-action="logout">Log out</button>
     </div>
+  </div>
+</div>
+
+<!-- Search / command palette (Ctrl+K) -->
+<div class="palette hidden" id="palette" role="dialog" aria-modal="true" aria-label="Search">
+  <div class="modal-backdrop" data-close-palette></div>
+  <div class="palette-card">
+    <div class="palette-input"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><input id="paletteInput" placeholder="Search orders, customers, products, vouchers, pages…" autocomplete="off" spellcheck="false"><kbd>Esc</kbd></div>
+    <div class="palette-list" id="paletteList" role="listbox"></div>
+    <div class="palette-foot"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Ctrl</kbd><kbd>K</kbd> anytime</span></div>
   </div>
 </div>
 

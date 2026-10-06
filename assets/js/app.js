@@ -721,6 +721,7 @@ const cartTotalElement =
 function renderCart() {
   updateHeaderCart();
   scheduleVoucherRefresh();
+  renderCheckoutExtras();
 
   const wrap =
     cartItemsElement;
@@ -796,12 +797,14 @@ function renderCart() {
     html.push(`
       <div class="cart-item">
 
-        <img
-          src="${p.img}"
-          alt="${p.name}"
-          loading="lazy"
+        ${p.img
+          ? `<img
+          src="${escapeHTML(p.img)}"
+          alt="${escapeHTML(p.name)}"
           decoding="async"
-        >
+          onerror="this.onerror=null;this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
+        >`
+          : `<div class="img-ph" aria-hidden="true">A&amp;E</div>`}
 
         <div>
 
@@ -1123,6 +1126,12 @@ function renderCarousel(cat) {
     return;
   }
 
+  if (!isCatalogReady()) {
+    carousel.innerHTML = Array.from({ length: 4 }, () =>
+      '<div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div>').join("");
+    return;
+  }
+
   carousel.innerHTML =
     "";
 
@@ -1385,16 +1394,17 @@ function renderScentOptions() {
   }
 
   scentSelect.innerHTML =
+    '<option value="">Choose a scent…</option>' +
     catalog
       .all()
       .filter((p) => p.active == true)
       .map(
         (p) =>
-          `<option value="${p.id}">${p.name} (${
+          `<option value="${escapeHTML(p.id)}"${p.stock != null && Number(p.stock) <= 0 ? " disabled" : ""}>${escapeHTML(p.name)} (${
             p.cat === "men"
               ? "For Him"
-              : "For Her"
-          })</option>`,
+              : p.cat === "unisex" ? "Unisex" : "For Her"
+          })${p.stock != null && Number(p.stock) <= 0 ? " — sold out" : ""}</option>`,
       )
       .join("");
 }
@@ -2132,6 +2142,8 @@ async function loadManagedProducts() {
       },
     );
 
+    window.__aeCatalogReady = true;
+
     renderScentOptions();
 
     renderReviewScentOptions();
@@ -2153,6 +2165,13 @@ async function loadManagedProducts() {
       "Managed catalog unavailable; using built-in catalog.",
       error,
     );
+  } finally {
+    if (!window.__aeCatalogReady) {
+      // database unreachable: fall back to the built-in list
+      window.__aeCatalogReady = true;
+      renderStoreContent();
+      renderCarousel(activeCat);
+    }
   }
 }
 
@@ -3998,6 +4017,16 @@ ${p.name} × ${item.qty} — ₱${(
 
       clearVoucher();
 
+      const payBox = document.getElementById("payInstructions");
+      if (payBox) {
+        payBox.innerHTML = payInstructionsHTML({
+          payment: data.get("payment"),
+          amount: response.total != null ? Number(response.total) : estimatedOrderTotal(orderTotal),
+          orderId: response.orderId,
+        });
+      }
+      goCheckoutStep(1, { silent: true });
+
       document
         .getElementById(
           "confirmationModal",
@@ -4017,7 +4046,7 @@ ${p.name} × ${item.qty} — ₱${(
 
       form.reset();
 
-      qtyNumber.value = 1;
+      if (qtyNumber) qtyNumber.value = 1;
 
       cart = [];
 
@@ -4228,6 +4257,14 @@ function renderTracking(
         <dt>Customer</dt><dd>${escapeHTML(data.fullname || "")}</dd>
       </dl>
     </div>
+    ${!cancelled && (payStatus === "Unpaid" || payStatus === "Partial")
+      ? payInstructionsHTML({
+          payment: data.payment,
+          amount: payStatus === "Partial" ? Math.max(0, total - (paid || 0)) : total,
+          orderId: data.orderId,
+          compact: true,
+        })
+      : ""}
   `;
 
   /* ---------- progress ---------- */
@@ -4517,6 +4554,7 @@ function activeProducts() {
 }
 
 function renderCounts() {
+  if (!isCatalogReady()) return;   // don't flash the built-in list's numbers
   const products = activeProducts();
   if (!products.length) return;
 
@@ -4547,6 +4585,7 @@ function renderCounts() {
 /* ---------- How to Choose (built from each scent's profiles) ---------- */
 
 function renderGuide() {
+  if (!isCatalogReady()) return;
   const list = document.getElementById("guideList");
   if (!list) return;
 
@@ -4588,6 +4627,7 @@ document.getElementById("guideList")?.addEventListener("click", (e) => {
 /* ---------- Build Your Duo ---------- */
 
 function renderDuo() {
+  if (!isCatalogReady()) return;
   if (!duoOne || !duoTwo) return;
 
   const products = activeProducts().slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
@@ -4650,6 +4690,7 @@ function updateDuoTotal() {
 /* ---------- Featured rows (follow the admin Homepage switches) ---------- */
 
 function renderFeaturedRows() {
+  if (!isCatalogReady()) return;
   const box = document.getElementById("featuredRows");
   if (!box) return;
 
@@ -4859,6 +4900,7 @@ function renderCartLines() {
   if (dl) dl.textContent = label;
   if (d) d.textContent = "−₱" + discount.toLocaleString();
   totalEl.textContent = "₱" + Math.max(0, total).toLocaleString();
+  updateCoBar(Math.max(0, total));
 }
 
 document.getElementById("voucherApply")?.addEventListener("click", () => {
@@ -4972,8 +5014,8 @@ function renderFavorites() {
     const tag = p.cat === "women" ? "For Her" : p.cat === "unisex" ? "Unisex" : "For Him";
     return `
       <div class="fav-item">
-        <button type="button" class="fav-thumb" data-fav-details="${id}" aria-label="Details of ${escapeHTML(p.name)}">
-          <img src="${escapeHTML(p.img || "")}" alt="" loading="lazy" onerror="this.remove()">
+        <button type="button" class="fav-thumb${p.img ? "" : " ph"}" data-fav-details="${id}" aria-label="Details of ${escapeHTML(p.name)}">
+          ${p.img ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;this.parentNode.classList.add('ph');this.remove()">` : ""}
         </button>
         <div class="fav-info">
           <small>${tag}</small>
@@ -5137,3 +5179,336 @@ document.addEventListener("keydown", (e) => {
 })();
 
 updateFavCount();
+
+// ============================================================
+// CHECKOUT: Cart → Details → Review, live summary,
+// mobile checkout bar, payment instructions, loading state
+// (function declarations + var only — renderCart() calls into
+//  this part of the file before it has run)
+// ============================================================
+
+var coStep = 1;
+var DEFAULT_GCASH = "09351936851";
+
+function isCatalogReady() {
+  return window.__aeCatalogReady === true ||
+    (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured());
+}
+
+function phoneDigits(value) {
+  let d = String(value || "").replace(/\D/g, "");
+  if (d.startsWith("63") && d.length === 12) d = "0" + d.slice(2);
+  if (d.length === 10 && d.startsWith("9")) d = "0" + d;
+  return d;
+}
+
+function prettyPhone(value) {
+  const d = phoneDigits(value);
+  return /^09\d{9}$/.test(d) ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : String(value || "");
+}
+
+function payMethod() {
+  return document.querySelector('#orderForm input[name="payment"]:checked')?.value || "Cash on Delivery / Meetup";
+}
+
+/* ---------- validation ---------- */
+
+function setFieldError(id, message) {
+  const input = document.getElementById(id);
+  const out = document.querySelector(`[data-error-for="${id}"]`);
+  input?.classList.toggle("invalid", Boolean(message));
+  input?.setAttribute("aria-invalid", message ? "true" : "false");
+  if (out) out.textContent = message || "";
+  return !message;
+}
+
+function validateDetails(focus) {
+  const name = document.getElementById("fullname")?.value.trim() || "";
+  const contact = document.getElementById("contact")?.value || "";
+  const address = document.getElementById("address")?.value.trim() || "";
+
+  const checks = [
+    ["fullname", name.length >= 2 ? "" : "Please enter your full name."],
+    ["contact", /^09\d{9}$/.test(phoneDigits(contact)) ? "" : "Enter a valid mobile number, e.g. 0917 123 4567."],
+    ["address", address.length >= 4 ? "" : "Please enter where we'll deliver or meet you."],
+  ];
+
+  let firstBad = null;
+  checks.forEach(([id, msg]) => {
+    if (!setFieldError(id, msg) && !firstBad) firstBad = id;
+  });
+  if (firstBad && focus) document.getElementById(firstBad)?.focus();
+  return !firstBad;
+}
+
+/* ---------- steps ---------- */
+
+function goCheckoutStep(n, opts) {
+  const options = opts || {};
+  const cartError = document.getElementById("coCartError");
+
+  if (n >= 2 && (!cart || !cart.length)) {
+    if (cartError && !options.silent) cartError.hidden = false;
+    n = 1;
+  } else if (cartError) {
+    cartError.hidden = true;
+  }
+  if (n === 3 && !validateDetails(!options.silent)) n = 2;
+
+  coStep = n;
+  document.querySelectorAll("#orderForm .co-panel").forEach((panel) => {
+    panel.hidden = Number(panel.dataset.panel) !== n;
+  });
+  document.querySelectorAll("#coSteps li").forEach((li) => {
+    const step = Number(li.dataset.step);
+    li.classList.toggle("active", step === n);
+    li.classList.toggle("done", step < n);
+    li.querySelector("button")?.setAttribute("aria-current", step === n ? "step" : "false");
+  });
+
+  if (n === 3) renderReview();
+  document.body.classList.remove("co-step-1", "co-step-2", "co-step-3");
+  document.body.classList.add(`co-step-${n}`);
+
+  if (!options.silent) {
+    const top = document.getElementById("coSteps");
+    if (top && top.getBoundingClientRect().top < 110) {
+      top.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (n === 2) setTimeout(() => {
+      const first = ["fullname", "contact", "address"].map((id) => document.getElementById(id)).find((el) => el && !el.value);
+      first?.focus({ preventScroll: true });
+    }, 60);
+  }
+}
+
+/* ---------- live summary ---------- */
+
+function cartLinesHTML(withThumbs) {
+  return (cart || []).map((item) => {
+    const p = getProductById(item.id);
+    if (!p) return "";
+    const price = Number(p.price || PRODUCT_PRICE);
+    const thumb = withThumbs
+      ? (p.img
+          ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<span class=&quot;img-ph sm&quot;>A&amp;E</span>'">`
+          : `<span class="img-ph sm">A&amp;E</span>`)
+      : "";
+    return `<div class="sum-line">${thumb}<span>${escapeHTML(p.name)} <small>× ${item.qty}</small></span><b>₱${(price * item.qty).toLocaleString()}</b></div>`;
+  }).join("");
+}
+
+function renderCheckoutExtras() {
+  const box = document.getElementById("sumItems");
+  if (!box) return;
+
+  const qty = typeof cartQuantity === "function" ? cartQuantity() : 0;
+  box.innerHTML = qty
+    ? cartLinesHTML(true)
+    : `<p class="summary-empty">No scents yet. Tap <b>Add</b> on any perfume, or pick one on the left.</p>`;
+
+  // "Add 1 more for the 2-Bottle Promo"
+  const nudge = document.getElementById("promoNudge");
+  if (nudge) {
+    const promos = (typeof activePromotions !== "undefined" && Array.isArray(activePromotions) ? activePromotions : [])
+      .filter((p) => p.active !== false && Number(p.minQty) > qty)
+      .sort((a, b) => Number(a.minQty) - Number(b.minQty));
+    const next = promos[0];
+    const appliesNow = qty && typeof getApplicablePromotion === "function" && getApplicablePromotion(qty);
+    if (qty > 0 && next && !appliesNow) {
+      const more = Number(next.minQty) - qty;
+      const deal = next.type === "fixed_total"
+        ? `any ${Number(next.minQty)} for ₱${Number(next.fixedTotal).toLocaleString()}`
+        : `${Number(next.percentOff)}% off ${Number(next.minQty)}+ bottles`;
+      nudge.innerHTML = `✨ Add <b>${more} more</b> scent${more === 1 ? "" : "s"} for the ${escapeHTML(next.name)} — ${deal}.`;
+      nudge.hidden = false;
+    } else if (appliesNow) {
+      nudge.innerHTML = `✓ ${escapeHTML(appliesNow.name)} applied.`;
+      nudge.hidden = false;
+    } else {
+      nudge.hidden = true;
+    }
+  }
+
+  if (!qty && coStep !== 1) goCheckoutStep(1, { silent: true });
+  if (coStep === 3) renderReview();
+  updateCoBar();
+}
+
+function renderReview() {
+  const box = document.getElementById("reviewBox");
+  if (!box) return;
+  const val = (id) => document.getElementById(id)?.value.trim() || "";
+  const pay = payMethod();
+  const total = document.getElementById("cartTotal")?.textContent || "";
+  const linesEl = document.getElementById("cartLines");
+  const discount = linesEl && !linesEl.hidden
+    ? `<div class="sum-line muted"><span>${escapeHTML(document.getElementById("cartDiscountLabel")?.textContent || "Discount")}</span><b>${escapeHTML(document.getElementById("cartDiscount")?.textContent || "")}</b></div>`
+    : "";
+
+  box.innerHTML = `
+    <div class="review-sec">
+      <div class="review-head"><h5>Items</h5><button type="button" class="co-edit" data-go="1">Edit</button></div>
+      ${cartLinesHTML(false)}
+      ${discount}
+      <div class="sum-line total"><span>Total</span><b>${escapeHTML(total)}</b></div>
+    </div>
+    <div class="review-sec">
+      <div class="review-head"><h5>Deliver to</h5><button type="button" class="co-edit" data-go="2">Edit</button></div>
+      <p><b>${escapeHTML(val("fullname"))}</b> · ${escapeHTML(prettyPhone(val("contact")))}<br>${escapeHTML(val("address"))}</p>
+      ${val("notes") ? `<p class="muted">Note: ${escapeHTML(val("notes"))}</p>` : ""}
+    </div>
+    <div class="review-sec">
+      <div class="review-head"><h5>Payment</h5><button type="button" class="co-edit" data-go="2">Change</button></div>
+      <p>${escapeHTML(pay)}</p>
+      <p class="muted">${pay === "GCash"
+        ? "After you submit, we'll show the GCash number and the exact amount to send."
+        : "Pay when you receive your order. We'll message you to confirm the schedule."}</p>
+    </div>`;
+}
+
+/* ---------- mobile checkout bar ---------- */
+
+function updateCoBar(total) {
+  const bar = document.getElementById("coBar");
+  if (!bar) return;
+  const qty = typeof cartQuantity === "function" ? cartQuantity() : 0;
+  bar.hidden = qty === 0;
+  const count = document.getElementById("coBarCount");
+  if (count) count.textContent = `${qty} item${qty === 1 ? "" : "s"}`;
+  document.body.classList.toggle("has-cobar", qty > 0);
+  const t = document.getElementById("coBarTotal");
+  if (t) t.textContent = total != null ? "₱" + Number(total).toLocaleString() : (document.getElementById("cartTotal")?.textContent || "");
+}
+
+(function watchOrderSection() {
+  const section = document.getElementById("order");
+  if (!section || !("IntersectionObserver" in window)) return;
+  new IntersectionObserver((entries) => {
+    document.body.classList.toggle("order-in-view", entries[0].isIntersecting);
+  }, { threshold: 0.05 }).observe(section);
+})();
+
+/* ---------- payment instructions (confirmation + Track Order) ---------- */
+
+function messengerLink(orderId) {
+  const raw = String((storeSettings || {}).messengerUrl || "").trim();
+  if (!/^https:\/\/(m\.me|(www\.)?messenger\.com|(www\.|m\.)?facebook\.com)\//i.test(raw)) return "";
+  try {
+    const url = new URL(raw);
+    if (orderId && /m\.me$/i.test(url.hostname)) url.searchParams.set("text", `Hi! Here's my payment for order ${orderId}.`);
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function payInstructionsHTML(opts) {
+  const o = opts || {};
+  const settings = storeSettings || {};
+  const amount = Number(o.amount || 0);
+  const amountText = "₱" + amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const orderId = escapeHTML(o.orderId || "");
+  const msg = messengerLink(o.orderId);
+  const msgBtn = msg
+    ? `<a class="msg-btn" href="${escapeHTML(msg)}" target="_blank" rel="noopener">Send screenshot via Messenger</a>`
+    : "";
+
+  if (o.payment === "GCash") {
+    const number = phoneDigits(settings.gcashNumber || DEFAULT_GCASH);
+    const name = String(settings.gcashName || "").trim();
+    return `
+      <div class="pay-box${o.compact ? " compact" : ""}">
+        <h5>Pay with GCash</h5>
+        <div class="pay-row"><span>Send exactly</span><b>${amountText}</b><button type="button" class="copy-chip" data-copy="${amount}">Copy</button></div>
+        <div class="pay-row"><span>GCash number</span><b>${escapeHTML(prettyPhone(number))}</b><button type="button" class="copy-chip" data-copy="${escapeHTML(number)}">Copy</button></div>
+        ${name ? `<div class="pay-row"><span>Account name</span><b>${escapeHTML(name)}</b><span></span></div>` : ""}
+        <ol>
+          <li>Open GCash → <b>Send Money</b> and send the exact amount.</li>
+          <li>Take a screenshot of the receipt.</li>
+          <li>Send the screenshot with your Order ID <b>${orderId}</b>${msg ? " through Messenger" : " to us"}.</li>
+        </ol>
+        ${msgBtn}
+      </div>`;
+  }
+
+  if (/cash|cod|meetup/i.test(String(o.payment || ""))) {
+    return `
+      <div class="pay-box${o.compact ? " compact" : ""}">
+        <h5>Cash on delivery / meetup</h5>
+        <p>Please prepare <b>${amountText}</b>. We'll message you to confirm the delivery or meetup schedule.</p>
+        ${msg ? `<a class="msg-btn ghost" href="${escapeHTML(msg)}" target="_blank" rel="noopener">Message us</a>` : ""}
+      </div>`;
+  }
+
+  return `
+    <div class="pay-box${o.compact ? " compact" : ""}">
+      <h5>Payment</h5>
+      <p>Amount due: <b>${amountText}</b>. We'll message you the payment details.</p>
+      ${msgBtn}
+    </div>`;
+}
+
+/* ---------- events ---------- */
+
+document.addEventListener("click", async (e) => {
+  const go = e.target.closest("#order [data-go]");
+  if (go) {
+    e.preventDefault();
+    const target = Number(go.dataset.go);
+    // moving forward from the cart validates it; going back never does
+    goCheckoutStep(target);
+    return;
+  }
+
+  const copy = e.target.closest("[data-copy], [data-copy-target]");
+  if (copy) {
+    const text = copy.dataset.copy ?? document.getElementById(copy.dataset.copyTarget)?.textContent.trim() ?? "";
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const t = document.createElement("textarea");
+      t.value = text;
+      document.body.appendChild(t);
+      t.select();
+      try { document.execCommand("copy"); } catch { /* ignore */ }
+      t.remove();
+    }
+    const label = copy.textContent;
+    copy.textContent = "Copied ✓";
+    copy.classList.add("done");
+    setTimeout(() => { copy.textContent = label; copy.classList.remove("done"); }, 1500);
+  }
+});
+
+// Enter in a field moves to the next step instead of submitting early
+document.addEventListener("submit", (e) => {
+  if (e.target?.id !== "orderForm") return;
+  if (coStep !== 3 || !cart.length || !validateDetails(true)) {
+    e.preventDefault();
+    e.stopPropagation();
+    goCheckoutStep(Math.min(3, coStep + 1));
+  }
+}, true);
+
+["fullname", "contact", "address"].forEach((id) => {
+  const el = document.getElementById(id);
+  el?.addEventListener("input", () => {
+    if (el.classList.contains("invalid")) setFieldError(id, "");
+  });
+});
+
+document.getElementById("contact")?.addEventListener("blur", (e) => {
+  const pretty = prettyPhone(e.target.value);
+  if (pretty !== e.target.value && /^09/.test(phoneDigits(e.target.value))) e.target.value = pretty;
+});
+
+document.querySelectorAll('#orderForm input[name="payment"]').forEach((r) =>
+  r.addEventListener("change", () => { if (coStep === 3) renderReview(); }));
+
+document.getElementById("coBarBtn")?.addEventListener("click", () => {
+  if (coStep === 1 && cart.length) setTimeout(() => goCheckoutStep(1, { silent: true }), 0);
+});
+
+renderCheckoutExtras();
+goCheckoutStep(1, { silent: true });

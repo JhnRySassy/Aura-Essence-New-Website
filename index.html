@@ -157,10 +157,10 @@
         <div id="featuredRows" class="featured-rows"></div>
         <div class="tabs">
           <button class="tab active" data-cat="men">
-            For Him <span class="count">(9)</span>
+            For Him <span class="count"></span>
           </button>
           <button class="tab" data-cat="women">
-            For Her <span class="count">(8)</span>
+            For Her <span class="count"></span>
           </button>
         </div>
         <div class="carousel-wrap">
@@ -556,123 +556,107 @@
           to confirm payment and delivery or meetup.
         </p>
 
-        <div class="order-grid" style="margin-top: 34px">
-          <form id="orderForm">
-            <div class="field">
-              <label for="fullname">Full Name</label>
-              <input
-                id="fullname"
-                name="fullname"
-                type="text"
-                placeholder="Juan Dela Cruz"
-                required
-              />
-            </div>
-            <div class="row2">
-              <div class="field">
-                <label for="contact">Contact Number</label>
-                <input
-                  id="contact"
-                  name="contact"
-                  type="tel"
-                  placeholder="09xx xxx xxxx"
-                  required
-                />
+        <ol class="co-steps" id="coSteps" aria-label="Checkout steps">
+          <li data-step="1" class="active"><button type="button" data-go="1"><span>1</span>Cart</button></li>
+          <li data-step="2"><button type="button" data-go="2"><span>2</span>Details</button></li>
+          <li data-step="3"><button type="button" data-go="3"><span>3</span>Review</button></li>
+        </ol>
+
+        <div class="order-grid checkout-grid">
+          <form id="orderForm" novalidate>
+
+            <!-- STEP 1: CART -->
+            <div class="co-panel" data-panel="1">
+              <div class="cart-box">
+                <div class="cart-head"><h4>Your Cart</h4><span class="cart-count" id="cartCount">0 items</span></div>
+                <div id="cartItems"><div class="cart-empty">Your cart is empty. Add one or more fragrances above.</div></div>
               </div>
-              <div class="field">
-                <label for="qtyNumber">Quantity</label>
-                <div class="qty-control">
-                  <button type="button" id="qtyMinus" aria-label="Decrease quantity">−</button>
-                  <input id="qtyNumber" type="number" min="1" max="10" value="1" inputmode="numeric" aria-label="Quantity">
-                  <button type="button" id="qtyPlus" aria-label="Increase quantity">+</button>
+              <div class="quick-add">
+                <label for="scent">Add a scent</label>
+                <div class="quick-add-row">
+                  <select id="scent" name="scent"></select>
+                  <button type="button" class="add-cart-btn" id="addSelectedToCart">+ Add</button>
                 </div>
-                <input type="hidden" id="qty" name="qty" value="1 bottle">
-                <div class="live-total" id="liveTotal">Estimated total: ₱430</div>
+              </div>
+              <p class="co-error" id="coCartError" hidden>Add at least one scent to continue.</p>
+              <div class="co-actions">
+                <a class="co-link" href="#collection">← Keep shopping</a>
+                <button type="button" class="submit co-next" data-go="2">Continue to details</button>
               </div>
             </div>
-            <div class="field">
-              <label for="scent">Preferred Scent</label>
-              <select id="scent" name="scent"></select>
-            </div>
-            <button type="button" class="add-cart-btn" id="addSelectedToCart">+ ADD SELECTED SCENT TO CART</button>
-            <div class="cart-box">
-              <div class="cart-head"><h4>Your Cart</h4><span class="cart-count" id="cartCount">0 items</span></div>
-              <div id="cartItems"><div class="cart-empty">Your cart is empty. Add one or more fragrances above.</div></div>
-              <div class="voucher-box" id="voucherBox">
-                <label for="voucherInput">Voucher code</label>
-                <div class="voucher-row">
-                  <input id="voucherInput" type="text" placeholder="e.g. SUKI50" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30">
-                  <button type="button" id="voucherApply">Apply</button>
+
+            <!-- STEP 2: DETAILS -->
+            <div class="co-panel" data-panel="2" hidden>
+              <div class="field">
+                <label for="fullname">Full Name</label>
+                <input id="fullname" name="fullname" type="text" placeholder="Juan Dela Cruz" autocomplete="name" required />
+                <small class="field-error" data-error-for="fullname"></small>
+              </div>
+              <div class="field">
+                <label for="contact">Mobile Number</label>
+                <input id="contact" name="contact" type="tel" placeholder="0917 123 4567" autocomplete="tel" inputmode="tel" required />
+                <small class="field-error" data-error-for="contact"></small>
+              </div>
+              <div class="field">
+                <label for="address">Delivery / Meetup Location</label>
+                <input id="address" name="address" type="text" placeholder="Street, Barangay, City / landmark" autocomplete="street-address" required />
+                <small class="field-error" data-error-for="address"></small>
+              </div>
+              <div class="field">
+                <span class="field-label">Payment</span>
+                <div class="pay-options" role="radiogroup" aria-label="Payment">
+                  <label class="pay-option">
+                    <input type="radio" name="payment" value="Cash on Delivery / Meetup" checked>
+                    <span><b>Cash on Delivery / Meetup</b><small>Pay when you receive your order</small></span>
+                  </label>
+                  <label class="pay-option">
+                    <input type="radio" name="payment" value="GCash">
+                    <span><b>GCash</b><small>We'll show the GCash number after you submit</small></span>
+                  </label>
                 </div>
-                <p class="voucher-status" id="voucherStatus" aria-live="polite"></p>
               </div>
-              <div class="cart-lines" id="cartLines" hidden>
-                <div><span>Subtotal</span><span id="cartSubtotal">₱0</span></div>
-                <div class="disc"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">−₱0</span></div>
+              <div class="field">
+                <label for="notes">Notes (optional)</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Preferred schedule, landmark, etc."></textarea>
               </div>
-              <div class="cart-total"><span>Estimated Total</span><strong id="cartTotal">₱0</strong></div>
+              <div class="co-actions">
+                <button type="button" class="co-link" data-go="1">← Back to cart</button>
+                <button type="button" class="submit co-next" data-go="3">Review order</button>
+              </div>
             </div>
-            <div class="field">
-              <label for="address">Delivery / Meetup Location</label>
-              <input
-                id="address"
-                name="address"
-                type="text"
-                placeholder="Barangay, City"
-                required
-              />
+
+            <!-- STEP 3: REVIEW -->
+            <div class="co-panel" data-panel="3" hidden>
+              <div class="review-box" id="reviewBox"></div>
+              <div class="co-actions">
+                <button type="button" class="co-link" data-go="2">← Edit details</button>
+                <button type="submit" class="submit" id="submitBtn">Submit Order</button>
+              </div>
+              <div id="submitStatus" class="submit-status" role="status" aria-live="polite"></div>
             </div>
-            <div class="field">
-              <label for="payment">Preferred Payment</label>
-              <select id="payment" name="payment">
-                <option>Cash on Delivery / Meetup</option>
-                <option>GCash</option>
-                <option>Bank Transfer</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="notes">Notes (optional)</label>
-              <textarea
-                id="notes"
-                name="notes"
-                rows="3"
-                placeholder="Preferred schedule, landmark, etc."
-              ></textarea>
-            </div>
-            <button type="submit" class="submit" id="submitBtn">
-              Submit Order
-            </button>
-            <div
-              id="submitStatus"
-              class="submit-status"
-              role="status"
-              aria-live="polite"
-            ></div>
           </form>
 
-          <div class="summary-box">
-            <h4>Your Order Summary</h4>
-            <div id="summaryEmpty" class="summary-empty">
-              Your order summary will appear here after you submit.
+          <aside class="summary-box live-summary" id="liveSummary" aria-label="Order summary">
+            <h4>Order Summary</h4>
+            <div class="sum-items" id="sumItems"><p class="summary-empty">No scents yet. Tap <b>Add</b> on any perfume.</p></div>
+            <p class="promo-nudge" id="promoNudge" hidden></p>
+            <div class="voucher-box" id="voucherBox">
+              <label for="voucherInput">Voucher code</label>
+              <div class="voucher-row">
+                <input id="voucherInput" type="text" placeholder="e.g. SUKI50" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30">
+                <button type="button" id="voucherApply">Apply</button>
+              </div>
+              <p class="voucher-status" id="voucherStatus" aria-live="polite"></p>
             </div>
-            <div
-              id="summaryLines"
-              class="summary-lines"
-              style="display: none"
-            ></div>
-            <div
-              class="summary-actions"
-              id="summaryActions"
-              style="display: none"
-            >
-              <button type="button" class="ghost-btn" id="copyBtn">
-                Copy Order Summary
-              </button>
+            <div class="cart-lines" id="cartLines" hidden>
+              <div><span>Subtotal</span><span id="cartSubtotal">₱0</span></div>
+              <div class="disc"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">−₱0</span></div>
             </div>
+            <div class="cart-total"><span>Total</span><strong id="cartTotal">₱0</strong></div>
             <p class="note-small">
               Keep your Order ID — use it in <a href="#tracking">Track Your Order</a> anytime.
             </p>
-          </div>
+          </aside>
         </div>
       </div>
     </section>
@@ -683,6 +667,14 @@
         <h3 id="confirmationTitle">Order Received</h3>
         <p id="confirmationMessage">Thank you. Your order has been received and saved.</p>
         <div class="confirmation-order-id" id="confirmationOrderId"></div>
+        <button type="button" class="copy-chip" data-copy-target="confirmationOrderId">Copy Order ID</button>
+        <div class="pay-steps" id="payInstructions"></div>
+        <details class="conf-details">
+          <summary>Order details</summary>
+          <div id="summaryEmpty" class="summary-empty" hidden></div>
+          <div id="summaryLines" class="summary-lines"></div>
+          <div class="summary-actions" id="summaryActions"><button type="button" class="ghost-btn" id="copyBtn">Copy Order Summary</button></div>
+        </details>
         <div class="confirmation-actions">
           <button type="button" class="btn-primary" id="confirmationTrackBtn">Track Order</button>
           <button type="button" class="ghost-btn" id="confirmationCloseBtn">Continue Shopping</button>
@@ -745,7 +737,7 @@
 
     <footer>
       <div class="mark">A &amp; E</div>
-      <p>Aura &amp; Essence &middot; Extrait de Parfum &middot; &#8369;430</p>
+      <p>Aura &amp; Essence &middot; Extrait de Parfum</p>
     </footer>
 
     <div class="fav-drawer" id="favDrawer" aria-hidden="true">
@@ -777,6 +769,11 @@
     </div>
 
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <div class="co-bar" id="coBar" hidden>
+      <div><b id="coBarTotal">₱0</b><small id="coBarCount">0 items</small></div>
+      <a href="#order" class="co-bar-btn" id="coBarBtn">Checkout →</a>
+    </div>
 
     <nav class="bottom-bar" aria-label="Quick links">
       <a href="#collection"><span aria-hidden="true">◇</span>Shop</a>

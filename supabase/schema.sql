@@ -1341,3 +1341,8 @@ revoke execute on function public.admin_restock(text, integer, numeric, text, te
 revoke execute on function public.admin_delete_restock(bigint) from public, anon;
 grant execute on function public.admin_restock(text, integer, numeric, text, text, date) to authenticated;
 grant execute on function public.admin_delete_restock(bigint) to authenticated;
+
+-- ---------- Payment details shown after checkout (edit in admin → Homepage) ----------
+update public.site_settings
+   set data = data || '{"gcashNumber": "09351936851"}'::jsonb
+ where id = 1 and not (data ? 'gcashNumber');

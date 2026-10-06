@@ -1,0 +1,15 @@
+{
+  "name": "Aura & Essence Admin",
+  "short_name": "A&E Admin",
+  "description": "Orders, products, vouchers and reports for Aura & Essence.",
+  "start_url": "admin.html",
+  "scope": "./admin",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    { "src": "assets/images/admin-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "assets/images/admin-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

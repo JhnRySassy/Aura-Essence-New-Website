@@ -286,7 +286,13 @@ function settingsIn(data = {}) {
     showBestSellers: toBool(data.showBestSellers),
     showFeatured: toBool(data.showFeatured),
     showNewArrivals: toBool(data.showNewArrivals),
-    showSignature: toBool(data.showSignature)
+    showSignature: toBool(data.showSignature),
+    // Payment details shown to customers after they order
+    gcashNumber: String(data.gcashNumber ?? "").replace(/[^\d+]/g, "").slice(0, 15),
+    gcashName: String(data.gcashName ?? "").trim().slice(0, 80),
+    messengerUrl: /^https:\/\/[^\s]+$/i.test(String(data.messengerUrl ?? "").trim())
+      ? String(data.messengerUrl).trim().slice(0, 300)
+      : ""
   };
 }
 
