@@ -64,6 +64,26 @@
           <div id="globalStatus" class="status"></div>
         </header>
         <section id="dashboardView" class="view">
+          <div class="toolbar date-range">
+            <select id="rangePreset" aria-label="Date range">
+              <option value="all">All time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+              <option value="thisMonth">This month</option>
+              <option value="lastMonth">Last month</option>
+              <option value="thisYear">This year</option>
+              <option value="custom">Custom range</option>
+            </select>
+            <label class="range-field"
+              >From <input type="date" id="rangeFrom"
+            /></label>
+            <label class="range-field"
+              >To <input type="date" id="rangeTo"
+            /></label>
+            <span id="rangeLabel" class="muted filter-count"></span>
+          </div>
           <div class="cards" id="statsCards"></div>
           <div class="grid-2">
             <div class="panel">

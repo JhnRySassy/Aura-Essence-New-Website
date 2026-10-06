@@ -273,6 +273,10 @@ class AdminApp {
       "auditRows",
 
       "statsCards",
+      "rangePreset",
+      "rangeFrom",
+      "rangeTo",
+      "rangeLabel",
       "topProducts",
       "lowStockLabel",
       "lowStock",
@@ -522,6 +526,22 @@ class AdminApp {
     /* -----------------------------------------------
        SESSION
     ------------------------------------------------ */
+
+    /* -----------------------------------------------
+       DASHBOARD DATE RANGE
+    ------------------------------------------------ */
+
+    this.dom.rangePreset?.addEventListener("change", () => {
+      this.fillRangeInputs();
+      this.renderDashboard(this.lastDashboard || {});
+    });
+
+    ["rangeFrom", "rangeTo"].forEach((id) => {
+      this.dom[id]?.addEventListener("change", () => {
+        if (this.dom.rangePreset) this.dom.rangePreset.value = "custom";
+        this.renderDashboard(this.lastDashboard || {});
+      });
+    });
 
     /* -----------------------------------------------
        REVIEWS
@@ -922,6 +942,23 @@ class AdminApp {
   }
 
   renderDashboard(response) {
+    /*
+     * Keep the full (all-time) data from the database, then
+     * recalculate orders/revenue/top products for the chosen dates.
+     */
+    this.lastDashboard = response || {};
+
+    const range = this.dashboardRange();
+
+    if (range) {
+      response = {
+        ...response,
+        ...this.computeDashboard(range),
+      };
+    }
+
+    this.renderRangeLabel(range, response?.stats);
+
     const stats = response?.stats || {};
 
     /* -----------------------------------------------
@@ -1032,6 +1069,10 @@ class AdminApp {
             No low-stock products.
           </p>
           `;
+
+      if (list.length) {
+        lowStock.innerHTML = `<div class="mini-list">${lowStock.innerHTML}</div>`;
+      }
     }
   }
 
@@ -1059,6 +1100,10 @@ class AdminApp {
       this.rebuildOrderIndex();
 
       this.renderOrders();
+
+      if (this.dashboardRange()) {
+        this.renderDashboard(this.lastDashboard || {});
+      }
     } finally {
       this._pollingOrders = false;
     }
@@ -2070,6 +2115,171 @@ class AdminApp {
     }
   }
 }
+
+/* =========================================================
+   DASHBOARD DATE RANGE
+========================================================= */
+
+function toDateInput(d) {
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function startOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+}
+
+function endOfDay(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+}
+
+Object.assign(AdminApp.prototype, {
+  presetRange(preset) {
+    const now = new Date();
+    const today = startOfDay(now);
+    const addDays = (d, n) =>
+      new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+    switch (preset) {
+      case "today":
+        return { from: today, to: endOfDay(today) };
+      case "yesterday": {
+        const y = addDays(today, -1);
+        return { from: y, to: endOfDay(y) };
+      }
+      case "7d":
+        return { from: addDays(today, -6), to: endOfDay(today) };
+      case "30d":
+        return { from: addDays(today, -29), to: endOfDay(today) };
+      case "thisMonth":
+        return {
+          from: new Date(now.getFullYear(), now.getMonth(), 1),
+          to: endOfDay(today),
+        };
+      case "lastMonth":
+        return {
+          from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+          to: endOfDay(new Date(now.getFullYear(), now.getMonth(), 0)),
+        };
+      case "thisYear":
+        return { from: new Date(now.getFullYear(), 0, 1), to: endOfDay(today) };
+      default:
+        return null;
+    }
+  },
+
+  fillRangeInputs() {
+    const range = this.presetRange(this.dom.rangePreset?.value);
+
+    if (this.dom.rangeFrom)
+      this.dom.rangeFrom.value = range ? toDateInput(range.from) : "";
+    if (this.dom.rangeTo)
+      this.dom.rangeTo.value = range ? toDateInput(range.to) : "";
+  },
+
+  // Returns { from, to } or null for "All time"
+  dashboardRange() {
+    const preset = this.dom.rangePreset?.value || "all";
+
+    if (preset === "all") return null;
+    if (preset !== "custom") return this.presetRange(preset);
+
+    const parse = (v) => {
+      const [y, m, d] = String(v || "")
+        .split("-")
+        .map(Number);
+      return y ? new Date(y, m - 1, d) : null;
+    };
+
+    let from = parse(this.dom.rangeFrom?.value);
+    let to = parse(this.dom.rangeTo?.value);
+
+    if (!from && !to) return null;
+    if (!from) from = new Date(2000, 0, 1);
+    if (!to) to = new Date();
+    if (from > to) [from, to] = [to, from];
+
+    return { from: startOfDay(from), to: endOfDay(to) };
+  },
+
+  computeDashboard({ from, to }) {
+    const orders = this.orders.filter((order) => {
+      const t = new Date(order.timestamp);
+      return !isNaN(t) && t >= from && t <= to;
+    });
+
+    const counted = orders.filter((order) => order.status !== "Cancelled");
+
+    const revenue = counted.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0,
+    );
+
+    const customers = new Set(
+      orders.map(
+        (order) =>
+          String(order.contact || "")
+            .replace(/\D/g, "")
+            .slice(-10) || normalize(order.fullname),
+      ),
+    );
+
+    const sales = {};
+    counted.forEach((order) =>
+      (order.items || []).forEach((item) => {
+        const key = String(item.id ?? item.name);
+        sales[key] = (sales[key] || 0) + Number(item.qty || 0);
+      }),
+    );
+
+    const topProducts = this.products
+      .map((product) => ({
+        id: product.id,
+        name: product.name,
+        units: sales[String(product.id)] || 0,
+      }))
+      .sort(
+        (a, b) =>
+          b.units - a.units || String(a.name).localeCompare(String(b.name)),
+      )
+      .slice(0, 10);
+
+    return {
+      stats: {
+        orders: orders.length,
+        revenue,
+        completed: orders.filter((o) => o.status === "Completed").length,
+        pending: orders.filter(
+          (o) => o.status !== "Completed" && o.status !== "Cancelled",
+        ).length,
+        customers: customers.size,
+        averageOrderValue: counted.length ? revenue / counted.length : 0,
+      },
+      topProducts,
+    };
+  },
+
+  renderRangeLabel(range, stats = {}) {
+    this.dom.rangePreset?.classList.toggle("on", Boolean(range));
+
+    if (!this.dom.rangeLabel) return;
+
+    const fmt = (d) =>
+      d.toLocaleDateString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    const avg = Number(stats.averageOrderValue || 0);
+    const avgText = avg
+      ? ` · avg ${formatCurrency(Math.round(avg))}/order`
+      : "";
+
+    this.dom.rangeLabel.textContent = range
+      ? `${fmt(range.from)} – ${fmt(range.to)}${avgText}`
+      : `All time${avgText}`;
+  },
+});
 
 /* =========================================================
    REVIEWS (moderation)

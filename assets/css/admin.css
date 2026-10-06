@@ -435,3 +435,31 @@ td small {
     width: 100%;
   }
 }
+.toolbar.date-range {
+  flex-wrap: wrap;
+}
+.toolbar input[type="date"] {
+  flex: 0 0 auto;
+  min-width: 0;
+  color-scheme: dark;
+  padding: 9px 10px;
+}
+.range-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.toolbar.date-range select.on {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+@media (max-width: 600px) {
+  .range-field {
+    flex: 1 1 45%;
+  }
+  .range-field input {
+    flex: 1;
+  }
+}
