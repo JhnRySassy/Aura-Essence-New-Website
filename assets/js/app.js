@@ -528,11 +528,13 @@ async function loadActivePromotions() {
           promotion.active === true ||
           String(
             promotion.active,
-          ).toLowerCase() === "true",
+                    ).toLowerCase() === "true",
       );
 
     renderCart();
     syncQuantity();
+    renderPromoBar();
+    renderDuo();
   } catch (error) {
     console.warn(
       "Promotions unavailable; using regular prices.",
@@ -564,15 +566,18 @@ function addToCart(id, qty = 1) {
   const next =
     (existing?.qty || 0) + qty;
 
-  if (
+    if (
     product.stock != null &&
     next > Number(product.stock)
   ) {
-    alert(
-      `Only ${product.stock} bottle(s) of ${product.name} available.`,
+    showToast(
+      Number(product.stock) === 0
+        ? `${escapeHTML(product.name)} is sold out.`
+        : `Only ${Number(product.stock)} bottle(s) of ${escapeHTML(product.name)} available.`,
+      { warn: true },
     );
 
-    return;
+    return false;
   }
 
   if (
@@ -581,13 +586,21 @@ function addToCart(id, qty = 1) {
       qty,
     )
   ) {
-    return;
+    return false;
   }
 
   cart =
     cartManager.items;
 
   renderCart();
+
+  showToast(
+    `Added <b>${escapeHTML(product.name)}</b> to your cart ✓`,
+    { link: true },
+  );
+  bumpCart();
+
+  return true;
 }
 
 function changeCartQty(
@@ -706,6 +719,8 @@ const cartTotalElement =
 // ============================================================
 
 function renderCart() {
+  updateHeaderCart();
+
   const wrap =
     cartItemsElement;
 
@@ -983,6 +998,125 @@ function getVisibleProducts(cat) {
 // PRODUCT CAROUSEL
 // ============================================================
 
+function buildProductCard(p) {
+  const card =
+    document.createElement(
+      "div",
+    );
+
+  const stock =
+    p.stock == null || p.stock === ""
+      ? null
+      : Number(p.stock);
+
+  const soldOut = stock === 0;
+
+  card.className =
+    "pcard" + (soldOut ? " is-sold-out" : "");
+
+  const meta =
+    PRODUCT_META[p.id] ||
+    {};
+
+  const stats =
+    reviewStats[p.id] || {
+      avg: 0,
+      count: 0,
+    };
+
+  // Stars only when there are reviews (no "No reviews yet")
+  const ratingText =
+    stats.count
+      ? `★ ${stats.avg.toFixed(1)} <span>(${stats.count})</span>`
+      : "";
+
+  const badges = (
+    meta.badges || []
+  )
+    .map(
+      (b) =>
+        `<span class="product-badge">${escapeHTML(b)}</span>`,
+    )
+    .join("");
+
+  const saved =
+    favorites.includes(
+      p.id,
+    );
+
+  const stockNote =
+    stock === null
+      ? ""
+      : soldOut
+        ? `<span class="stock-note out">SOLD OUT</span>`
+        : stock <= 2
+          ? `<span class="stock-note low">Only ${stock} left!</span>`
+          : `<span class="stock-note">In stock</span>`;
+
+  const id = escapeHTML(p.id);
+  const name = escapeHTML(p.name);
+
+  card.innerHTML = `
+    <div class="pimg">
+      <div class="product-badges">
+        ${badges}
+      </div>
+      <button
+        type="button"
+        class="wishlist-btn ${saved ? "active" : ""}"
+        data-wishlist-id="${id}"
+        aria-label="${saved ? "Remove" : "Add"} ${name} ${saved ? "from" : "to"} favorites"
+      >
+        ${saved ? "♥" : "♡"}
+      </button>
+      <img
+        src="${escapeHTML(p.img || "")}"
+        alt="${name}"
+        loading="lazy"
+        decoding="async"
+        onerror="this.onerror=null;this.closest('.pimg').classList.add('noimg');this.remove();"
+      >
+    </div>
+    <div class="pbody">
+      <span class="ptag">
+        ${p.cat === "women" ? "FOR HER" : p.cat === "unisex" ? "UNISEX" : "FOR HIM"}
+      </span>
+      <h4>
+        ${name}
+      </h4>
+      <p>
+        ${escapeHTML(p.desc || "")}
+      </p>
+      <div class="product-rating">${ratingText}</div>
+      <div class="pfoot">
+        <span class="pprice">
+          &#8369;${Number(p.price || PRODUCT_PRICE).toLocaleString()}
+        </span>
+        <div class="pactions">
+          <button
+            type="button"
+            class="pdetails"
+            data-details-id="${id}"
+          >
+            Details
+          </button>
+          <button
+            type="button"
+            class="porder"
+            data-id="${id}"
+            ${soldOut ? "disabled" : ""}
+          >
+            ${soldOut ? "Sold Out" : "Add"}
+          </button>
+        </div>
+      </div>
+      ${stockNote}
+    </div>
+  `;
+
+  return card;
+}
+
 function renderCarousel(cat) {
   if (!carousel) {
     return;
@@ -1000,170 +1134,8 @@ function renderCarousel(cat) {
     document.createDocumentFragment();
 
   products.forEach((p) => {
-    const card =
-      document.createElement(
-        "div",
-      );
-
-    card.className =
-      "pcard";
-
-    const meta =
-      PRODUCT_META[p.id] ||
-      {};
-
-    const stats =
-      reviewStats[p.id] || {
-        avg: 0,
-        count: 0,
-      };
-
-    const ratingText =
-      stats.count
-        ? `★ ${stats.avg.toFixed(
-            1,
-          )} <span>(${stats.count})</span>`
-        : "No reviews yet";
-
-    const badges = (
-      meta.badges || []
-    )
-      .map(
-        (b) =>
-          `<span class="product-badge">${b}</span>`,
-      )
-      .join("");
-
-    const saved =
-      favorites.includes(
-        p.id,
-      );
-
-    card.innerHTML = `
-      <div class="pimg">
-
-        <div class="product-badges">
-          ${badges}
-        </div>
-
-        <button
-          type="button"
-          class="wishlist-btn ${
-            saved ? "active" : ""
-          }"
-          data-wishlist-id="${p.id}"
-          aria-label="${
-            saved
-              ? "Remove"
-              : "Add"
-          } ${p.name} ${
-            saved
-              ? "from"
-              : "to"
-          } favorites"
-        >
-          ${saved ? "♥" : "♡"}
-        </button>
-
-        <img
-          src="${p.img}"
-          alt="${p.name}"
-          loading="lazy"
-          decoding="async"
-        >
-
-      </div>
-
-      <div class="pbody">
-
-        <span class="ptag">
-          ${
-            cat === "men"
-              ? "FOR HIM"
-              : "FOR HER"
-          }
-        </span>
-
-        <h4>
-          ${p.name}
-        </h4>
-
-        <p>
-          ${p.desc}
-        </p>
-
-        <div class="product-rating">
-          ${ratingText}
-        </div>
-
-        <div class="pfoot">
-
-          <span class="pprice">
-            &#8369;${Number(
-              p.price ||
-                PRODUCT_PRICE,
-            ).toLocaleString()}
-          </span>
-
-          <div class="pactions">
-
-            <button
-              type="button"
-              class="pdetails"
-              data-details-id="${p.id}"
-            >
-              Details
-            </button>
-
-            <button
-              type="button"
-              class="porder"
-              data-id="${p.id}"
-              ${
-                p.stock === 0
-                  ? "disabled"
-                  : ""
-              }
-            >
-              ${
-                p.stock === 0
-                  ? "Sold Out"
-                  : "Add"
-              }
-            </button>
-
-          </div>
-
-        </div>
-
-        ${
-          p.stock !== null &&
-          p.stock !== undefined
-            ? `
-              <span
-                class="sold-out"
-                style="color:${
-                  p.stock === 0
-                    ? "#d98b8b"
-                    : "var(--parchment-dim)"
-                }"
-              >
-                ${
-                  p.stock === 0
-                    ? "SOLD OUT"
-                    : p.stock +
-                      " in stock"
-                }
-              </span>
-            `
-            : ""
-        }
-
-      </div>
-    `;
-
     fragment.appendChild(
-      card,
+      buildProductCard(p),
     );
   });
 
@@ -1176,10 +1148,16 @@ function renderCarousel(cat) {
     );
   }
 
+  // Featured rows use the same cards (stars, stock, favorites)
+  if (typeof renderFeaturedRows === "function") {
+    renderFeaturedRows();
+  }
+
   requestAnimationFrame(
     updateCarouselArrows,
   );
 }
+
 
 // ============================================================
 // CAROUSEL CONTROLS
@@ -1973,66 +1951,64 @@ tabs.forEach((tab) => {
 // CAROUSEL CLICK EVENTS
 // ============================================================
 
-carousel?.addEventListener(
-  "click",
-  (e) => {
-    const wish =
-      e.target.closest(
-        ".wishlist-btn",
-      );
-
-    if (wish) {
-      toggleFavorite(
-        wish.dataset
-          .wishlistId,
-      );
-
-      return;
-    }
-
-    const detailsBtn =
-      e.target.closest(
-        ".pdetails",
-      );
-
-    if (detailsBtn) {
-      openFragranceDetails(
-        detailsBtn.dataset
-          .detailsId,
-      );
-
-      return;
-    }
-
-    const btn =
-      e.target.closest(
-        ".porder",
-      );
-
-    if (
-      !btn ||
-      btn.disabled
-    ) {
-      return;
-    }
-
-    addToCart(
-      btn.dataset.id,
-      1,
+function handleProductClick(e) {
+  const wish =
+    e.target.closest(
+      ".wishlist-btn",
     );
 
+  if (wish) {
+    toggleFavorite(
+      wish.dataset
+        .wishlistId,
+    );
+    return;
+  }
+
+  const detailsBtn =
+    e.target.closest(
+      ".pdetails",
+    );
+
+  if (detailsBtn) {
+    openFragranceDetails(
+      detailsBtn.dataset
+        .detailsId,
+    );
+    return;
+  }
+
+  const btn =
+    e.target.closest(
+      ".porder",
+    );
+
+  if (
+    !btn ||
+    btn.disabled
+  ) {
+    return;
+  }
+
+  // Customers stay on the product list; the toast offers "View cart".
+  if (addToCart(btn.dataset.id, 1) && scentSelect) {
     scentSelect.value =
       btn.dataset.id;
+  }
+}
 
-    document
-      .getElementById(
-        "order",
-      )
-      ?.scrollIntoView({
-        behavior: "smooth",
-      });
-  },
+carousel?.addEventListener(
+  "click",
+  handleProductClick,
 );
+
+document
+  .getElementById("featuredRows")
+  ?.addEventListener(
+    "click",
+    handleProductClick,
+  );
+
 
 // ============================================================
 // INITIAL RENDER
@@ -2216,8 +2192,10 @@ async function loadManagedProducts() {
 
     renderReviewScentOptions();
 
-    // Reviews may have loaded before these products existed.
+        // Reviews may have loaded before these products existed.
     computeReviewStats();
+
+    renderStoreContent();
 
     renderCarousel(
       activeCat,
@@ -2496,19 +2474,25 @@ function renderReviews(
         img.loading =
           "lazy";
 
-        img.decoding =
+                img.decoding =
           "async";
+
+        // If the photo can't load (e.g. Drive sharing changed), show the neat empty style
+        img.onerror = () => {
+          photo.classList.add("empty");
+          photo.innerHTML = `<div>“<small>CUSTOMER REVIEW</small></div>`;
+        };
 
         photo.appendChild(
           img,
         );
       } else {
-        photo.classList.add(
+                photo.classList.add(
           "empty",
         );
 
-        photo.textContent =
-          "CUSTOMER REVIEW";
+        photo.innerHTML =
+          `<div>“<small>CUSTOMER REVIEW</small></div>`;
       }
 
       const body =
@@ -3576,40 +3560,11 @@ const duoTotal =
     "duoTotal",
   );
 
-[duoOne, duoTwo].forEach(
-  (select) => {
-    if (!select) {
-      return;
-    }
-
-    select.innerHTML =
-      catalog
-        .all()
-        .map(
-          (p) =>
-            `<option value="${p.id}">${p.name}</option>`,
-        )
-        .join("");
-
-    select.addEventListener(
-      "change",
-      () => {
-        const duoSubtotal =
-          PRODUCT_PRICE * 2;
-
-        const duoPreview =
-          calculatePromotionDiscount(
-            duoSubtotal,
-            2,
-          );
-
-        duoTotal.textContent =
-          duoPreview.promotion
-            ? `2 bottles • ₱${duoPreview.total.toLocaleString()} — ${duoPreview.promotion.name}`
-            : `2 bottles • ₱${duoPreview.total.toLocaleString()}`;
-      },
-    );
-  },
+[duoOne, duoTwo].forEach((select) =>
+  select?.addEventListener("change", () => {
+    select.dataset.touched = "1";   // keep the customer's choice when the list refreshes
+    updateDuoTotal();
+  }),
 );
 
 document
@@ -3619,42 +3574,24 @@ document
   ?.addEventListener(
     "click",
     () => {
-      const names = [
-        duoOne.value,
-        duoTwo.value,
-      ];
+      const a = duoOne?.value;
+      const b = duoTwo?.value;
+      if (!a || !b) return;
 
-      scentSelect.value =
-        names[0];
+      // Both bottles go straight into the cart (the same scent twice is fine)
+      const okA = addToCart(a, 1);
+      const okB = okA && addToCart(b, 1);
 
-      document.getElementById(
-        "qtyNumber",
-      ).value = 2;
-
-      syncQuantity();
-
-      document.getElementById(
-        "notes",
-      ).value =
-        "Duo: " +
-        names
-          .map(
-            (id) =>
-              catalog.find(
-                id,
-              )?.name || id,
-          )
-          .join(" + ");
-
-      document
-        .getElementById(
-          "order",
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
+      if (okA && okB) {
+        const names = [a, b].map((id) => getProductById(id)?.name || id);
+        showToast(
+          `Added duo <b>${escapeHTML(names.join(" + "))}</b> to your cart ✓`,
+          { link: true },
+        );
+      }
     },
   );
+
 
 // ============================================================
 // ORDER FORM
@@ -4476,3 +4413,332 @@ copyBtn?.addEventListener(
     }
   },
 );
+
+
+// ============================================================
+// STOREFRONT UPGRADES
+// Header cart, toast, promo bar, menu, live counts, guide,
+// duo, featured rows (Best Sellers / New / Featured / Signature)
+// (`var` on purpose: these are used by code that runs earlier in this file)
+// ============================================================
+
+var storeSettings = {};
+var toastTimer = null;
+
+var GUIDE_GROUPS = [
+  { label: "Fresh & Clean", profiles: ["fresh", "aquatic", "marine", "citrus"] },
+  { label: "Sweet & Warm", profiles: ["sweet", "warm", "vanilla", "chestnut", "coffee"] },
+  { label: "Floral & Elegant", profiles: ["floral", "rose", "powdery"] },
+  { label: "Woody & Amber", profiles: ["woody", "amber", "smoky"] },
+  { label: "Fruity & Playful", profiles: ["fruity"] },
+  { label: "Spicy & Bold", profiles: ["spicy", "aromatic", "minty"] },
+];
+
+var FEATURED_ROWS = [
+  { setting: "showBestSellers", badge: "BEST SELLER", title: "Best Sellers", tag: "Customer favorites" },
+  { setting: "showNewArrivals", badge: "NEW", title: "New Arrivals", tag: "Just added" },
+  { setting: "showFeatured", badge: "FEATURED", title: "Featured", tag: "Our picks" },
+  { setting: "showSignature", badge: "SIGNATURE", title: "Signature Collection", tag: "House signatures" },
+];
+
+function peso(value) {
+  return "₱" + Number(value || 0).toLocaleString();
+}
+
+/* ---------- Toast ---------- */
+
+function showToast(html, options = {}) {
+  const toast = document.getElementById("toast");
+  if (!toast) return;
+
+  toast.innerHTML =
+    `<span>${html}</span>` +
+    (options.link ? `<a href="#order" data-toast-cart>View cart</a>` : "");
+  toast.classList.toggle("warn", Boolean(options.warn));
+  toast.hidden = false;
+  requestAnimationFrame(() => toast.classList.add("show"));
+
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.classList.remove("show");
+    setTimeout(() => { toast.hidden = true; }, 250);
+  }, options.warn ? 3800 : 2800);
+}
+
+document.getElementById("toast")?.addEventListener("click", (e) => {
+  if (e.target.closest("[data-toast-cart]")) {
+    e.currentTarget.classList.remove("show");
+  }
+});
+
+/* ---------- Header + bottom bar cart count ---------- */
+
+function cartQuantity() {
+  return (cart || []).reduce((sum, item) => sum + Number(item.qty || 0), 0);
+}
+
+function updateHeaderCart() {
+  const qty = cartQuantity();
+  const button = document.getElementById("headerCart");
+
+  ["headerCartCount", "bottomCartCount"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = qty;
+    el.hidden = qty === 0;
+  });
+
+  if (button) button.setAttribute("aria-label", `Cart, ${qty} item${qty === 1 ? "" : "s"}`);
+}
+
+function bumpCart() {
+  const button = document.getElementById("headerCart");
+  if (!button) return;
+  button.classList.remove("bump");
+  void button.offsetWidth; // restart the animation
+  button.classList.add("bump");
+}
+
+/* ---------- Mobile menu ---------- */
+
+const menuBtn = document.getElementById("menuBtn");
+const navLinks = document.getElementById("navLinks");
+
+function setMenu(open) {
+  navLinks?.classList.toggle("open", open);
+  menuBtn?.setAttribute("aria-expanded", String(open));
+  menuBtn?.setAttribute("aria-label", open ? "Close menu" : "Open menu");
+}
+
+menuBtn?.addEventListener("click", () => setMenu(!navLinks?.classList.contains("open")));
+navLinks?.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
+
+/* ---------- Promo bar (from active Promotions in the admin) ---------- */
+
+function promoText(promo) {
+  if (promo.type === "fixed_total") {
+    return `<b>${escapeHTML(promo.name)}</b> — any ${Number(promo.minQty)} bottles for ${peso(promo.fixedTotal)}`;
+  }
+  return `<b>${escapeHTML(promo.name)}</b> — ${Number(promo.percentOff)}% off when you buy ${Number(promo.minQty)}+ bottles`;
+}
+
+function renderPromoBar() {
+  const bar = document.getElementById("promoBar");
+  const text = document.getElementById("promoText");
+  if (!bar || !text) return;
+
+  let dismissed = false;
+  try { dismissed = sessionStorage.getItem("aePromoClosed") === "1"; } catch { /* ignore */ }
+
+  const promos = (activePromotions || []).filter((p) =>
+    (p.type === "fixed_total" && Number(p.fixedTotal) > 0) ||
+    (p.type === "percent" && Number(p.percentOff) > 0),
+  );
+
+  if (!promos.length || dismissed) {
+    bar.hidden = true;
+    return;
+  }
+
+  text.innerHTML = "✨ " + promos.slice(0, 2).map(promoText).join(" &nbsp;·&nbsp; ");
+  bar.hidden = false;
+}
+
+document.getElementById("promoClose")?.addEventListener("click", () => {
+  const bar = document.getElementById("promoBar");
+  if (bar) bar.hidden = true;
+  try { sessionStorage.setItem("aePromoClosed", "1"); } catch { /* ignore */ }
+});
+
+/* ---------- Live counts ---------- */
+
+function activeProducts() {
+  return catalog.all().filter((p) => p.active !== false);
+}
+
+function renderCounts() {
+  const products = activeProducts();
+  if (!products.length) return;
+
+  const men = products.filter((p) => p.cat === "men").length;
+  const women = products.filter((p) => p.cat === "women").length;
+  const words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
+                 "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+  const word = (n) => words[n] || String(n);
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
+  const sub = document.getElementById("heroSub");
+  if (sub) {
+    sub.textContent =
+      `Iconic scents, refined. ${cap(word(products.length))} signature blends inspired by the world's most recognized fragrances — ${word(men)} for him, ${word(women)} for her.`;
+  }
+
+  const title = document.getElementById("blendCountTitle");
+  const text = document.getElementById("blendCountText");
+  if (title) title.textContent = `${products.length} Signature Blends`;
+  if (text) text.textContent = `${cap(word(men))} for him, ${word(women)} for her — black cap for the men's line, gold cap for the women's line.`;
+
+  document.querySelectorAll(".tab[data-cat] .count").forEach((el) => {
+    const cat = el.closest(".tab").dataset.cat;
+    el.textContent = `(${products.filter((p) => p.cat === cat).length})`;
+  });
+}
+
+/* ---------- How to Choose (built from each scent's profiles) ---------- */
+
+function renderGuide() {
+  const list = document.getElementById("guideList");
+  if (!list) return;
+
+  const products = activeProducts();
+
+  const rows = GUIDE_GROUPS.map((group) => {
+    const picks = products
+      .map((p) => {
+        const profiles = getProductSearchData(p).profiles || [];
+        return { p, hits: group.profiles.filter((g) => profiles.includes(g)).length };
+      })
+      .filter((x) => x.hits > 0)
+      .sort((a, b) =>
+        (Number(a.p.stock) === 0) - (Number(b.p.stock) === 0) ||
+        b.hits - a.hits ||
+        String(a.p.name).localeCompare(String(b.p.name)))
+      .slice(0, 4)
+      .map((x) => x.p);
+
+    if (!picks.length) return "";
+
+    return `
+      <div class="guide-item">
+        <span>${escapeHTML(group.label)}</span>
+        <span class="guide-picks">
+          ${picks.map((p) => `<button type="button" class="guide-pick ${Number(p.stock) === 0 ? "sold" : ""}" data-guide-id="${escapeHTML(p.id)}" title="See details">${escapeHTML(p.name)}</button>`).join("")}
+        </span>
+      </div>`;
+  }).join("");
+
+  if (rows.trim()) list.innerHTML = rows;
+}
+
+document.getElementById("guideList")?.addEventListener("click", (e) => {
+  const pick = e.target.closest("[data-guide-id]");
+  if (pick) openFragranceDetails(pick.dataset.guideId);
+});
+
+/* ---------- Build Your Duo ---------- */
+
+function renderDuo() {
+  if (!duoOne || !duoTwo) return;
+
+  const products = activeProducts().slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const inStock = products.filter((p) => Number(p.stock) !== 0);
+  const keepA = duoOne.value;
+  const keepB = duoTwo.value;
+
+  const options = products
+    .map((p) => {
+      const sold = Number(p.stock) === 0;
+      return `<option value="${escapeHTML(p.id)}" ${sold ? "disabled" : ""}>${escapeHTML(p.name)}${sold ? " — sold out" : ""}</option>`;
+    })
+    .join("");
+
+  duoOne.innerHTML = options;
+  duoTwo.innerHTML = options;
+
+  const valid = (id) => inStock.some((p) => p.id === id);
+  const isBest = (p) => (PRODUCT_META[p.id]?.badges || []).includes("BEST SELLER");
+  const preferred = inStock.slice().sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
+
+  const keepOne = duoOne.dataset.touched && valid(keepA);
+  const keepTwo = duoTwo.dataset.touched && valid(keepB);
+
+  duoOne.value = keepOne ? keepA : (preferred[0]?.id || "");
+  duoTwo.value = keepTwo ? keepB : (preferred.find((p) => p.id !== duoOne.value)?.id || duoOne.value);
+
+  const lede = document.getElementById("duoLede");
+  const twoFor = (activePromotions || []).find((p) =>
+    p.type === "fixed_total" && Number(p.minQty) === 2 && Number(p.fixedTotal) > 0);
+
+  if (lede) {
+    lede.textContent = twoFor
+      ? `Choose any two fragrances — ${twoFor.name}: both for ${peso(twoFor.fixedTotal)}.`
+      : `Choose any two fragrances for a two-bottle set at ${peso(PRODUCT_PRICE)} per bottle.`;
+  }
+
+  updateDuoTotal();
+}
+
+function updateDuoTotal() {
+  if (!duoTotal) return;
+
+  const a = getProductById(duoOne?.value);
+  const b = getProductById(duoTwo?.value);
+
+  if (!a || !b) {
+    duoTotal.textContent = "Choose two scents.";
+    return;
+  }
+
+  const subtotal = Number(a.price || PRODUCT_PRICE) + Number(b.price || PRODUCT_PRICE);
+  const result = calculatePromotionDiscount(subtotal, 2);
+
+  duoTotal.innerHTML = result.discount > 0
+    ? `2 bottles • <b>${peso(result.total)}</b> <s>${peso(subtotal)}</s><span class="save">Save ${peso(result.discount)}</span>`
+    : `2 bottles • <b>${peso(subtotal)}</b>`;
+}
+
+/* ---------- Featured rows (follow the admin Homepage switches) ---------- */
+
+function renderFeaturedRows() {
+  const box = document.getElementById("featuredRows");
+  if (!box) return;
+
+  const products = activeProducts();
+  box.innerHTML = "";
+
+  (FEATURED_ROWS || []).forEach((row) => {
+    if (String((storeSettings || {})[row.setting] ?? "true") === "false") return;
+
+    const picks = products.filter((p) =>
+      (PRODUCT_META[p.id]?.badges || p.badges || [])
+        .map((b) => String(b).toUpperCase())
+        .includes(row.badge));
+
+    if (!picks.length) return;
+
+    const section = document.createElement("div");
+    section.className = "featured-row";
+    section.innerHTML =
+      `<h3>${escapeHTML(row.title)}<small>${escapeHTML(row.tag)}</small></h3><div class="mini-row"></div>`;
+
+    const strip = section.querySelector(".mini-row");
+    picks.forEach((p) => strip.appendChild(buildProductCard(p)));
+    box.appendChild(section);
+  });
+}
+
+async function loadStoreSettings() {
+  if (!isSupabaseConfigured()) return;
+  try {
+    const result = await apiClient.get({ action: "settings" });
+    if (result?.success) {
+      storeSettings = result.settings || {};
+      renderFeaturedRows();
+    }
+  } catch {
+    // keep defaults (all rows on)
+  }
+}
+
+function renderStoreContent() {
+  renderCounts();
+  renderGuide();
+  renderDuo();
+  renderFeaturedRows();
+}
+
+renderStoreContent();
+renderPromoBar();
+updateHeaderCart();
+loadStoreSettings();
