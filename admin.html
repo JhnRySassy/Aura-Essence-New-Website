@@ -2,11 +2,17 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<meta name="robots" content="noindex">
 <title>AURA & ESSENCE — Admin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230a0a0a'/%3E%3Ctext x='32' y='43' font-family='Georgia,serif' font-size='30' text-anchor='middle' fill='%23d8bd72'%3EA%26amp;E%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="assets/css/admin.css">
+<link rel="stylesheet" href="assets/css/admin-ui.css">
 </head>
 <body>
+
+<!-- ============ LOGIN ============ -->
 <div id="loginView" class="login-shell">
   <div class="login-card">
     <div class="brand-mini">A &amp; E</div>
@@ -21,10 +27,12 @@
     <p id="loginStatus" class="status"></p>
   </div>
 </div>
+
+<!-- ============ APP ============ -->
 <div id="appView" class="app hidden">
   <aside class="sidebar">
-    <div class="side-brand"><span>A &amp; E</span><small>ADMIN</small></div>
-    <nav>
+    <div class="side-brand"><span>A&nbsp;&amp;&nbsp;E</span><small>ADMIN</small></div>
+    <nav class="side-nav">
       <button data-view="dashboard" class="nav-item active">Dashboard</button>
       <button data-view="orders" class="nav-item">Orders</button>
       <button data-view="products" class="nav-item">Products</button>
@@ -33,10 +41,38 @@
       <button data-view="reviews" class="nav-item">Reviews</button>
       <button data-view="audit" class="nav-item">Audit Log</button>
     </nav>
-    <div class="side-bottom"><button id="backupBtn" type="button">⬇ Download backup</button><a href="index.html">← Customer Site</a><button id="logoutBtn">Log out</button></div>
+    <div class="side-bottom">
+      <button id="backupBtn" type="button">⬇ Download backup</button>
+      <a href="index.html" target="_blank" rel="noopener">↗ Customer Site</a>
+      <button id="logoutBtn" type="button">Log out</button>
+    </div>
   </aside>
+
   <main class="main">
-    <header class="topbar"><div><p class="eyebrow">CONTROL CENTER</p><h2 id="viewTitle">Dashboard</h2></div><div id="globalStatus" class="status"></div></header>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">CONTROL CENTER</p>
+        <h2 id="viewTitle">Dashboard</h2>
+      </div>
+      <div class="topbar-actions">
+        <span id="globalStatus" class="conn" title="Connected to the database">●</span>
+        <div class="notif-wrap">
+          <button type="button" class="icon-btn" id="notifBtn" aria-label="Notifications" aria-expanded="false" aria-controls="notifPanel">
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15L6 16Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M10 20a2 2 0 0 0 4 0"/></svg>
+            <span class="count-badge" id="notifCount" hidden>0</span>
+          </button>
+          <div class="notif-panel hidden" id="notifPanel" role="dialog" aria-label="Notifications">
+            <div class="notif-head">
+              <b>Notifications</b>
+              <button type="button" class="link-btn" id="notifReadAll">Mark all as read</button>
+            </div>
+            <div class="notif-list" id="notifList"></div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ---------- Dashboard ---------- -->
     <section id="dashboardView" class="view">
       <div class="toolbar date-range">
         <select id="rangePreset" aria-label="Date range">
@@ -55,34 +91,227 @@
         <span id="rangeLabel" class="muted filter-count"></span>
       </div>
       <div class="cards" id="statsCards"></div>
-      <div class="panel chart-panel"><div class="panel-head"><h3>Revenue</h3><span id="chartLabel"></span></div><div id="revenueChart" class="chart"></div><div id="chartTip" class="chart-tip" hidden></div></div>
-      <div class="grid-2"><div class="panel"><div class="panel-head"><h3>Top Products</h3><span>Units sold</span></div><div id="topProducts"></div></div><div class="panel"><div class="panel-head"><h3>Low Stock</h3><span id="lowStockLabel"></span></div><div id="lowStock"></div></div></div>
+      <div class="panel chart-panel">
+        <div class="panel-head"><h3>Revenue</h3><span id="chartLabel"></span></div>
+        <div id="revenueChart" class="chart"></div>
+        <div id="chartTip" class="chart-tip" hidden></div>
+      </div>
+      <div class="grid-2">
+        <div class="panel"><div class="panel-head"><h3>Top Products</h3><span>Units sold</span></div><div id="topProducts"></div></div>
+        <div class="panel"><div class="panel-head"><h3>Low Stock</h3><span id="lowStockLabel"></span></div><div id="lowStock"></div></div>
+      </div>
     </section>
+
+    <!-- ---------- Orders ---------- -->
     <section id="ordersView" class="view hidden">
-      <div class="toolbar"><input id="orderSearch" placeholder="Search order, customer, contact, scent..."><select id="orderPayFilter" aria-label="Payment"><option value="">All payments</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Refunded">Refunded</option></select><button class="btn" id="refreshOrders">Refresh</button><button class="btn" id="exportOrders">Export CSV</button></div>
+      <div class="toolbar">
+        <input id="orderSearch" placeholder="Search order, customer, contact, scent..." aria-label="Search orders">
+        <select id="orderPayFilter" aria-label="Payment"><option value="">All payments</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Refunded">Refunded</option></select>
+        <button class="btn" id="refreshOrders">Refresh</button>
+        <button class="btn" id="exportOrders">Export CSV</button>
+      </div>
       <div class="tabs" id="orderTabs" role="tablist"></div>
-      <div class="table-wrap"><table class="orders-table"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead><tbody id="ordersRows"></tbody></table></div>
+      <div class="table-wrap"><table class="orders-table responsive"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead><tbody id="ordersRows"></tbody></table></div>
     </section>
-    <section id="productsView" class="view hidden"><div class="toolbar"><input id="productSearch" placeholder="Search products..."><button class="btn primary" id="newProduct">+ Add Product</button><button class="btn" id="refreshProducts">Refresh</button></div><div class="toolbar filters">
-      <select id="filterCat" aria-label="Category"><option value="">All categories</option><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select>
-      <select id="filterStock" aria-label="Stock"><option value="">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="unlimited">Unlimited</option></select>
-      <select id="filterBadge" aria-label="Badge"><option value="">All badges</option><option value="BEST SELLER">Best Seller</option><option value="FEATURED">Featured</option><option value="NEW">New</option><option value="LIMITED">Limited</option><option value="SIGNATURE">Signature</option><option value="__none">No badge</option></select>
-      <select id="filterActive" aria-label="Visibility"><option value="">Active &amp; hidden</option><option value="active">Active only</option><option value="hidden">Hidden only</option></select>
-      <select id="sortProducts" aria-label="Sort"><option value="order">Sort: display order</option><option value="name">Name A–Z</option><option value="stockAsc">Stock: low → high</option><option value="stockDesc">Stock: high → low</option><option value="priceAsc">Price: low → high</option><option value="priceDesc">Price: high → low</option></select>
-      <button class="btn ghost" id="clearFilters" type="button">Clear</button>
-      <span id="productCount" class="muted filter-count"></span>
-    </div><div class="table-wrap"><table><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Badges</th><th>Active</th><th>Order</th><th></th></tr></thead><tbody id="productsRows"></tbody></table></div><div id="productEditor" class="editor hidden"><div class="panel-head"><h3 id="editorTitle">Add Product</h3><button class="btn ghost" id="closeEditor">Close</button></div><form id="productForm" class="form-grid">
-      <input type="hidden" id="pOriginalId"><label>ID<input id="pId" required></label><label>Name<input id="pName" required></label><label>Category<select id="pCat"><option value="men">For Him</option><option value="women">For Her</option></select></label><label>Price<input id="pPrice" type="number" min="0" value="430"></label><label>Stock<input id="pStock" type="number" min="0" value="10"></label><label>Sort Order<input id="pSort" type="number" value="0"></label><div class="full image-field"><span class="field-label">Photo</span><div class="image-row"><div class="image-preview"><img id="pImgPreview" alt="" hidden><span id="pImgEmpty">No photo</span></div><div class="image-actions"><label class="btn upload-btn">Upload photo<input type="file" id="pImgFile" accept="image/jpeg,image/png,image/webp" hidden></label><input id="pImg" placeholder="…or paste an image link"><small id="pImgStatus" class="muted">JPG, PNG or WebP. Big photos are resized automatically.</small></div></div></div><label class="full">Short Description<input id="pDesc"></label><label class="full">Long Description<textarea id="pDescLong"></textarea></label><label class="full">Top / First Notes<input id="pTop"></label><label class="full">Heart Notes<input id="pHeart"></label><label class="full">Base Notes<input id="pBase"></label><label class="full">How to Apply<textarea id="pApplication"></textarea></label><label class="full">Profiles (comma separated)<input id="pProfiles" placeholder="Fresh, Woody"></label><label>Longevity<input id="pLongevity" type="number" min="1" max="10" value="7"></label><label>Projection<input id="pProjection" type="number" min="1" max="10" value="7"></label><label>Strength<select id="pStrength"><option value="subtle">Subtle</option><option value="moderate" selected>Moderate</option><option value="bold">Bold</option></select></label><label>Best Time<input id="pTime" placeholder="Day, Night"></label><label class="full">Occasion<input id="pOccasion"></label><fieldset class="full"><legend>Badges</legend><div class="checks"><label><input class="badge" value="BEST SELLER" type="checkbox"> Best Seller</label><label><input class="badge" value="FEATURED" type="checkbox"> Featured</label><label><input class="badge" value="NEW" type="checkbox"> New</label><label><input class="badge" value="LIMITED" type="checkbox"> Limited</label><label><input class="badge" value="SIGNATURE" type="checkbox"> Signature</label></div></fieldset><label class="full inline-check"><input id="pActive" type="checkbox" checked> Active / visible on website</label><div class="form-actions full"><button class="btn primary" type="submit">Save Product</button><button class="btn danger" type="button" id="deleteProduct">Delete</button></div></form></div></section>
-    <section id="promotionsView" class="view hidden"><div class="toolbar"><button class="btn primary" id="newPromo">+ Add Promotion</button></div><div id="promosList" class="list"></div><div id="promoEditor" class="editor hidden"><div class="panel-head"><h3>Promotion</h3><button class="btn ghost" id="closePromo">Close</button></div><form id="promoForm" class="form-grid"><input type="hidden" id="promoId"><label>Name<input id="promoName" required></label><label>Type<select id="promoType"><option value="fixed_total">Fixed Total</option><option value="percent">Percent Off</option></select></label><label>Minimum Quantity<input id="promoQty" type="number" min="1" value="2"></label><label>Fixed Total<input id="promoFixed" type="number" min="0" value="840"></label><label>Percent Off<input id="promoPercent" type="number" min="0" max="100" value="0"></label><label class="inline-check"><input id="promoActive" type="checkbox" checked> Active</label><div class="form-actions full"><button class="btn primary">Save Promotion</button></div></form></div></section>
-    <section id="homepageView" class="view hidden"><div class="panel"><div class="panel-head"><h3>Homepage Controls</h3><span>Control what customers see</span></div><form id="settingsForm" class="form-grid"><label>Low Stock Threshold<input id="setLowStock" type="number" min="0" value="5"></label><label>Email me when stock reaches<input id="setAlertAt" type="number" min="0" value="1"><small class="muted">Sent to your order email when a product drops to this number.</small></label><label class="inline-check"><input id="setBest" type="checkbox" checked> Show Best Sellers</label><label class="inline-check"><input id="setFeatured" type="checkbox" checked> Show Featured</label><label class="inline-check"><input id="setNew" type="checkbox" checked> Show New Arrivals</label><label class="inline-check"><input id="setSignature" type="checkbox" checked> Show Signature Collection</label><div class="form-actions full"><button class="btn primary">Save Settings</button></div></form></div></section>
-    <section id="reviewsView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div><div class="table-wrap"><table><thead><tr><th>Photo</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead><tbody id="reviewsRows"></tbody></table></div></section>
-    <section id="auditView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshAudit">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th></tr></thead><tbody id="auditRows"></tbody></table></div></section>
+
+    <!-- ---------- Products ---------- -->
+    <section id="productsView" class="view hidden">
+      <div class="toolbar">
+        <input id="productSearch" placeholder="Search products..." aria-label="Search products">
+        <button class="btn primary" id="newProduct">+ Add Product</button>
+        <button class="btn" id="refreshProducts">Refresh</button>
+      </div>
+      <div class="toolbar filters">
+        <select id="filterCat" aria-label="Category"><option value="">All categories</option><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select>
+        <select id="filterStock" aria-label="Stock"><option value="">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="unlimited">Unlimited</option></select>
+        <select id="filterBadge" aria-label="Badge"><option value="">All badges</option><option value="BEST SELLER">Best Seller</option><option value="FEATURED">Featured</option><option value="NEW">New</option><option value="LIMITED">Limited</option><option value="SIGNATURE">Signature</option><option value="__none">No badge</option></select>
+        <select id="filterActive" aria-label="Visibility"><option value="">Active &amp; hidden</option><option value="active">Active only</option><option value="hidden">Hidden only</option></select>
+        <select id="sortProducts" aria-label="Sort"><option value="order">Sort: display order</option><option value="name">Name A–Z</option><option value="stockAsc">Stock: low → high</option><option value="stockDesc">Stock: high → low</option><option value="priceAsc">Price: low → high</option><option value="priceDesc">Price: high → low</option></select>
+        <button class="btn ghost" id="clearFilters" type="button">Clear</button>
+        <span id="productCount" class="muted filter-count"></span>
+      </div>
+      <div class="table-wrap"><table class="products-table responsive"><thead><tr><th>Product</th><th>Price</th><th>Stock</th><th>Badges</th><th>Visible</th><th></th></tr></thead><tbody id="productsRows"></tbody></table></div>
+    </section>
+
+    <!-- ---------- Promotions ---------- -->
+    <section id="promotionsView" class="view hidden">
+      <div class="toolbar"><button class="btn primary" id="newPromo">+ Add Promotion</button><span class="muted">Active promotions show in the website's promo bar and apply at checkout.</span></div>
+      <div id="promosList" class="list"></div>
+    </section>
+
+    <!-- ---------- Homepage / settings ---------- -->
+    <section id="homepageView" class="view hidden">
+      <form id="settingsForm" class="settings-grid">
+        <div class="panel">
+          <div class="panel-head"><h3>Homepage sections</h3><span>Rows customers see above the collection</span></div>
+          <label class="switch-row"><span><b>Best Sellers</b><small>Products with the Best Seller badge</small></span><input id="setBest" type="checkbox" class="switch" checked></label>
+          <label class="switch-row"><span><b>New Arrivals</b><small>Products with the New badge</small></span><input id="setNew" type="checkbox" class="switch" checked></label>
+          <label class="switch-row"><span><b>Featured</b><small>Products with the Featured badge</small></span><input id="setFeatured" type="checkbox" class="switch" checked></label>
+          <label class="switch-row"><span><b>Signature Collection</b><small>Products with the Signature badge</small></span><input id="setSignature" type="checkbox" class="switch" checked></label>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Inventory alerts</h3><span>Low stock warnings</span></div>
+          <div class="form-grid one">
+            <label>Low stock threshold<input id="setLowStock" type="number" min="0" value="5"><small class="muted">Products at or below this show in Low Stock on the Dashboard.</small></label>
+            <label>Email &amp; notify me when stock reaches<input id="setAlertAt" type="number" min="0" value="1"><small class="muted">You also get a notification here in the admin.</small></label>
+          </div>
+        </div>
+        <div class="form-actions full"><button class="btn primary" type="submit">Save Settings</button></div>
+      </form>
+    </section>
+
+    <!-- ---------- Reviews ---------- -->
+    <section id="reviewsView" class="view hidden">
+      <div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div>
+      <div class="tabs" id="reviewTabs" role="tablist"></div>
+      <div class="table-wrap"><table class="reviews-table responsive"><thead><tr><th>Photo</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead><tbody id="reviewsRows"></tbody></table></div>
+    </section>
+
+    <!-- ---------- Audit ---------- -->
+    <section id="auditView" class="view hidden">
+      <div class="toolbar">
+        <input id="auditSearch" placeholder="Search the log (e.g. sauvage, AE-2026…)" aria-label="Search audit log">
+        <select id="auditFilter" aria-label="Type"><option value="">Everything</option><option value="order">Orders</option><option value="payment">Payments</option><option value="product">Products &amp; stock</option><option value="promotion">Promotions</option><option value="review">Reviews</option><option value="homepage settings">Settings</option></select>
+        <button class="btn" id="refreshAudit">Refresh</button>
+      </div>
+      <div id="auditList" class="audit-list"></div>
+      <table hidden><tbody id="auditRows"></tbody></table>
+    </section>
   </main>
+
+  <!-- Order details (filled by admin.js) -->
   <div id="orderDrawer" class="drawer hidden" aria-hidden="true">
     <div class="drawer-backdrop" data-close-drawer></div>
     <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"><div id="drawerBody"></div></aside>
   </div>
+
+  <!-- Product editor (side panel) -->
+  <div id="productEditor" class="drawer side-editor hidden" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-editor></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="editorTitle">
+      <div class="drawer-head"><div><p class="eyebrow">PRODUCT</p><h3 id="editorTitle">Add Product</h3></div><button class="btn ghost" type="button" id="closeEditor">Close</button></div>
+      <form id="productForm" class="editor-form">
+        <input type="hidden" id="pOriginalId">
+
+        <fieldset class="form-sec">
+          <legend>Basics</legend>
+          <div class="form-grid">
+            <label>Name<input id="pName" required></label>
+            <label>ID <small class="muted">(used in links; change with care)</small><input id="pId" required></label>
+            <label>Category<select id="pCat"><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select></label>
+            <label>Price (₱)<input id="pPrice" type="number" min="0" value="430" inputmode="decimal"></label>
+            <label>Stock <small class="muted">(blank = unlimited)</small><input id="pStock" type="number" min="0" value="10" inputmode="numeric"></label>
+            <label>Display order<input id="pSort" type="number" value="0" inputmode="numeric"></label>
+            <label class="switch-row full"><span><b>Visible on website</b><small>Hidden products can't be ordered</small></span><input id="pActive" type="checkbox" class="switch" checked></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-sec">
+          <legend>Photo</legend>
+          <div class="image-field"><div class="image-row"><div class="image-preview"><img id="pImgPreview" alt="" hidden><span id="pImgEmpty">No photo</span></div><div class="image-actions"><label class="btn upload-btn">Upload photo<input type="file" id="pImgFile" accept="image/jpeg,image/png,image/webp" hidden></label><input id="pImg" placeholder="…or paste an image link" aria-label="Image link"><small id="pImgStatus" class="muted">JPG, PNG or WebP. Big photos are resized automatically.</small></div></div></div>
+        </fieldset>
+
+        <fieldset class="form-sec">
+          <legend>Description</legend>
+          <div class="form-grid one">
+            <label>Short description <small class="muted">(shown on the product card)</small><input id="pDesc"></label>
+            <label>Long description<textarea id="pDescLong" rows="4"></textarea></label>
+            <label>How to apply<textarea id="pApplication" rows="3"></textarea></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-sec">
+          <legend>Scent profile</legend>
+          <div class="form-grid">
+            <label class="full">Profiles <small class="muted">(comma separated)</small><input id="pProfiles" placeholder="Fresh, Woody"></label>
+            <label>Strength<select id="pStrength"><option value="subtle">Subtle</option><option value="moderate" selected>Moderate</option><option value="bold">Bold</option></select></label>
+            <label>Best time<input id="pTime" placeholder="Day, Night"></label>
+            <label>Longevity (1–10)<input id="pLongevity" type="number" min="1" max="10" value="7"></label>
+            <label>Projection (1–10)<input id="pProjection" type="number" min="1" max="10" value="7"></label>
+            <label class="full">Occasion<input id="pOccasion" placeholder="Daily, Office, Date Night"></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-sec">
+          <legend>Notes</legend>
+          <div class="form-grid one">
+            <label>Top / first notes<input id="pTop"></label>
+            <label>Heart notes<input id="pHeart"></label>
+            <label>Base notes<input id="pBase"></label>
+          </div>
+        </fieldset>
+
+        <fieldset class="form-sec">
+          <legend>Badges</legend>
+          <div class="checks chips"><label><input class="badge" value="BEST SELLER" type="checkbox"> Best Seller</label><label><input class="badge" value="FEATURED" type="checkbox"> Featured</label><label><input class="badge" value="NEW" type="checkbox"> New</label><label><input class="badge" value="LIMITED" type="checkbox"> Limited</label><label><input class="badge" value="SIGNATURE" type="checkbox"> Signature</label></div>
+        </fieldset>
+
+        <div class="form-actions sticky-actions"><button class="btn danger" type="button" id="deleteProduct">Delete</button><button class="btn primary" type="submit">Save Product</button></div>
+      </form>
+    </aside>
+  </div>
+
+  <!-- Promotion editor (side panel) -->
+  <div id="promoEditor" class="drawer side-editor hidden" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-editor></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="promoTitle">
+      <div class="drawer-head"><div><p class="eyebrow">PROMOTION</p><h3 id="promoTitle">Promotion</h3></div><button class="btn ghost" type="button" id="closePromo">Close</button></div>
+      <form id="promoForm" class="editor-form">
+        <input type="hidden" id="promoId">
+        <fieldset class="form-sec">
+          <legend>Details</legend>
+          <div class="form-grid">
+            <label class="full">Name<input id="promoName" required placeholder="e.g. 2-Bottle Promo"></label>
+            <label>Type<select id="promoType"><option value="fixed_total">Fixed total (e.g. 2 for ₱840)</option><option value="percent">Percent off</option></select></label>
+            <label>Minimum bottles<input id="promoQty" type="number" min="1" value="2"></label>
+            <label data-promo-field="fixed_total">Fixed total (₱)<input id="promoFixed" type="number" min="0" value="840"></label>
+            <label data-promo-field="percent">Percent off (%)<input id="promoPercent" type="number" min="0" max="100" value="0"></label>
+            <label class="switch-row full"><span><b>Active</b><small>Shows in the promo bar and applies at checkout</small></span><input id="promoActive" type="checkbox" class="switch" checked></label>
+          </div>
+          <p class="promo-preview" id="promoPreview"></p>
+        </fieldset>
+        <div class="form-actions sticky-actions"><button class="btn primary" type="submit">Save Promotion</button></div>
+      </form>
+    </aside>
+  </div>
+
+  <!-- Mobile bottom navigation -->
+  <nav class="mobile-nav" aria-label="Admin sections">
+    <button type="button" data-view="dashboard" class="m-nav active"><span aria-hidden="true">▦</span>Dashboard</button>
+    <button type="button" data-view="orders" class="m-nav"><span aria-hidden="true">☰</span>Orders<b class="count-badge" id="mOrdersBadge" hidden>0</b></button>
+    <button type="button" data-view="products" class="m-nav"><span aria-hidden="true">◇</span>Products</button>
+    <button type="button" class="m-nav" id="moreBtn" aria-expanded="false" aria-controls="moreSheet"><span aria-hidden="true">⋯</span>More<b class="count-badge" id="mMoreBadge" hidden>0</b></button>
+  </nav>
+  <div class="more-sheet hidden" id="moreSheet">
+    <div class="drawer-backdrop" data-close-more></div>
+    <div class="more-panel">
+      <button type="button" data-view="promotions">Promotions</button>
+      <button type="button" data-view="homepage">Homepage</button>
+      <button type="button" data-view="reviews">Reviews <b class="count-badge" id="mReviewsBadge" hidden>0</b></button>
+      <button type="button" data-view="audit">Audit Log</button>
+      <hr>
+      <button type="button" data-more-action="backup">⬇ Download backup</button>
+      <a href="index.html" target="_blank" rel="noopener">↗ Customer Site</a>
+      <button type="button" data-more-action="logout">Log out</button>
+    </div>
+  </div>
 </div>
+
+<!-- Pop-up messages + confirmation dialog -->
+<div class="toast-stack" id="toastStack" aria-live="polite"></div>
+<div class="modal hidden" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialogTitle">
+  <div class="modal-backdrop"></div>
+  <div class="modal-card">
+    <h3 id="dialogTitle"></h3>
+    <p id="dialogMessage"></p>
+    <input id="dialogInput" type="number" min="0" hidden>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="dialogCancel">Cancel</button>
+      <button type="button" class="btn primary" id="dialogOk">OK</button>
+    </div>
+  </div>
+</div>
+
 <script type="module" src="assets/js/admin.js"></script>
 </body>
 </html>

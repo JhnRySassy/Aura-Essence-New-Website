@@ -1817,22 +1817,22 @@ class AdminApp {
 
         return `
           <tr data-order="${escapeHTML(order.orderId)}">
-            <td>
+            <td class="td-main">
               <b>${escapeHTML(order.orderId)}</b>
               <small>${order.timestamp ? escapeHTML(new Date(order.timestamp).toLocaleString()) : ""}</small>
             </td>
-            <td>
+            <td data-label="Customer">
               ${escapeHTML(order.fullname)}
               <small>${escapeHTML(order.contact)}</small>
             </td>
-            <td>
+            <td data-label="Items">
               ${
                 Array.isArray(order.items) && order.items.length
                   ? order.items.map(item => `${escapeHTML(item.name)} × ${escapeHTML(item.qty)}`).join("<br>")
                   : escapeHTML(order.scent || "")
               }
             </td>
-            <td>
+            <td data-label="Total">
               ${formatCurrency(order.total)}
               ${
                 paid != null && paid !== Number(order.total)
@@ -1840,8 +1840,8 @@ class AdminApp {
                   : ""
               }
             </td>
-            <td>${payPill(order)}<small>${escapeHTML(order.payment || "")}</small></td>
-            <td>${statusPill(order.status)}</td>
+            <td data-label="Payment">${payPill(order)}<small>${escapeHTML(order.payment || "")}</small></td>
+            <td data-label="Status">${statusPill(order.status)}</td>
             <td>
               <div class="order-actions">
                 ${
@@ -3759,7 +3759,7 @@ Object.assign(AdminApp.prototype, {
     const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
     const slot = iw / buckets.length;
     const gap = Math.min(2, slot * 0.2);
-    const bw = Math.max(1, slot - gap);
+    const bw = Math.max(1, Math.min(slot - gap, 48));   // never a giant bar
     const y = v => pad.t + ih - (v / top) * ih;
 
     const short = d => d.toLocaleDateString(undefined, unit === "month" ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" });
@@ -3773,7 +3773,7 @@ Object.assign(AdminApp.prototype, {
     }
 
     buckets.forEach((b, i) => {
-      const x = pad.l + i * slot + gap / 2;
+      const x = pad.l + i * slot + (slot - bw) / 2;
       if (b.total > 0) {
         const h = Math.max(2, ih - (y(b.total) - pad.t));
         const yy = pad.t + ih - h;
@@ -4380,6 +4380,1197 @@ Object.assign(AdminApp.prototype, {
         true
       );
     }
+  }
+});
+
+
+/* =========================================================
+   ADMIN UI v2
+   Notifications bell, pop-up toasts, styled dialogs, busy
+   buttons, mobile navigation, side editors, clearer dashboard,
+   product thumbnails + switches, readable promotions, review
+   tabs, filterable audit log.
+   (These replace/extend the methods defined above.)
+========================================================= */
+
+const NOTIF_SEEN_KEY = "aeAdminNotifSeen";
+const MORE_VIEWS = ["promotions", "homepage", "reviews", "audit"];
+
+const NOTIF_ICON = { order: "🛍", payment: "₱", stock: "!", review: "★" };
+
+function timeAgo(value) {
+  const t = new Date(value).getTime();
+  if (!t) return "";
+  const s = Math.max(0, (Date.now() - t) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s / 60)} min ago`;
+  if (s < 86400) return `${Math.floor(s / 3600)} hr ago`;
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)} day${s < 172800 ? "" : "s"} ago`;
+  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function readSeen() {
+  try { return new Set(JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || "[]")); } catch { return new Set(); }
+}
+
+function writeSeen(set) {
+  try { localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify([...set].slice(-400))); } catch { /* ignore */ }
+}
+
+function pctChange(now, before) {
+  if (!before) return now ? null : 0;
+  return Math.round(((now - before) / before) * 100);
+}
+
+function promoSummary(p) {
+  return p.type === "percent"
+    ? `${Number(p.percentOff)}% off when buying ${Number(p.minQty)}+ bottles`
+    : `Any ${Number(p.minQty)} bottles for ${peso(p.fixedTotal)}`;
+}
+
+const _orig = {
+  cacheDOM: AdminApp.prototype.cacheDOM,
+  bind: AdminApp.prototype.bind,
+  request: AdminApp.prototype.request,
+  showView: AdminApp.prototype.showView,
+  openApp: AdminApp.prototype.openApp,
+  loadOrders: AdminApp.prototype.loadOrders,
+  loadProducts: AdminApp.prototype.loadProducts,
+  loadReviews: AdminApp.prototype.loadReviews,
+  loadSettings: AdminApp.prototype.loadSettings,
+  editPromotion: AdminApp.prototype.editPromotion,
+  editProduct: AdminApp.prototype.editProduct,
+  updateOrderBadge: AdminApp.prototype.updateOrderBadge
+};
+
+Object.assign(AdminApp.prototype, {
+
+  /* ---------------------------------------------------
+     Setup
+  --------------------------------------------------- */
+
+  cacheDOM() {
+    _orig.cacheDOM.call(this);
+    [
+      "notifBtn", "notifCount", "notifPanel", "notifList", "notifReadAll",
+      "toastStack", "dialog", "dialogTitle", "dialogMessage", "dialogInput", "dialogOk", "dialogCancel",
+      "moreBtn", "moreSheet", "mOrdersBadge", "mMoreBadge", "mReviewsBadge",
+      "promoTitle", "promoPreview", "reviewTabs", "auditList", "auditFilter", "auditSearch"
+    ].forEach(id => { this.dom[id] = document.getElementById(id); });
+  },
+
+
+  bind() {
+    this.notifs = new Map();
+    this.notifSeen = readSeen();
+    this.reviewTab = "pending";
+
+    _orig.bind.call(this);
+
+    /* Notifications bell */
+    this.dom.notifBtn?.addEventListener("click", e => {
+      e.stopPropagation();
+      this.toggleNotifPanel();
+    });
+    this.dom.notifReadAll?.addEventListener("click", () => {
+      this.notifs.forEach((_, id) => this.notifSeen.add(id));
+      writeSeen(this.notifSeen);
+      this.renderNotifications();
+    });
+    this.dom.notifList?.addEventListener("click", e => {
+      const item = e.target.closest("[data-notif]");
+      if (!item) return;
+      const n = this.notifs.get(item.dataset.notif);
+      this.notifSeen.add(item.dataset.notif);
+      writeSeen(this.notifSeen);
+      this.toggleNotifPanel(false);
+      if (n) this.runNotifAction(n);
+    });
+    document.addEventListener("click", e => {
+      if (!this.dom.notifPanel?.classList.contains("hidden") && !e.target.closest(".notif-wrap")) {
+        this.toggleNotifPanel(false);
+      }
+    });
+
+    /* Dialog */
+    this.dom.dialogCancel?.addEventListener("click", () => this.closeDialog(null));
+    this.dom.dialog?.querySelector(".modal-backdrop")?.addEventListener("click", () => this.closeDialog(null));
+    this.dom.dialogOk?.addEventListener("click", () => this.closeDialog(true));
+    this.dom.dialogInput?.addEventListener("keydown", e => { if (e.key === "Enter") this.closeDialog(true); });
+
+    /* Escape closes whatever is on top */
+    document.addEventListener("keydown", e => {
+      if (e.key !== "Escape") return;
+      if (!this.dom.dialog?.classList.contains("hidden")) return this.closeDialog(null);
+      this.toggleNotifPanel(false);
+      this.closeEditors();
+      this.dom.moreSheet?.classList.add("hidden");
+    });
+
+    /* Side editors: backdrop closes */
+    document.querySelectorAll("[data-close-editor]").forEach(el =>
+      el.addEventListener("click", () => this.closeEditors()));
+
+    /* Busy buttons: remember the button that started an action */
+    document.addEventListener("click", e => {
+      const btn = e.target.closest("button, .btn");
+      if (!btn || btn.closest(".modal, .side-nav, .mobile-nav, .tabs, .more-panel, .notif-wrap")) return;
+      this._busyCandidate = { btn, at: Date.now() };
+    }, true);
+    document.addEventListener("submit", e => {
+      if (e.submitter) this._busyCandidate = { btn: e.submitter, at: Date.now() };
+    }, true);
+
+    /* Mobile navigation */
+    document.querySelectorAll(".m-nav[data-view], .more-panel [data-view]").forEach(btn =>
+      btn.addEventListener("click", () => this.showView(btn.dataset.view)));
+    this.dom.moreBtn?.addEventListener("click", () => {
+      const open = this.dom.moreSheet.classList.toggle("hidden") === false;
+      this.dom.moreBtn.setAttribute("aria-expanded", String(open));
+    });
+    this.dom.moreSheet?.querySelector("[data-close-more]")?.addEventListener("click", () =>
+      this.dom.moreSheet.classList.add("hidden"));
+    this.dom.moreSheet?.addEventListener("click", e => {
+      const action = e.target.closest("[data-more-action]")?.dataset.moreAction;
+      if (action === "backup") { this.dom.moreSheet.classList.add("hidden"); this.downloadBackup(); }
+      if (action === "logout") this.dom.logoutBtn?.click();
+    });
+
+    /* Products: visible switch */
+    this.dom.productsRows?.addEventListener("change", e => {
+      const toggle = e.target.closest("[data-toggle-active]");
+      if (toggle) this.setProductActive(toggle.dataset.toggleActive, toggle.checked, toggle);
+    });
+
+    /* Promotions: on/off switch + live preview */
+    document.getElementById("promosList")?.addEventListener("change", e => {
+      const toggle = e.target.closest("[data-promo-toggle]");
+      if (toggle) this.setPromotionActive(toggle.dataset.promoToggle, toggle.checked, toggle);
+    });
+    ["promoType", "promoQty", "promoFixed", "promoPercent"].forEach(id =>
+      document.getElementById(id)?.addEventListener("input", () => this.updatePromoPreview()));
+
+    /* Low stock rows open the product */
+    document.getElementById("lowStock")?.addEventListener("click", e => {
+      const row = e.target.closest("[data-product]");
+      const product = row && this.productMap.get(row.dataset.product);
+      if (product) this.editProduct(product);
+    });
+
+    /* Reviews tabs */
+    this.dom.reviewTabs?.addEventListener("click", e => {
+      const tab = e.target.closest("[data-rtab]");
+      if (!tab) return;
+      this._reviewTabAuto = false;
+      this.reviewTab = tab.dataset.rtab;
+      this.renderReviews();
+    });
+
+    /* Audit filters */
+    this.dom.auditFilter?.addEventListener("change", () => this.renderAudit());
+    this.dom.auditSearch?.addEventListener("input", debounce(() => this.renderAudit(), 150));
+
+    /* Body class while a side panel is open (moves pop-ups out of the way) */
+    const drawers = ["orderDrawer", "productEditor", "promoEditor"].map(id => document.getElementById(id)).filter(Boolean);
+    const syncDrawerClass = () =>
+      document.body.classList.toggle("has-drawer", drawers.some(d => !d.classList.contains("hidden")));
+    const observer = new MutationObserver(syncDrawerClass);
+    drawers.forEach(d => observer.observe(d, { attributes: true, attributeFilter: ["class"] }));
+
+    /* Refresh "x min ago" in the bell now and then */
+    setInterval(() => {
+      if (!this.dom.notifPanel?.classList.contains("hidden")) this.renderNotifications();
+    }, 60000);
+  },
+
+
+  /* ---------------------------------------------------
+     Toasts (replace the small status text)
+  --------------------------------------------------- */
+
+  toast(message, type = "ok", options = {}) {
+    const stack = this.dom.toastStack;
+    if (!stack || !message) return;
+
+    const item = document.createElement("div");
+    item.className = `toast-item ${type}`;
+    item.setAttribute("role", type === "error" ? "alert" : "status");
+    item.innerHTML = `
+      <span class="t-icon">${type === "error" ? "⚠" : type === "info" ? "🔔" : "✓"}</span>
+      <div>${options.title ? `<b>${escapeHTML(options.title)}</b>` : ""}${escapeHTML(message)}</div>
+      <button type="button" aria-label="Dismiss">×</button>`;
+
+    const remove = () => {
+      item.classList.add("out");
+      setTimeout(() => item.remove(), 200);
+    };
+
+    item.querySelector("button").addEventListener("click", ev => { ev.stopPropagation(); remove(); });
+    if (options.onClick) item.addEventListener("click", () => { options.onClick(); remove(); });
+
+    stack.prepend(item);
+    while (stack.children.length > 4) stack.lastElementChild.remove();
+    setTimeout(remove, options.timeout || (type === "error" ? 7000 : 3500));
+  },
+
+
+  setStatus(message, error = false) {
+    const dot = this.dom.globalStatus;
+
+    if (/^Admin connected$/i.test(String(message))) {
+      if (dot) { dot.className = "conn ok"; dot.title = "Connected to the database"; }
+      return;
+    }
+
+    if (error && dot && /reach the database|Failed to fetch/i.test(String(message))) {
+      dot.className = "conn error";
+      dot.title = "Can't reach the database";
+    }
+
+    this.toast(message, error ? "error" : "ok");
+  },
+
+
+  /* ---------------------------------------------------
+     Styled confirm / prompt dialog
+  --------------------------------------------------- */
+
+  ask({ title, message = "", okText = "OK", cancelText = "Cancel", danger = false, input = null }) {
+    const d = this.dom;
+    if (!d.dialog) return Promise.resolve(input ? null : false);
+
+    d.dialogTitle.textContent = title;
+    d.dialogMessage.textContent = message;
+    d.dialogOk.textContent = okText;
+    d.dialogCancel.textContent = cancelText;
+    d.dialogOk.className = "btn " + (danger ? "danger-solid" : "primary");
+
+    d.dialogInput.hidden = !input;
+    if (input) {
+      d.dialogInput.value = input.value ?? "";
+      d.dialogInput.min = input.min ?? 0;
+    }
+
+    d.dialog.classList.remove("hidden");
+    setTimeout(() => (input ? d.dialogInput : d.dialogOk).focus(), 30);
+
+    return new Promise(resolve => {
+      this._dialogResolve = value => resolve(input ? (value ? d.dialogInput.value : null) : Boolean(value));
+    });
+  },
+
+
+  closeDialog(value) {
+    this.dom.dialog?.classList.add("hidden");
+    const resolve = this._dialogResolve;
+    this._dialogResolve = null;
+    resolve?.(value);
+  },
+
+
+  /* ---------------------------------------------------
+     Busy state on the button that started a save
+  --------------------------------------------------- */
+
+  async request(method, params = {}) {
+    const candidate = this._busyCandidate;
+    this._busyCandidate = null;
+
+    const btn = method === "POST" && candidate && Date.now() - candidate.at < 4000 && document.contains(candidate.btn)
+      ? candidate.btn
+      : null;
+
+    if (btn) {
+      btn.classList.add("is-busy");
+      btn.setAttribute("aria-busy", "true");
+      if (btn.tagName === "BUTTON") btn.disabled = true;
+    }
+
+    try {
+      return await _orig.request.call(this, method, params);
+    } finally {
+      if (btn) {
+        btn.classList.remove("is-busy");
+        btn.removeAttribute("aria-busy");
+        if (btn.tagName === "BUTTON") btn.disabled = false;
+      }
+    }
+  },
+
+
+  /* ---------------------------------------------------
+     Navigation
+  --------------------------------------------------- */
+
+  showView(view) {
+    _orig.showView.call(this, view);
+
+    document.querySelectorAll(".m-nav[data-view]").forEach(btn =>
+      btn.classList.toggle("active", btn.dataset.view === view));
+    this.dom.moreBtn?.classList.toggle("active", MORE_VIEWS.includes(view));
+    this.dom.moreSheet?.classList.add("hidden");
+    this.dom.moreBtn?.setAttribute("aria-expanded", "false");
+    this.toggleNotifPanel(false);
+
+    const titles = { audit: "Audit Log", homepage: "Homepage & Alerts" };
+    if (this.dom.viewTitle && titles[view]) this.dom.viewTitle.textContent = titles[view];
+
+    window.scrollTo({ top: 0 });
+  },
+
+
+  closeEditors() {
+    ["productEditor", "promoEditor"].forEach(id => {
+      const el = this.dom[id] || document.getElementById(id);
+      el?.classList.add("hidden");
+      el?.setAttribute("aria-hidden", "true");
+    });
+  },
+
+
+  async openApp() {
+    this.initialLoadDone = false;
+    await _orig.openApp.call(this);
+    // Reviews are needed for the badge and notifications
+    await this.loadReviews().catch(() => {});
+    this.initialLoadDone = true;
+    this.refreshNotifications({ summary: true });
+  },
+
+
+  /* ---------------------------------------------------
+     Data loads → refresh notifications + dashboard
+  --------------------------------------------------- */
+
+  async loadOrders(silent = false) {
+    await _orig.loadOrders.call(this, silent);
+    this.ordersLoaded = true;
+    this.renderDashboard(this.lastDashboard || {});
+    this.refreshNotifications();
+  },
+
+
+  async loadProducts() {
+    await _orig.loadProducts.call(this);
+    this.refreshNotifications();
+    if (this.lastDashboard) this.renderDashboard(this.lastDashboard);
+  },
+
+
+  async loadReviews() {
+    await _orig.loadReviews.call(this);
+    this.updateReviewBadges();
+    this.refreshNotifications();
+  },
+
+
+  async loadSettings() {
+    await _orig.loadSettings.call(this);
+    this.refreshNotifications();
+  },
+
+
+  updateOrderBadge() {
+    _orig.updateOrderBadge.call(this);
+    const count = this.orders.filter(o => o.status === "New").length;
+    if (this.dom.mOrdersBadge) {
+      this.dom.mOrdersBadge.textContent = count;
+      this.dom.mOrdersBadge.hidden = count === 0;
+    }
+  },
+
+
+  updateReviewBadges() {
+    const pending = (this.reviews || []).filter(r => !r.approved).length;
+
+    const nav = document.querySelector('.nav-item[data-view="reviews"]');
+    let badge = nav?.querySelector(".nav-badge");
+    if (nav && pending) {
+      if (!badge) { badge = document.createElement("span"); badge.className = "nav-badge"; nav.appendChild(badge); }
+      badge.textContent = pending;
+    } else {
+      badge?.remove();
+    }
+
+    [this.dom.mReviewsBadge, this.dom.mMoreBadge].forEach(el => {
+      if (!el) return;
+      el.textContent = pending;
+      el.hidden = pending === 0;
+    });
+  },
+
+
+  /* ---------------------------------------------------
+     Notifications bell
+  --------------------------------------------------- */
+
+  refreshNotifications(options = {}) {
+    if (!this.dom.notifList) return;
+
+    const list = [];
+    const alertAt = Number(this.settings?.lowStockAlertAt ?? 1);
+
+    (this.orders || []).forEach(o => {
+      if (o.status === "New") {
+        list.push({
+          id: `order-new:${o.orderId}`, type: "order", time: o.timestamp,
+          title: "New order",
+          body: `${o.fullname} · ${peso(o.total)} · ${(o.items || []).map(i => `${i.name} × ${i.qty}`).join(", ")}`,
+          action: { orderId: o.orderId }
+        });
+      }
+      if (o.status === "Completed" && ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid")) {
+        const owed = Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0));
+        list.push({
+          id: `order-unpaid:${o.orderId}:${o.paymentStatus}`, type: "payment", time: o.timestamp,
+          title: "Completed but not fully paid",
+          body: `${o.fullname} · ${peso(owed)} to collect · ${o.orderId}`,
+          action: { orderId: o.orderId }
+        });
+      }
+    });
+
+    (this.products || []).forEach(p => {
+      if (p.active === false || p.stock == null) return;
+      const stock = Number(p.stock);
+      if (stock > alertAt) return;
+      list.push({
+        id: `stock:${p.id}:${stock}`, type: "stock", time: null,
+        title: stock === 0 ? "Sold out" : "Low stock",
+        body: stock === 0 ? `${p.name} is sold out on the website.` : `${p.name} — only ${stock} left.`,
+        action: { view: "products", stock: stock === 0 ? "out" : "low" }
+      });
+    });
+
+    const pending = (this.reviews || []).filter(r => !r.approved);
+    if (pending.length) {
+      const newest = pending.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+      list.push({
+        id: `reviews:${pending.length}:${newest?.id}`, type: "review", time: newest?.timestamp,
+        title: `${pending.length} review${pending.length === 1 ? "" : "s"} waiting for approval`,
+        body: newest ? `Latest: ${newest.name} on ${newest.scent || "a scent"} (${"★".repeat(Number(newest.rating) || 0)})` : "",
+        action: { view: "reviews", tab: "pending" }
+      });
+    }
+
+    list.sort((a, b) => (b.time ? new Date(b.time) : Infinity) - (a.time ? new Date(a.time) : Infinity));
+
+    // Pop up anything new that appeared after the first full load
+    const fresh = this.initialLoadDone && !options.summary
+      ? list.filter(n => !this.notifs.has(n.id) && !this.notifSeen.has(n.id))
+      : [];
+
+    this.notifs = new Map(list.slice(0, 50).map(n => [n.id, n]));
+    this.renderNotifications();
+
+    if (options.summary) {
+      const unread = [...this.notifs.keys()].filter(id => !this.notifSeen.has(id)).length;
+      if (unread) {
+        this.toast(`You have ${unread} new notification${unread === 1 ? "" : "s"}.`, "info", {
+          onClick: () => this.toggleNotifPanel(true)
+        });
+      }
+      return;
+    }
+
+    fresh.slice(0, 3).forEach(n => {
+      this.toast(n.body, "info", { title: n.title, onClick: () => this.runNotifAction(n), timeout: 6000 });
+    });
+    if (fresh.length) {
+      this.dom.notifBtn?.classList.remove("ring");
+      void this.dom.notifBtn?.offsetWidth;
+      this.dom.notifBtn?.classList.add("ring");
+    }
+  },
+
+
+  renderNotifications() {
+    const listEl = this.dom.notifList;
+    if (!listEl) return;
+
+    const items = [...this.notifs.values()];
+    const unread = items.filter(n => !this.notifSeen.has(n.id)).length;
+
+    if (this.dom.notifCount) {
+      this.dom.notifCount.textContent = unread > 9 ? "9+" : unread;
+      this.dom.notifCount.hidden = unread === 0;
+    }
+    this.dom.notifBtn?.setAttribute("aria-label", `Notifications${unread ? `, ${unread} unread` : ""}`);
+
+    listEl.innerHTML = items.length
+      ? items.map(n => `
+          <button type="button" class="notif-item ${this.notifSeen.has(n.id) ? "" : "unread"}" data-notif="${escapeHTML(n.id)}">
+            <span class="notif-icon ${n.type}">${NOTIF_ICON[n.type] || "•"}</span>
+            <span>
+              <div class="notif-title">${escapeHTML(n.title)}</div>
+              <div class="notif-body">${escapeHTML(n.body)}</div>
+              ${n.time ? `<div class="notif-time">${escapeHTML(timeAgo(n.time))}</div>` : ""}
+            </span>
+          </button>`).join("")
+      : `<div class="notif-empty">You're all caught up ✓</div>`;
+  },
+
+
+  toggleNotifPanel(force) {
+    const panel = this.dom.notifPanel;
+    if (!panel) return;
+
+    const open = force ?? panel.classList.contains("hidden");
+    if (open === !panel.classList.contains("hidden")) return;
+
+    panel.classList.toggle("hidden", !open);
+    this.dom.notifBtn?.setAttribute("aria-expanded", String(open));
+
+    if (open) {
+      this.renderNotifications();
+      // Opening the bell clears the badge; items keep their dot until next time
+      this.notifs.forEach((_, id) => this.notifSeen.add(id));
+      writeSeen(this.notifSeen);
+      if (this.dom.notifCount) this.dom.notifCount.hidden = true;
+    } else {
+      this.renderNotifications();
+    }
+  },
+
+
+  runNotifAction(n) {
+    const a = n.action || {};
+
+    if (a.orderId) {
+      this.showView("orders");
+      this.orderTab = "all";
+      this.renderOrders();
+      this.openOrder(a.orderId);
+      return;
+    }
+
+    if (a.view === "products") {
+      this.showView("products");
+      if (this.dom.filterStock) this.dom.filterStock.value = a.stock || "";
+      this.renderProducts();
+      return;
+    }
+
+    if (a.view === "reviews") {
+      this.reviewTab = a.tab || "pending";
+      this.showView("reviews");
+    }
+  },
+
+
+  /* New orders: chime + badge (+ the bell via refreshNotifications) */
+  checkNewOrders() {
+    const ids = new Set(this.orders.map(o => o.orderId));
+
+    if (!this.knownOrderIds) {
+      this.knownOrderIds = ids;
+      this.updateOrderBadge();
+      return;
+    }
+
+    const fresh = this.orders.filter(o => !this.knownOrderIds.has(o.orderId));
+    this.knownOrderIds = ids;
+
+    if (fresh.length) {
+      const viewingOrders = !document.getElementById("ordersView")?.classList.contains("hidden");
+      if (!viewingOrders || document.hidden) this.unseenOrders = (this.unseenOrders || 0) + fresh.length;
+      playChime();
+    }
+
+    this.updateOrderBadge();
+  },
+
+
+  /* ---------------------------------------------------
+     Dashboard
+  --------------------------------------------------- */
+
+  computeDashboard(range) {
+    const from = range?.from || new Date(0);
+    const to = range?.to || new Date(8640000000000000);
+
+    const orders = (this.orders || []).filter(o => {
+      const t = new Date(o.timestamp);
+      return !isNaN(t) && t >= from && t <= to;
+    });
+
+    const counted = orders.filter(o => o.status !== "Cancelled");
+    const expectedOf = o => (o.paymentStatus === "Paid" && o.amountPaid != null) ? Number(o.amountPaid) : Number(o.total || 0);
+    const expected = counted.reduce((sum, o) => sum + expectedOf(o), 0);
+    const collected = counted.reduce((sum, o) =>
+      sum + (["Paid", "Partial"].includes(o.paymentStatus) ? Number(o.amountPaid ?? o.total ?? 0) : 0), 0);
+    const unpaid = counted.filter(o => ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid"));
+    const toCollect = unpaid.reduce((sum, o) => sum + Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0)), 0);
+
+    const customers = new Set(orders.map(o => last10(o.contact) || normalize(o.fullname)));
+
+    const sales = {};
+    counted.forEach(o => (o.items || []).forEach(i => {
+      const key = String(i.id ?? i.name);
+      sales[key] = (sales[key] || 0) + Number(i.qty || 0);
+    }));
+
+    const names = new Map(this.products.map(p => [String(p.id), p.name]));
+    const topProducts = Object.entries(sales)
+      .map(([id, units]) => ({ id, name: names.get(id) || id, units }))
+      .filter(t => t.units > 0)
+      .sort((a, b) => b.units - a.units || String(a.name).localeCompare(String(b.name)))
+      .slice(0, 8);
+
+    return {
+      stats: {
+        orders: orders.length,
+        completed: orders.filter(o => o.status === "Completed").length,
+        pending: orders.filter(o => ACTIVE_STATUSES.includes(o.status)).length,
+        cancelled: orders.filter(o => o.status === "Cancelled").length,
+        customers: customers.size,
+        expected,
+        collected,
+        toCollect,
+        unpaidOrders: unpaid.length,
+        revenue: expected,
+        averageOrderValue: counted.length ? expected / counted.length : 0
+      },
+      topProducts
+    };
+  },
+
+
+  renderDashboard(response) {
+    this.lastDashboard = response || {};
+
+    const range = this.dashboardRange();
+    let stats, topProducts, prev = null;
+
+    if (this.ordersLoaded) {
+      const now = this.computeDashboard(range);
+      stats = now.stats;
+      topProducts = now.topProducts;
+
+      if (range) {
+        const span = range.to - range.from + 1;
+        prev = this.computeDashboard({ from: new Date(range.from - span), to: new Date(range.from - 1) }).stats;
+      }
+    } else {
+      const s = this.lastDashboard.stats || {};
+      stats = { ...s, expected: s.revenue || 0, collected: null };
+      topProducts = (this.lastDashboard.topProducts || []).filter(t => Number(t.units) > 0);
+    }
+
+    this.renderRangeLabel(range, stats);
+    this.renderRevenueChart(range);
+
+    const days = range ? Math.max(1, Math.round((range.to - range.from + 1) / 86400000)) : 0;
+    const prevLabel = days === 1 ? "previous day" : `previous ${days} days`;
+
+    const delta = (now, before) => {
+      if (!prev) return "";
+      const pct = pctChange(now, before);
+      if (pct === null) return `<span class="delta up">▲ new vs ${prevLabel}</span>`;
+      if (pct === 0) return `<span class="delta flat">— same as ${prevLabel}</span>`;
+      return `<span class="delta ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct)}% vs ${prevLabel}</span>`;
+    };
+
+    const card = (label, value, sub = "", extra = "", cls = "") => `
+      <div class="stat ${cls}">
+        <small>${escapeHTML(label)}</small>
+        <strong>${escapeHTML(value)}</strong>
+        ${sub ? `<small class="sub">${escapeHTML(sub)}</small>` : ""}
+        ${extra}
+      </div>`;
+
+    if (this.dom.statsCards) {
+      this.dom.statsCards.innerHTML = [
+        card("Orders", stats.orders || 0, `${stats.completed || 0} completed · ${stats.pending || 0} open`, delta(stats.orders, prev?.orders)),
+        card("Expected sales", formatCurrency(Math.round(stats.expected || 0)), "after discounts, excl. cancelled", delta(stats.expected, prev?.expected)),
+        card("Collected", stats.collected == null ? "—" : formatCurrency(Math.round(stats.collected)), "money received", stats.collected == null ? "" : delta(stats.collected, prev?.collected), "highlight"),
+        card("To collect", formatCurrency(Math.round(stats.toCollect || 0)), `${stats.unpaidOrders || 0} unpaid order${Number(stats.unpaidOrders) === 1 ? "" : "s"}`),
+        card("Avg. order", formatCurrency(Math.round(stats.averageOrderValue || 0)), "per order"),
+        card("Customers", stats.customers || 0, "unique numbers")
+      ].join("");
+    }
+
+    /* Top products: only what sold, with a bar */
+    if (this.dom.topProducts) {
+      const max = Math.max(1, ...topProducts.map(t => Number(t.units)));
+      this.dom.topProducts.innerHTML = topProducts.length
+        ? topProducts.map((t, i) => `
+            <div class="top-row">
+              <span>${i + 1}. ${escapeHTML(t.name)}</span><b>${escapeHTML(t.units)}</b>
+              <div class="bar"><i style="width:${Math.max(4, (Number(t.units) / max) * 100)}%"></i></div>
+            </div>`).join("")
+        : `<p class="empty-note">No sales in this period yet.</p>`;
+    }
+
+    /* Low stock: live from products, click to edit */
+    const threshold = Number(this.settings?.lowStockThreshold ?? response?.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+    if (this.dom.lowStockLabel) this.dom.lowStockLabel.textContent = `At or below ${threshold}`;
+
+    if (this.dom.lowStock) {
+      const low = (this.products.length ? this.products : (response?.lowStock || []))
+        .filter(p => p.active !== false && p.stock != null && Number(p.stock) <= threshold)
+        .sort((a, b) => Number(a.stock) - Number(b.stock) || String(a.name).localeCompare(String(b.name)));
+
+      this.dom.lowStock.innerHTML = low.length
+        ? `<div class="mini-list">${low.map(p => `
+            <div class="mini" data-product="${escapeHTML(p.id)}" style="cursor:pointer" title="Edit ${escapeHTML(p.name)}">
+              <span>${escapeHTML(p.name)}</span>
+              <b style="color:${Number(p.stock) === 0 ? "var(--red)" : "inherit"}">${Number(p.stock) === 0 ? "Sold out" : `${escapeHTML(p.stock)} left`}</b>
+            </div>`).join("")}</div>`
+        : `<p class="empty-note">Everything is well stocked.</p>`;
+    }
+  },
+
+
+  /* ---------------------------------------------------
+     Products: thumbnails, visible switch, side editor
+  --------------------------------------------------- */
+
+  renderProducts() {
+    const table = this.dom.productsRows;
+    if (!table) return;
+
+    const search = normalize(this.dom.productSearch?.value);
+    const cat = this.dom.filterCat?.value || "";
+    const stockFilter = this.dom.filterStock?.value || "";
+    const badge = this.dom.filterBadge?.value || "";
+    const visibility = this.dom.filterActive?.value || "";
+    const sortBy = this.dom.sortProducts?.value || "order";
+    const lowLimit = Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+    const stockOf = p => (p.stock == null ? Infinity : Number(p.stock));
+
+    ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach(id =>
+      this.dom[id]?.classList.toggle("on", Boolean(this.dom[id].value)));
+
+    const sorters = {
+      order: (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)),
+      name: (a, b) => String(a.name).localeCompare(String(b.name)),
+      stockAsc: (a, b) => stockOf(a) - stockOf(b),
+      stockDesc: (a, b) => stockOf(b) - stockOf(a),
+      priceAsc: (a, b) => Number(a.price || 0) - Number(b.price || 0),
+      priceDesc: (a, b) => Number(b.price || 0) - Number(a.price || 0)
+    };
+
+    const products = this.productSearchIndex
+      .filter(item => !search || item.search.includes(search))
+      .map(item => item.product)
+      .filter(p => {
+        if (cat && p.cat !== cat) return false;
+        const stock = stockOf(p);
+        if (stockFilter === "in" && !(stock > 0)) return false;
+        if (stockFilter === "low" && !(stock > 0 && stock <= lowLimit)) return false;
+        if (stockFilter === "out" && stock !== 0) return false;
+        if (stockFilter === "unlimited" && p.stock != null) return false;
+        const badges = (p.badges || []).map(b => String(b).toUpperCase());
+        if (badge === "__none" && badges.length) return false;
+        if (badge && badge !== "__none" && !badges.includes(badge)) return false;
+        if (visibility === "active" && p.active === false) return false;
+        if (visibility === "hidden" && p.active !== false) return false;
+        return true;
+      })
+      .slice()
+      .sort(sorters[sortBy] || sorters.order);
+
+    if (this.dom.productCount) {
+      this.dom.productCount.textContent = products.length === this.products.length
+        ? `${products.length} products`
+        : `Showing ${products.length} of ${this.products.length}`;
+    }
+
+    if (!products.length) {
+      table.innerHTML = `<tr><td colspan="6" class="muted">No products match these filters.</td></tr>`;
+      return;
+    }
+
+    const catLabel = { men: "For Him", women: "For Her", unisex: "Unisex" };
+
+    table.innerHTML = products.map(p => {
+      const id = escapeHTML(p.id);
+      const stockCell = p.stock == null
+        ? `<div class="stock-cell"><b>∞</b><button class="mini-btn text" data-stock="${id}" data-op="set" title="Start tracking stock">Set</button></div>`
+        : `<div class="stock-cell">
+             <button class="mini-btn" data-stock="${id}" data-op="dec" aria-label="Remove 1 ${escapeHTML(p.name)}">−</button>
+             <b class="${Number(p.stock) === 0 ? "zero" : ""}">${escapeHTML(p.stock)}</b>
+             <button class="mini-btn" data-stock="${id}" data-op="inc" aria-label="Add 1 ${escapeHTML(p.name)}">+</button>
+             <button class="mini-btn text" data-stock="${id}" data-op="restock">Restock</button>
+           </div>`;
+
+      return `
+        <tr>
+          <td class="td-main">
+            <div class="prod-cell">
+              <div class="thumb">${p.img ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.remove()">` : "No photo"}</div>
+              <div><b>${escapeHTML(p.name)}</b><small>${escapeHTML(catLabel[p.cat] || p.cat || "")} · ${id}</small></div>
+            </div>
+          </td>
+          <td data-label="Price">${formatCurrency(p.price)}</td>
+          <td data-label="Stock">${stockCell}</td>
+          <td data-label="Badges">${(p.badges || []).length ? p.badges.map(b => `<span class="badge">${escapeHTML(b)}</span>`).join("") : "—"}</td>
+          <td data-label="Visible"><input type="checkbox" class="switch" data-toggle-active="${id}" ${p.active !== false ? "checked" : ""} aria-label="Show ${escapeHTML(p.name)} on the website"></td>
+          <td><div class="row-actions"><button class="btn" data-edit="${id}">Edit</button></div></td>
+        </tr>`;
+    }).join("");
+  },
+
+
+  editProduct(product) {
+    _orig.editProduct.call(this, product);
+    this.dom.productEditor?.setAttribute("aria-hidden", "false");
+    if (this.dom.deleteProduct) this.dom.deleteProduct.hidden = !product;
+    this.dom.productEditor?.querySelector(".drawer-panel")?.scrollTo({ top: 0 });
+    setTimeout(() => this.dom.pName?.focus(), 50);
+  },
+
+
+  async setProductActive(id, active, toggle) {
+    const product = this.productMap.get(String(id));
+    if (!product) return;
+
+    toggle.disabled = true;
+    try {
+      const res = await this.request("POST", { action: "adminSetProductActive", id, active });
+      product.active = res.active;
+      this.cacheWrite("products", this.products);
+      this.setStatus(`${product.name} is now ${res.active ? "visible" : "hidden"} on the website`);
+    } catch (error) {
+      toggle.checked = !active;
+      this.setStatus(error.message, true);
+    } finally {
+      toggle.disabled = false;
+    }
+  },
+
+
+  async deleteProduct(id = this.dom.pOriginalId?.value) {
+    if (!id) return;
+    const product = this.productMap.get(String(id));
+
+    const ok = await this.ask({
+      title: "Delete product?",
+      message: `"${product?.name || id}" will be removed from the website and the admin. This can't be undone.\n\nTip: switch off "Visible" instead if you only want to hide it for now.`,
+      okText: "Delete product",
+      danger: true
+    });
+    if (!ok) return;
+
+    try {
+      await this.request("POST", { action: "adminDeleteProduct", id });
+      this.setStatus(`Deleted ${product?.name || id}`);
+      this.closeEditors();
+      await Promise.all([this.loadProducts(), this.loadDashboard()]);
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  async adjustStock(id, op) {
+    const product = this.productMap.get(String(id));
+    if (!product) return;
+
+    const params = { action: "adminAdjustStock", id };
+
+    if (op === "inc") params.delta = 1;
+    else if (op === "dec") params.delta = -1;
+    else {
+      const asked = await this.ask({
+        title: op === "set" ? `Track stock for ${product.name}` : `Restock ${product.name}`,
+        message: op === "set" ? "How many bottles do you have now?" : `How many bottles are you adding? (now ${product.stock})`,
+        okText: op === "set" ? "Set stock" : "Add bottles",
+        input: { value: op === "set" ? 10 : 5, min: 0 }
+      });
+      if (asked === null) return;
+
+      const n = parseInt(asked, 10);
+      if (!Number.isFinite(n) || n < 0) return this.setStatus("Please enter a number of bottles.", true);
+      if (op === "set") params.set = n; else params.delta = n;
+    }
+
+    try {
+      const response = await this.request("POST", params);
+      product.stock = response.stock;
+      this.cacheWrite("products", this.products);
+      this.renderProducts();
+      this.setStatus(`${product.name}: ${response.stock} in stock`);
+      this.refreshNotifications();
+      this.loadDashboard(true).catch(() => {});
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  /* ---------------------------------------------------
+     Promotions: readable cards, switches, side editor
+  --------------------------------------------------- */
+
+  renderPromotions() {
+    const box = document.getElementById("promosList");
+    if (!box) return;
+
+    box.innerHTML = this.promotions.length
+      ? this.promotions.map(p => `
+          <div class="promo-card ${p.active ? "" : "off"}">
+            <div class="promo-main">
+              <b>${escapeHTML(p.name)}</b>
+              <span>${escapeHTML(promoSummary(p))}</span>
+              <small>${p.active ? "Showing on the website and applied at checkout" : "Off — not shown or applied"}</small>
+            </div>
+            <div class="promo-actions">
+              <label class="switch-row" style="border:0;padding:0"><span class="muted" style="font-size:11px">${p.active ? "On" : "Off"}</span><input type="checkbox" class="switch" data-promo-toggle="${escapeHTML(p.id)}" ${p.active ? "checked" : ""} aria-label="Turn ${escapeHTML(p.name)} on or off"></label>
+              <button class="btn" data-pedit="${escapeHTML(p.id)}">Edit</button>
+              <button class="btn danger" data-pdel="${escapeHTML(p.id)}">Delete</button>
+            </div>
+          </div>`).join("")
+      : `<p class="empty-note">No promotions yet. Add one, e.g. "Any 2 bottles for ₱840".</p>`;
+  },
+
+
+  editPromotion(promotion) {
+    _orig.editPromotion.call(this, promotion);
+    if (this.dom.promoTitle) this.dom.promoTitle.textContent = promotion ? "Edit promotion" : "Add promotion";
+    this.dom.promoEditor?.setAttribute("aria-hidden", "false");
+    this.updatePromoPreview();
+    setTimeout(() => document.getElementById("promoName")?.focus(), 50);
+  },
+
+
+  updatePromoPreview() {
+    const type = document.getElementById("promoType")?.value || "fixed_total";
+    document.querySelectorAll("[data-promo-field]").forEach(el => {
+      el.hidden = el.dataset.promoField !== type;
+    });
+
+    const preview = this.dom.promoPreview;
+    if (!preview) return;
+    preview.textContent = "Customers see: " + promoSummary({
+      type,
+      minQty: document.getElementById("promoQty")?.value || 2,
+      fixedTotal: document.getElementById("promoFixed")?.value || 0,
+      percentOff: document.getElementById("promoPercent")?.value || 0
+    });
+  },
+
+
+  async setPromotionActive(id, active, toggle) {
+    const promo = this.promotionMap.get(String(id));
+    toggle.disabled = true;
+    try {
+      const res = await this.request("POST", { action: "adminSetPromotionActive", id, active });
+      if (promo) promo.active = res.active;
+      this.renderPromotions();
+      this.setStatus(`${promo?.name || "Promotion"} turned ${res.active ? "on" : "off"}`);
+    } catch (error) {
+      toggle.checked = !active;
+      this.setStatus(error.message, true);
+    } finally {
+      toggle.disabled = false;
+    }
+  },
+
+
+  async deletePromotion(id) {
+    const promo = this.promotionMap.get(String(id));
+    const ok = await this.ask({
+      title: "Delete promotion?",
+      message: `"${promo?.name || "This promotion"}" will stop applying right away. You can switch it off instead to keep it for later.`,
+      okText: "Delete",
+      danger: true
+    });
+    if (!ok) return;
+
+    try {
+      await this.request("POST", { action: "adminDeletePromotion", id });
+      await this.loadPromotions();
+      this.setStatus("Promotion deleted");
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  /* ---------------------------------------------------
+     Orders: styled confirmations
+  --------------------------------------------------- */
+
+  async cancelOrder(orderId) {
+    const order = this.findOrder(orderId);
+    if (!order) return;
+
+    const ok = await this.ask({
+      title: "Cancel this order?",
+      message: `${orderId} · ${order.fullname} · ${peso(order.total)}\n\nThe bottles go back into stock.`,
+      okText: "Cancel order",
+      cancelText: "Keep order",
+      danger: true
+    });
+    if (ok) this.updateOrder(orderId, "Cancelled");
+  },
+
+
+  async setOrderStatus(orderId, status) {
+    const order = this.findOrder(orderId);
+    if (!order || !status || status === order.status) return;
+
+    if (status === "Cancelled") return this.cancelOrder(orderId);
+
+    if (order.status === "Cancelled") {
+      const ok = await this.ask({
+        title: "Re-open cancelled order?",
+        message: `It will become "${status}" and its bottles will be taken out of stock again.`,
+        okText: "Re-open"
+      });
+      if (!ok) return;
+    }
+
+    this.updateOrder(orderId, status);
+  },
+
+
+  /* ---------------------------------------------------
+     Reviews: tabs + labels for mobile
+  --------------------------------------------------- */
+
+  renderReviews() {
+    const table = this.dom.reviewsRows;
+    if (!table) return;
+
+    const all = this.reviews || [];
+    const pending = all.filter(r => !r.approved);
+    const visible = all.filter(r => r.approved);
+
+    if (this.reviewTab === "pending" && !pending.length && this._reviewTabAuto !== false) this.reviewTab = "all";
+
+    if (this.dom.reviewTabs) {
+      const tabs = [["pending", "Pending", pending.length], ["visible", "Visible", visible.length], ["all", "All", all.length]];
+      this.dom.reviewTabs.innerHTML = tabs.map(([key, label, n]) =>
+        `<button type="button" class="tab ${this.reviewTab === key ? "active" : ""} ${key === "pending" && n ? "urgent" : ""}" data-rtab="${key}">${label}<b>${n}</b></button>`).join("");
+    }
+
+    const rows = this.reviewTab === "pending" ? pending : this.reviewTab === "visible" ? visible : all;
+
+    table.innerHTML = rows.length
+      ? rows.map(r => `
+          <tr>
+            <td class="td-main">
+              ${r.photoUrl
+                ? `<a href="${escapeHTML(r.photoUrl)}" target="_blank" rel="noopener"><img src="${escapeHTML(r.photoUrl)}" alt="Photo from ${escapeHTML(r.name)}" loading="lazy" style="width:64px;height:64px;object-fit:cover;border:1px solid var(--line)" onerror="this.replaceWith(document.createTextNode('Photo unavailable'))"></a>`
+                : `<span class="muted">No photo</span>`}
+            </td>
+            <td data-label="Customer"><b>${escapeHTML(r.name)}</b><small>${escapeHTML(r.scent || "")}</small></td>
+            <td data-label="Rating">${"★".repeat(Number(r.rating) || 0)}</td>
+            <td data-label="Review" style="max-width:380px;white-space:normal">${escapeHTML(r.review)}</td>
+            <td data-label="Status">${r.approved ? `<span class="pill st-completed">Visible</span>` : `<span class="pill st-new">Pending</span>`}</td>
+            <td>
+              <div class="row-actions">
+                ${r.approved
+                  ? `<button class="btn" data-review="${escapeHTML(r.id)}" data-op="hide">Hide</button>`
+                  : `<button class="btn primary" data-review="${escapeHTML(r.id)}" data-op="approve">Approve</button>`}
+                <button class="btn danger" data-review="${escapeHTML(r.id)}" data-op="delete">Delete</button>
+              </div>
+            </td>
+          </tr>`).join("")
+      : `<tr><td colspan="6" class="muted">${this.reviewTab === "pending" ? "No reviews waiting. ✓" : "No reviews here yet."}</td></tr>`;
+
+    this.updateReviewBadges();
+  },
+
+
+  async deleteReview(id) {
+    const review = (this.reviews || []).find(r => String(r.id) === String(id));
+    const ok = await this.ask({
+      title: "Delete review?",
+      message: `The review from ${review?.name || "this customer"} and its photo will be removed permanently.`,
+      okText: "Delete review",
+      danger: true
+    });
+    if (!ok) return;
+
+    try {
+      await this.request("POST", { action: "adminDeleteReview", id });
+      this.setStatus("Review deleted");
+      await this.loadReviews();
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  /* ---------------------------------------------------
+     Audit log: filter, search, grouped by day
+  --------------------------------------------------- */
+
+  async loadAudit() {
+    try {
+      const response = await this.request("GET", { action: "adminAudit" });
+      this.auditLogs = Array.isArray(response?.logs) ? response.logs : [];
+      this.renderAudit();
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  renderAudit() {
+    const box = this.dom.auditList;
+    if (!box) return;
+
+    const kindOf = log => {
+      const k = log.details?.kind;
+      if (k) return k;
+      const a = String(log.action || "").toLowerCase();
+      if (a.includes("payment")) return "payment";
+      if (a.includes(" order")) return "order";
+      if (a.includes("promotion")) return "promotion";
+      if (a.includes("review")) return "review";
+      if (a.includes("setting")) return "homepage settings";
+      if (a.includes("product") || a.includes("seeded")) return "product";
+      return "other";
+    };
+
+    const icon = { order: ["🛍", "order"], payment: ["₱", "payment"], product: ["◇", "stock"], promotion: ["%", "order"], review: ["★", "review"], "homepage settings": ["⚙", ""] };
+    const filter = this.dom.auditFilter?.value || "";
+    const search = normalize(this.dom.auditSearch?.value);
+
+    const logs = (this.auditLogs || []).filter(log =>
+      (!filter || kindOf(log) === filter) &&
+      (!search || normalize(`${log.action} ${log.actor}`).includes(search)));
+
+    if (!logs.length) {
+      box.innerHTML = `<p class="empty-note">Nothing in the log matches.</p>`;
+      return;
+    }
+
+    const today = dayKey(new Date());
+    const yesterday = dayKey(new Date(Date.now() - 86400000));
+    const groups = new Map();
+    logs.forEach(log => {
+      const d = new Date(log.timestamp);
+      const key = isNaN(d) ? "Unknown date" : dayKey(d);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(log);
+    });
+
+    box.innerHTML = [...groups.entries()].map(([key, items]) => {
+      const label = key === today ? "Today" : key === yesterday ? "Yesterday"
+        : key === "Unknown date" ? key
+        : new Date(`${key}T00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+
+      return `
+        <div class="audit-day">
+          <h4>${escapeHTML(label)}</h4>
+          ${items.map(log => {
+            const [sym, cls] = icon[kindOf(log)] || ["•", ""];
+            const d = new Date(log.timestamp);
+            return `
+              <div class="audit-item">
+                <span class="notif-icon ${cls}">${sym}</span>
+                <div>${escapeHTML(log.action)}<small>${escapeHTML(log.actor || "")}</small></div>
+                <time>${isNaN(d) ? "" : escapeHTML(d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }))}</time>
+              </div>`;
+          }).join("")}
+        </div>`;
+    }).join("");
   }
 });
 

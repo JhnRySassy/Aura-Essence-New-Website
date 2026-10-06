@@ -191,14 +191,24 @@ create trigger settings_touch before update on public.site_settings
 -- Only admin actions are logged, so customer orders don't flood it.
 -- ---------------------------------------------------------------------
 
+-- ₱ amounts in log messages: 430 or 430.50
+create or replace function public.peso_text(v numeric)
+returns text language sql immutable as $$
+  select case when v is null then null
+              when v = trunc(v) then to_char(v, 'FM999,999,990')
+              else to_char(v, 'FM999,999,990.00') end;
+$$;
+
 create or replace function public.audit_admin_change()
 returns trigger
 language plpgsql security definer set search_path = public
 as $$
 declare
-  label  text;
-  verb   text;
-  target text;
+  label   text;
+  verb    text;
+  target  text;
+  changes text[] := '{}';
+  details jsonb  := '{}'::jsonb;
 begin
   if not public.is_admin() then
     return coalesce(new, old);
@@ -210,9 +220,36 @@ begin
     when 'products' then
       label  := 'product';
       target := coalesce(new.id, old.id);
+      if tg_op = 'UPDATE' then
+        -- say exactly what changed, e.g. "stock 10 → 9"
+        if new.stock is distinct from old.stock then
+          changes := changes || format('stock %s → %s', coalesce(old.stock::text, '∞'), coalesce(new.stock::text, '∞'));
+        end if;
+        if new.price is distinct from old.price then
+          changes := changes || format('price ₱%s → ₱%s', public.peso_text(old.price), public.peso_text(new.price));
+        end if;
+        if new.active is distinct from old.active then
+          changes := changes || (case when new.active then 'now visible' else 'now hidden' end)::text;
+        end if;
+        if new.name is distinct from old.name then
+          changes := changes || format('name "%s" → "%s"', old.name, new.name);
+        end if;
+        if new.badges is distinct from old.badges then
+          changes := changes || format('badges %s', coalesce(nullif(array_to_string(new.badges, ', '), ''), 'none'));
+        end if;
+        if new.img is distinct from old.img then
+          changes := changes || 'new photo'::text;
+        end if;
+        if new.id is distinct from old.id then
+          changes := changes || format('ID %s → %s', old.id, new.id);
+        end if;
+      end if;
     when 'promotions' then
       label  := 'promotion';
       target := coalesce(new.name, old.name);
+      if tg_op = 'UPDATE' and new.active is distinct from old.active then
+        verb := case when new.active then 'Turned on' else 'Turned off' end;
+      end if;
     when 'site_settings' then
       label  := 'homepage settings';
       target := null;
@@ -227,16 +264,29 @@ begin
       target := coalesce(new.order_id, old.order_id);
       if tg_op = 'UPDATE' and new.status is distinct from old.status then
         verb   := 'Set status ' || new.status || ' on';
+        details := jsonb_build_object('from', old.status, 'to', new.status);
       elsif tg_op = 'UPDATE' then
-        verb   := 'Recorded payment ' || new.payment_status ||
-                  coalesce(' ₱' || to_char(new.amount_paid, 'FM999,999,990.00'), '') || ' on';
+        label  := 'payment';
+        verb   := 'Recorded';
+        target := format('%s%s on order %s', new.payment_status,
+                         coalesce(' ₱' || public.peso_text(new.amount_paid), ''), new.order_id);
       end if;
     else
       label  := tg_table_name;
   end case;
 
-  insert into public.audit_log (actor, action)
-  values (public.current_actor(), trim(verb || ' ' || label || coalesce(' ' || target, '')));
+  -- Nothing worth logging (e.g. only updated_at changed)
+  if tg_table_name = 'products' and tg_op = 'UPDATE' and array_length(changes, 1) is null then
+    return new;
+  end if;
+
+  insert into public.audit_log (actor, action, details)
+  values (
+    public.current_actor(),
+    trim(verb || ' ' || label || coalesce(' ' || target, '') ||
+         case when array_length(changes, 1) > 0 then ': ' || array_to_string(changes, ', ') else '' end),
+    details || jsonb_build_object('table', tg_table_name, 'op', lower(tg_op), 'kind', label)
+  );
 
   return coalesce(new, old);
 end $$;

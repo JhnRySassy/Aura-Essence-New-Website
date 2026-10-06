@@ -435,6 +435,19 @@ const actions = {
     return ok();
   },
 
+  // Quick on/off switches in the admin lists
+  async adminSetProductActive(db, p) {
+    const rows = must(await db.from("products").update({ active: toBool(p.active, true) }).eq("id", String(p.id)).select("id, active"));
+    if (!rows.length) return { success: false, message: "Product not found." };
+    return ok({ active: rows[0].active });
+  },
+
+  async adminSetPromotionActive(db, p) {
+    const rows = must(await db.from("promotions").update({ active: toBool(p.active, true) }).eq("id", String(p.id)).select("id, active"));
+    if (!rows.length) return { success: false, message: "Promotion not found." };
+    return ok({ active: rows[0].active });
+  },
+
   async adminDeleteProduct(db, p) {
     must(await db.from("products").delete().eq("id", String(p.id)));
     return ok();
