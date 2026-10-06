@@ -683,53 +683,80 @@
     </div>
 
     <div class="fragrance-modal" id="fragranceModal" aria-hidden="true">
-      <div
-        class="fragrance-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="fragranceModalTitle"
-      >
-        <div class="fragrance-dialog-head">
-          <div>
-            <h3 id="fragranceModalTitle">Fragrance Details</h3>
-            <p id="fragranceModalCategory"></p>
+      <div class="fragrance-dialog fd" role="dialog" aria-modal="true" aria-labelledby="fragranceModalTitle">
+        <div class="fd-topbar">
+          <div class="fd-navs">
+            <button type="button" class="fd-nav" id="fdPrev" aria-label="Previous perfume">‹</button>
+            <span class="fd-pos" id="fdPos"></span>
+            <button type="button" class="fd-nav" id="fdNext" aria-label="Next perfume">›</button>
           </div>
-          <button type="button" class="fragrance-fav" id="fragranceFav" aria-pressed="false">♡ Save</button>
-          <button
-            type="button"
-            class="fragrance-close"
-            id="fragranceClose"
-            aria-label="Close"
-          >
-            &times;
-          </button>
+          <div class="fd-tools">
+            <button type="button" class="fd-share" id="fdShare">Share</button>
+            <button type="button" class="fragrance-close" id="fragranceClose" aria-label="Close">&times;</button>
+          </div>
         </div>
-        <div class="fragrance-dialog-body">
-          <p class="fragrance-description" id="fragranceModalDescription"></p>
-          <div class="note-grid">
-            <div class="note-box">
-              <span>Top / First Notes</span
-              ><strong id="fragranceTopNotes"></strong>
-            </div>
-            <div class="note-box">
-              <span>Heart Notes</span><strong id="fragranceHeartNotes"></strong>
-            </div>
-            <div class="note-box">
-              <span>Base Notes</span><strong id="fragranceBaseNotes"></strong>
+
+        <div class="fd-body" id="fdBody">
+          <div class="fd-hero">
+            <div class="fd-photo" id="fdPhoto"></div>
+            <div class="fd-info">
+              <p class="fd-cat" id="fragranceModalCategory"></p>
+              <h3 id="fragranceModalTitle">Fragrance Details</h3>
+              <a class="fd-rating" id="fdRating" href="#fdReviews"></a>
+              <div class="fd-price-row"><span class="fd-price" id="fdPrice"></span><span class="fd-stock" id="fdStock"></span></div>
+              <p class="fd-short" id="fdShort"></p>
+              <div class="fd-actions">
+                <button type="button" class="fd-add" id="fdAdd">Add to cart</button>
+                <button type="button" class="fragrance-fav" id="fragranceFav" aria-pressed="false">♡ Save</button>
+              </div>
+              <p class="fd-promo" id="fdPromo" hidden></p>
             </div>
           </div>
-          <div class="application-box">
-            <h4>How to Apply</h4>
-            <p id="fragranceApplication"></p>
-          </div>
-          <div class="profile-bars" id="fragranceProfileBars"></div>
-          <div class="daynight" id="fragranceDayNight"></div>
-          <div class="occasion-line" id="fragranceOccasion"></div>
+
+          <section class="fd-sec">
+            <h4>At a glance</h4>
+            <div class="fd-glance" id="fdGlance"></div>
+          </section>
+
+          <section class="fd-sec">
+            <h4>How it smells over time</h4>
+            <ol class="fd-timeline">
+              <li><span class="fd-when">Opening<small>first 15–30 min</small></span><span class="fd-notes"><b>Top notes</b><strong id="fragranceTopNotes"></strong></span></li>
+              <li><span class="fd-when">Heart<small>30 min – 3 hrs</small></span><span class="fd-notes"><b>Heart notes</b><strong id="fragranceHeartNotes"></strong></span></li>
+              <li><span class="fd-when">Dry-down<small>3 hrs onward</small></span><span class="fd-notes"><b>Base notes</b><strong id="fragranceBaseNotes"></strong></span></li>
+            </ol>
+          </section>
+
+          <section class="fd-sec">
+            <h4>About this scent</h4>
+            <p class="fragrance-description fd-clamp" id="fragranceModalDescription"></p>
+            <button type="button" class="fd-more" id="fdMore" hidden>Read more</button>
+            <details class="fd-apply" id="fdApply">
+              <summary>How to apply</summary>
+              <p id="fragranceApplication"></p>
+            </details>
+          </section>
+
+          <section class="fd-sec" id="fdReviews">
+            <h4>Reviews</h4>
+            <div class="fd-reviews" id="fdReviewList"></div>
+          </section>
+
+          <section class="fd-sec">
+            <h4>You may also like</h4>
+            <div class="fd-similar" id="fdSimilar"></div>
+          </section>
+
           <p class="fragrance-note-disclaimer">
             Note: This fragrance profile is provided as a guide to the scent
             inspiration. Aura &amp; Essence is not affiliated with or endorsed
             by the original fragrance brands, and the actual blend may vary.
           </p>
+        </div>
+
+        <div class="fd-buybar" id="fdBuybar">
+          <span><b id="fdBarPrice"></b><small id="fdBarStock"></small></span>
+          <button type="button" class="fd-add" id="fdBarAdd">Add to cart</button>
         </div>
       </div>
     </div>

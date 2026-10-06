@@ -1554,258 +1554,8 @@ function openFragranceDetails(
     return;
   }
 
-  fragranceModalTitle.textContent =
-    product.name;
-
-  syncModalFav(product.id);
-
-  fragranceModalCategory.textContent =
-    product.cat === "men"
-      ? "For Him • Extrait de Parfum"
-      : "For Her • Extrait de Parfum";
-
-  fragranceModalDescription.textContent =
-    product.descLong ||
-    product.desc ||
-    "";
-
-  fragranceTopNotes.textContent =
-    Array.isArray(
-      product.topNotes,
-    )
-      ? product.topNotes.join(
-          " • ",
-        )
-      : String(
-          product.topNotes ||
-            "",
-        );
-
-  fragranceHeartNotes.textContent =
-    Array.isArray(
-      product.heartNotes,
-    )
-      ? product.heartNotes.join(
-          " • ",
-        )
-      : String(
-          product.heartNotes ||
-            "",
-        );
-
-  fragranceBaseNotes.textContent =
-    Array.isArray(
-      product.baseNotes,
-    )
-      ? product.baseNotes.join(
-          " • ",
-        )
-      : String(
-          product.baseNotes ||
-            "",
-        );
-
-  fragranceApplication.textContent =
-    product.application ||
-    "";
-
-  fragranceOccasion.textContent =
-    product.occasion
-      ? "Best suited for: " +
-        product.occasion
-      : "";
-
-  const meta =
-    PRODUCT_META[
-      product.id
-    ] || {};
-
-  // ==========================================================
-  // PROFILES
-  // ==========================================================
-
-  let profiles = [];
-
-  if (
-    Array.isArray(
-      meta.profiles,
-    )
-  ) {
-    profiles =
-      meta.profiles
-        .map((profile) =>
-          String(profile).trim(),
-        )
-        .filter(Boolean);
-  } else if (
-    typeof meta.profiles ===
-    "string"
-  ) {
-    profiles =
-      meta.profiles
-        .split(",")
-        .map((profile) =>
-          profile.trim(),
-        )
-        .filter(Boolean);
-  }
-
-  const profileText =
-    profiles.length
-      ? profiles
-          .map(
-            (profile) =>
-              `<span class="profile-tag">${escapeHTML(
-                profile,
-              )}</span>`,
-          )
-          .join("")
-      : `
-        <span class="profile-tag">
-          No profile listed
-        </span>
-      `;
-
-  // ==========================================================
-  // LONGEVITY
-  // ==========================================================
-
-  const longevity =
-    Math.max(
-      0,
-      Math.min(
-        10,
-        Number(
-          meta.longevity,
-        ) || 7,
-      ),
-    );
-
-  // ==========================================================
-  // STRENGTH
-  // ==========================================================
-
-  const strengthKey =
-    normalizeStrength(
-      meta.strength,
-    );
-
-  const strengthScore = {
-    subtle: 4,
-    moderate: 7,
-    bold: 10,
-  }[strengthKey];
-
-  const strengthLabel = {
-    subtle: "Subtle",
-    moderate: "Moderate",
-    bold: "Bold",
-  }[strengthKey];
-
-  // ==========================================================
-  // PROFILE DISPLAY
-  // ==========================================================
-
-  fragranceProfileBars.innerHTML = `
-    <div class="profile-section">
-
-      <div class="profile-label">
-        Scent Profile
-      </div>
-
-      <div class="profile-tags">
-        ${profileText}
-      </div>
-
-    </div>
-
-    <div class="profile-row">
-
-      <span>
-        Longevity
-      </span>
-
-      <span class="profile-track">
-
-        <span
-          class="profile-fill"
-          style="width:${longevity * 10}%"
-        ></span>
-
-      </span>
-
-      <span>
-        ${longevity}/10
-      </span>
-
-    </div>
-
-    <div class="profile-row">
-
-      <span>
-        Strength
-      </span>
-
-      <span class="profile-track">
-
-        <span
-          class="profile-fill"
-          style="width:${
-            strengthScore * 10
-          }%"
-        ></span>
-
-      </span>
-
-      <span>
-        ${strengthLabel}
-      </span>
-
-    </div>
-  `;
-
-  // ==========================================================
-  // DAY / NIGHT
-  // ==========================================================
-
-  const time =
-    Array.isArray(meta.time)
-      ? meta.time.map(
-          (value) =>
-            String(
-              value,
-            ).toLowerCase(),
-        )
-      : String(
-          meta.time || "",
-        )
-          .split(",")
-          .map((value) =>
-            value
-              .trim()
-              .toLowerCase(),
-          )
-          .filter(Boolean);
-
-  fragranceDayNight.innerHTML = `
-    <span>
-      ☀ Day
-      ${
-        time.includes("day")
-          ? "✓"
-          : ""
-      }
-    </span>
-
-    <span>
-      🌙 Night
-      ${
-        time.includes("night")
-          ? "✓"
-          : ""
-      }
-    </span>
-  `;
+  // Built in the PRODUCT DETAILS section at the end of this file
+  renderFragranceDetails(product);
 
   fragranceModal.classList.add(
     "show",
@@ -1825,6 +1575,8 @@ function openFragranceDetails(
 // ============================================================
 
 function closeFragranceDetails() {
+  clearDetailsHash();
+
   fragranceModal.classList.remove(
     "show",
   );
@@ -5512,3 +5264,340 @@ document.getElementById("coBarBtn")?.addEventListener("click", () => {
 
 renderCheckoutExtras();
 goCheckoutStep(1, { silent: true });
+
+// ============================================================
+// PRODUCT DETAILS (the popup behind "Details")
+// Photo, price, stock, add to cart, at-a-glance profile,
+// scent timeline, reviews, similar scents, ‹ › navigation and
+// a shareable link (#scent-<id>).
+// ============================================================
+
+var fdCurrentId = null;
+var fdList = [];
+
+function fdMeta(p) {
+  return (typeof PRODUCT_META !== "undefined" && PRODUCT_META[p.id]) || {};
+}
+
+function fdListOf(value) {
+  if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
+  return String(value || "").split(/[,•·|]/).map((v) => v.trim()).filter(Boolean);
+}
+
+function fdCatLabel(p) {
+  return p.cat === "men" ? "For Him" : p.cat === "unisex" ? "Unisex" : "For Her";
+}
+
+function fdStars(avg) {
+  const full = Math.round(Number(avg) || 0);
+  return "★★★★★".slice(0, full) + "☆☆☆☆☆".slice(0, 5 - full);
+}
+
+function fdReviewsFor(p) {
+  const name = String(p.name || "").trim().toLowerCase();
+  const id = String(p.id).toLowerCase();
+  return (lastReviews || []).filter((r) =>
+    String(r.scentId || "").trim().toLowerCase() === id ||
+    String(r.scent || "").trim().toLowerCase() === name);
+}
+
+// Products the ‹ › buttons walk through: what the customer is browsing
+function fdNavList(p) {
+  let list = [];
+  try {
+    list = getVisibleProducts(activeCat).filter((x) => x.active !== false);
+  } catch { /* ignore */ }
+  if (!list.some((x) => x.id === p.id)) {
+    list = catalog.all().filter((x) => x.active !== false && x.cat === p.cat);
+  }
+  return list;
+}
+
+function fdSimilar(p) {
+  const mine = new Set(fdListOf(fdMeta(p).profiles).map((x) => x.toLowerCase()));
+  return catalog.all()
+    .filter((x) => x.id !== p.id && x.active !== false)
+    .map((x) => {
+      const theirs = fdListOf(fdMeta(x).profiles).map((t) => t.toLowerCase());
+      const shared = theirs.filter((t) => mine.has(t)).length;
+      const available = favStockInfo(x).ok ? 1 : 0;
+      return { x, score: shared * 3 + (x.cat === p.cat ? 1 : 0) + available * 2 };
+    })
+    .sort((a, b) => b.score - a.score || String(a.x.name).localeCompare(String(b.x.name)))
+    .slice(0, 3)
+    .map((s) => s.x);
+}
+
+function fdPhotoHTML(p, cls) {
+  return p.img
+    ? `<img src="${escapeHTML(p.img)}" alt="${escapeHTML(p.name)}" class="${cls || ""}" onerror="this.onerror=null;this.outerHTML='<div class=&quot;img-ph ${cls || ""}&quot;>A&amp;E</div>'">`
+    : `<div class="img-ph ${cls || ""}">A&amp;E</div>`;
+}
+
+function renderFragranceDetails(p) {
+  fdCurrentId = p.id;
+  const meta = fdMeta(p);
+  const info = favStockInfo(p);
+  const price = "₱" + Number(p.price || PRODUCT_PRICE).toLocaleString();
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const text = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+
+  /* ----- top: photo, name, rating, price, stock ----- */
+  const badges = fdListOf(meta.badges || p.badges).slice(0, 2)
+    .map((b) => `<span class="product-badge">${escapeHTML(b)}</span>`).join("");
+  set("fdPhoto", `${badges ? `<div class="product-badges">${badges}</div>` : ""}${fdPhotoHTML(p, "fd-img")}`);
+  text("fragranceModalCategory", `${fdCatLabel(p)} · Extrait de Parfum`);
+  text("fragranceModalTitle", p.name);
+
+  const stats = reviewStats[p.id];
+  set("fdRating", stats && stats.count
+    ? `<span class="stars">${fdStars(stats.avg)}</span> ${stats.avg.toFixed(1)} · ${stats.count} review${stats.count === 1 ? "" : "s"}`
+    : `<span class="muted">No reviews yet</span>`);
+
+  text("fdPrice", price);
+  const stockEl = document.getElementById("fdStock");
+  if (stockEl) { stockEl.textContent = info.text; stockEl.className = `fd-stock ${info.cls}`; }
+  text("fdShort", p.desc || "");
+
+  ["fdAdd", "fdBarAdd"].forEach((id) => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.disabled = !info.ok;
+    b.textContent = info.ok ? "Add to cart" : info.text;
+  });
+  text("fdBarPrice", price);
+  text("fdBarStock", info.text);
+  syncModalFav(p.id);
+
+  const promo = (activePromotions || [])
+    .filter((x) => x.active !== false && x.type === "fixed_total" && Number(x.minQty) === 2)[0];
+  const promoEl = document.getElementById("fdPromo");
+  if (promoEl) {
+    promoEl.hidden = !promo || !info.ok;
+    if (promo) promoEl.innerHTML = `✨ Pair it with another scent — <b>any 2 for ₱${Number(promo.fixedTotal).toLocaleString()}</b>`;
+  }
+
+  /* ----- at a glance ----- */
+  const longevity = Math.max(1, Math.min(10, Number(meta.longevity || p.longevity) || 7));
+  const projection = Math.max(1, Math.min(10, Number(meta.projection || p.projection) || 7));
+  const strengthKey = normalizeStrength(meta.strength || p.strength);
+  const strength = { subtle: ["Subtle", 4], moderate: ["Moderate", 7], bold: ["Bold", 10] }[strengthKey] || ["Moderate", 7];
+  const times = fdListOf(meta.time || p.time).map((t) => t.toLowerCase());
+  const occasion = String(meta.occasion || p.occasion || "").trim();
+  const profiles = fdListOf(meta.profiles || p.profiles);
+  const word = (n) => (n >= 8 ? "Long-lasting" : n >= 5 ? "Moderate" : "Light");
+  const bar = (label, n, caption) => `
+    <div class="fd-meter"><span class="fd-k">${label}</span>
+      <span class="fd-track"><i style="width:${n * 10}%"></i></span>
+      <span class="fd-v">${caption}</span></div>`;
+
+  set("fdGlance", `
+    ${bar("Longevity", longevity, `${word(longevity)} · ${longevity}/10`)}
+    ${bar("Projection", projection, `${projection >= 8 ? "Fills the room" : projection >= 5 ? "Arm's length" : "Close to skin"} · ${projection}/10`)}
+    ${bar("Strength", strength[1], strength[0])}
+    <div class="fd-chips">
+      <span class="fd-chip ${times.includes("day") ? "on" : ""}">☀ Day</span>
+      <span class="fd-chip ${times.includes("night") ? "on" : ""}">☾ Night</span>
+      ${occasion ? fdListOf(occasion).slice(0, 4).map((o) => `<span class="fd-chip">${escapeHTML(o)}</span>`).join("") : ""}
+    </div>
+    ${profiles.length ? `<div class="fd-tags">${profiles.map((t) => `<span class="profile-tag">${escapeHTML(t)}</span>`).join("")}</div>` : ""}
+  `);
+
+  /* ----- timeline ----- */
+  const notes = (v) => fdListOf(v).join(" · ") || "—";
+  text("fragranceTopNotes", notes(p.topNotes));
+  text("fragranceHeartNotes", notes(p.heartNotes));
+  text("fragranceBaseNotes", notes(p.baseNotes));
+
+  /* ----- description (short first) + how to apply ----- */
+  const desc = document.getElementById("fragranceModalDescription");
+  const more = document.getElementById("fdMore");
+  if (desc) {
+    desc.textContent = p.descLong || p.desc || "";
+    desc.classList.add("fd-clamp");
+    if (more) {
+      more.textContent = "Read more";
+      more.hidden = true;
+      requestAnimationFrame(() => { more.hidden = desc.scrollHeight <= desc.clientHeight + 2; });
+    }
+  }
+  const apply = document.getElementById("fdApply");
+  if (apply) {
+    apply.open = false;
+    apply.hidden = !p.application;
+  }
+  text("fragranceApplication", p.application || "");
+
+  /* ----- reviews ----- */
+  const reviews = fdReviewsFor(p);
+  set("fdReviewList", reviews.length
+    ? reviews.slice(0, 3).map((r) => `
+        <div class="fd-review">
+          ${r.photoUrl ? `<img src="${escapeHTML(r.photoUrl)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
+          <div>
+            <div class="fd-review-head"><b>${escapeHTML(r.customerName || r.name || "Customer")}</b><span class="stars">${fdStars(r.rating)}</span></div>
+            <p>${escapeHTML(String(r.review || "").slice(0, 220))}${String(r.review || "").length > 220 ? "…" : ""}</p>
+          </div>
+        </div>`).join("") +
+      `<a class="fd-link" href="#reviews" data-fd-goto="reviews">See all reviews →</a>`
+    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to review →</a></p>`);
+
+  /* ----- you may also like ----- */
+  set("fdSimilar", fdSimilar(p).map((x) => {
+    const xi = favStockInfo(x);
+    return `
+      <div class="fd-sim">
+        <button type="button" class="fd-sim-open" data-fd-open="${escapeHTML(x.id)}" aria-label="View ${escapeHTML(x.name)}">
+          ${fdPhotoHTML(x, "fd-sim-img")}
+          <span><small>${fdCatLabel(x)}</small><b>${escapeHTML(x.name)}</b><em>₱${Number(x.price || PRODUCT_PRICE).toLocaleString()}</em></span>
+        </button>
+        <button type="button" class="fd-sim-add" data-fd-add="${escapeHTML(x.id)}" ${xi.ok ? "" : "disabled"}>${xi.ok ? "+ Add" : xi.text}</button>
+      </div>`;
+  }).join(""));
+
+  /* ----- ‹ › navigation ----- */
+  fdList = fdNavList(p);
+  const idx = fdList.findIndex((x) => x.id === p.id);
+  text("fdPos", fdList.length > 1 && idx >= 0 ? `${idx + 1} / ${fdList.length}` : "");
+  ["fdPrev", "fdNext"].forEach((id) => {
+    const b = document.getElementById(id);
+    if (b) b.hidden = fdList.length < 2 || idx < 0;
+  });
+
+  document.getElementById("fdBody")?.scrollTo({ top: 0 });
+  setDetailsHash(p.id);
+}
+
+function fdStep(dir) {
+  if (!fdList.length || !fdCurrentId) return;
+  const idx = fdList.findIndex((x) => x.id === fdCurrentId);
+  const next = fdList[(idx + dir + fdList.length) % fdList.length];
+  if (next) renderFragranceDetails(next);
+}
+
+/* ----- shareable link ----- */
+
+function setDetailsHash(id) {
+  try { history.replaceState(null, "", `${location.pathname}${location.search}#scent-${encodeURIComponent(id)}`); } catch { /* ignore */ }
+}
+
+function clearDetailsHash() {
+  if (!/^#scent-/.test(location.hash)) return;
+  try { history.replaceState(null, "", `${location.pathname}${location.search}`); } catch { /* ignore */ }
+}
+
+function openFromHash() {
+  const m = location.hash.match(/^#scent-(.+)$/);
+  if (!m) return false;
+  const id = decodeURIComponent(m[1]);
+  const p = catalog.find(id) || catalog.all().find((x) => String(x.id).toLowerCase() === id.toLowerCase());
+  if (!p) return false;
+  openFragranceDetails(p.id);
+  return true;
+}
+
+/* ----- events ----- */
+
+document.getElementById("fdPrev")?.addEventListener("click", () => fdStep(-1));
+document.getElementById("fdNext")?.addEventListener("click", () => fdStep(1));
+
+["fdAdd", "fdBarAdd"].forEach((id) => {
+  document.getElementById(id)?.addEventListener("click", (e) => {
+    if (!fdCurrentId) return;
+    if (addToCart(fdCurrentId, 1) !== false) {
+      const btn = e.currentTarget;
+      btn.textContent = "Added ✓";
+      btn.classList.add("done");
+      setTimeout(() => { btn.textContent = "Add to cart"; btn.classList.remove("done"); }, 1400);
+    }
+  });
+});
+
+document.getElementById("fdMore")?.addEventListener("click", (e) => {
+  const desc = document.getElementById("fragranceModalDescription");
+  const open = desc.classList.toggle("fd-clamp") === false;
+  e.currentTarget.textContent = open ? "Show less" : "Read more";
+});
+
+document.getElementById("fdShare")?.addEventListener("click", async (e) => {
+  const p = catalog.find(fdCurrentId);
+  if (!p) return;
+  const url = `${location.origin}${location.pathname}#scent-${encodeURIComponent(p.id)}`;
+  const btn = e.currentTarget;
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: `${p.name} — Aura & Essence`, text: p.desc || p.name, url });
+      return;
+    }
+    await navigator.clipboard.writeText(url);
+    btn.textContent = "Link copied ✓";
+  } catch (err) {
+    if (err && err.name === "AbortError") return;
+    window.prompt("Copy this link:", url);
+  }
+  setTimeout(() => { btn.textContent = "Share"; }, 1600);
+});
+
+fragranceModal?.addEventListener("click", (e) => {
+  const open = e.target.closest("[data-fd-open]");
+  if (open) { renderFragranceDetails(catalog.find(open.dataset.fdOpen)); return; }
+
+  const add = e.target.closest("[data-fd-add]");
+  if (add) {
+    if (addToCart(add.dataset.fdAdd, 1) !== false) {
+      add.textContent = "Added ✓";
+      setTimeout(() => { add.textContent = "+ Add"; }, 1400);
+    }
+    return;
+  }
+
+  const go = e.target.closest("[data-fd-goto]");
+  if (go) {
+    e.preventDefault();
+    closeFragranceDetails();
+    document.getElementById(go.dataset.fdGoto)?.scrollIntoView({ behavior: "smooth" });
+    return;
+  }
+
+  const rating = e.target.closest("#fdRating");
+  if (rating) {
+    e.preventDefault();
+    document.getElementById("fdReviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (!fragranceModal?.classList.contains("show")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) return;
+  if (e.key === "ArrowLeft") fdStep(-1);
+  if (e.key === "ArrowRight") fdStep(1);
+});
+
+// Swipe left/right on phones
+(function swipeDetails() {
+  const body = document.getElementById("fdBody");
+  if (!body) return;
+  let x0 = null, y0 = null;
+  body.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  body.addEventListener("touchend", (e) => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0;
+    const dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) fdStep(dx < 0 ? 1 : -1);
+    x0 = y0 = null;
+  }, { passive: true });
+})();
+
+// Opening a shared link (…/#scent-sauvage) shows that perfume
+window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)) openFromHash(); });
+(function openSharedScent() {
+  if (!/^#scent-/.test(location.hash)) return;
+  let tries = 0;
+  const attempt = () => {
+    // wait for live products (stock/price) when the database is connected
+    if (isCatalogReady() || tries > 20) { openFromHash(); return; }
+    tries++;
+    setTimeout(attempt, 150);
+  };
+  attempt();
+})();
