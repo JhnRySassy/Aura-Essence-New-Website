@@ -96,6 +96,36 @@ create table if not exists public.orders (
 create index if not exists orders_created_at_idx on public.orders (created_at desc);
 create index if not exists orders_contact_digits_idx on public.orders (contact_digits);
 
+-- Payment tracking + status timeline (added later; safe on existing databases)
+do $$
+declare
+  is_new boolean := not exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public' and table_name = 'orders' and column_name = 'payment_status');
+begin
+  alter table public.orders
+    add column if not exists payment_status text not null default 'Unpaid',
+    add column if not exists amount_paid    numeric(10,2),
+    add column if not exists payment_ref    text not null default '',
+    add column if not exists payment_note   text not null default '',
+    add column if not exists paid_at        timestamptz,
+    add column if not exists status_history jsonb not null default '[]'::jsonb;
+
+  if is_new then
+    -- Orders already Completed before this feature are treated as paid in full.
+    update public.orders
+       set payment_status = 'Paid', amount_paid = total, paid_at = updated_at
+     where status = 'Completed';
+  end if;
+end $$;
+
+alter table public.orders drop constraint if exists orders_payment_status_check;
+alter table public.orders add constraint orders_payment_status_check
+  check (payment_status in ('Unpaid', 'Partial', 'Paid', 'Refunded'));
+alter table public.orders drop constraint if exists orders_amount_paid_check;
+alter table public.orders add constraint orders_amount_paid_check
+  check (amount_paid is null or amount_paid >= 0);
+
 create table if not exists public.reviews (
   id         text primary key default ('REV-' || to_char(now() at time zone 'Asia/Manila', 'YYYYMMDD-HH24MISS') || '-' || upper(substr(md5(random()::text), 1, 6))),
   name       text not null,
@@ -197,6 +227,9 @@ begin
       target := coalesce(new.order_id, old.order_id);
       if tg_op = 'UPDATE' and new.status is distinct from old.status then
         verb   := 'Set status ' || new.status || ' on';
+      elsif tg_op = 'UPDATE' then
+        verb   := 'Recorded payment ' || new.payment_status ||
+                  coalesce(' ₱' || to_char(new.amount_paid, 'FM999,999,990.00'), '') || ' on';
       end if;
     else
       label  := tg_table_name;
@@ -221,8 +254,41 @@ drop trigger if exists reviews_audit on public.reviews;
 create trigger reviews_audit after update or delete on public.reviews
   for each row execute function public.audit_admin_change();
 drop trigger if exists orders_audit on public.orders;
-create trigger orders_audit after update of status or delete on public.orders
+create trigger orders_audit after update of status, payment_status, amount_paid or delete on public.orders
   for each row execute function public.audit_admin_change();
+
+-- ---------------------------------------------------------------------
+-- ORDER TIMELINE: remembers when each status was set and by whom
+-- ---------------------------------------------------------------------
+
+create or replace function public.track_order_status()
+returns trigger
+language plpgsql
+as $$
+begin
+  if tg_op = 'INSERT' then
+    if coalesce(jsonb_array_length(new.status_history), 0) = 0 then
+      new.status_history := jsonb_build_array(
+        jsonb_build_object('status', new.status, 'at', coalesce(new.created_at, now()), 'by', 'customer'));
+    end if;
+  elsif new.status is distinct from old.status then
+    new.status_history := coalesce(old.status_history, '[]'::jsonb) || jsonb_build_object(
+      'status', new.status, 'at', now(), 'by', public.current_actor());
+  end if;
+
+  -- paid_at follows the payment status
+  if new.payment_status = 'Paid' and (tg_op = 'INSERT' or old.payment_status is distinct from 'Paid') then
+    new.paid_at := now();
+  elsif new.payment_status in ('Unpaid', 'Refunded') then
+    new.paid_at := null;
+  end if;
+
+  return new;
+end $$;
+
+drop trigger if exists orders_history on public.orders;
+create trigger orders_history before insert or update on public.orders
+  for each row execute function public.track_order_status();
 
 -- ---------------------------------------------------------------------
 -- INVENTORY: cancelling an order puts its bottles back in stock,
@@ -375,7 +441,8 @@ begin
     -- Same format as the old Apps Script: AE-20261005-143012-7F3A9C
     loop
       v_order_id := 'AE-' || to_char(clock_timestamp() at time zone 'Asia/Manila', 'YYYYMMDD-HH24MISS') || '-'
-                    || upper(encode(gen_random_bytes(3), 'hex'));
+                    -- gen_random_uuid() is built into Postgres (no extension needed)
+                    || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
       exit when not exists (select 1 from public.orders where order_id = v_order_id);
     end loop;
 
@@ -497,11 +564,15 @@ begin
     'stats', (
       select jsonb_build_object(
         'orders',    count(*),
-        'revenue',   coalesce(sum(total) filter (where status <> 'Cancelled'), 0),
+        -- money actually received when recorded (after outside discounts), else the order total
+        'revenue',   coalesce(sum(coalesce(amount_paid, total)) filter (where status <> 'Cancelled'), 0),
+        'toCollect', coalesce(sum(greatest(0, total - coalesce(amount_paid, 0)))
+                       filter (where status <> 'Cancelled' and payment_status in ('Unpaid', 'Partial')), 0),
+        'unpaidOrders', count(*) filter (where status <> 'Cancelled' and payment_status in ('Unpaid', 'Partial')),
         'completed', count(*) filter (where status = 'Completed'),
         'pending',   count(*) filter (where status not in ('Completed', 'Cancelled')),
         'customers', count(distinct coalesce(nullif(right(contact_digits, 10), ''), fullname)),
-        'averageOrderValue', coalesce(round(avg(total) filter (where status <> 'Cancelled'), 2), 0)
+        'averageOrderValue', coalesce(round(avg(coalesce(amount_paid, total)) filter (where status <> 'Cancelled'), 2), 0)
       ) from public.orders
     ),
     'topProducts', coalesce((

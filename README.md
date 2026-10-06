@@ -158,6 +158,15 @@ After updating the site, run `supabase/schema.sql` once more in the SQL Editor. 
 - **Low-stock email:** you get an email when a product drops to the number in **Homepage → Email me when stock reaches** (default 1), and again when it sells out. It uses the same Apps Script mailer as order emails, so update `OrderEmailNotifier.gs` in Apps Script (**Deploy → Manage deployments → Edit → New version**).
 - **Backup:** click **⬇ Download backup** in the sidebar to get one Excel file with Orders, Products, Promotions, Reviews, Audit Log and Settings.
 
+## Orders and payments
+After updating, run `supabase/schema.sql` once more. It's safe, and it adds the payment and timeline fields. Orders that were already **Completed** are marked **Paid** in full automatically.
+
+- **Tabs:** **Needs action** shows only open orders (New, Confirmed, Preparing, Out for Delivery), with counts. Filter by payment with the **All payments** dropdown.
+- **Next step:** one button per order moves it along: Confirm → Start preparing → Out for delivery → Mark completed.
+- **Order details:** click any order to see the address, payment method, notes, items with prices, the timeline (who changed what and when) and whether it's a repeat customer. **Cancel order** asks before cancelling, because it puts the stock back. **Change status…** fixes mistakes.
+- **Payment:** set **Unpaid / Partial / Paid / Refunded**, the **amount received**, the GCash reference and a note. If a customer paid less than the total (for example a suki discount given outside the website), enter what they actually paid. The difference shows as a discount, and the Dashboard **Revenue** counts the real amount received. **To collect** shows money still owed.
+- **New-order alert:** when a new order arrives while the admin is open, you hear a chime, the **Orders** tab shows a badge with the number of New orders, and the browser tab title shows a count.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

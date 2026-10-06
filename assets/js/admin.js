@@ -18,6 +18,31 @@ const ORDER_STATUSES = [
   "Cancelled"
 ];
 
+const ACTIVE_STATUSES = ["New", "Confirmed", "Preparing", "Out for Delivery"];
+
+const NEXT_STATUS = {
+  "New": "Confirmed",
+  "Confirmed": "Preparing",
+  "Preparing": "Out for Delivery",
+  "Out for Delivery": "Completed"
+};
+
+const NEXT_LABEL = {
+  "New": "Confirm",
+  "Confirmed": "Start preparing",
+  "Preparing": "Out for delivery",
+  "Out for Delivery": "Mark completed"
+};
+
+const STATUS_CLASS = {
+  "New": "st-new",
+  "Confirmed": "st-confirmed",
+  "Preparing": "st-preparing",
+  "Out for Delivery": "st-out",
+  "Completed": "st-completed",
+  "Cancelled": "st-cancelled"
+};
+
 const DEFAULT_PRODUCT_PRICE = 430;
 const DEFAULT_LOW_STOCK = 5;
 const DEFAULT_PROMO_QTY = 2;
@@ -63,6 +88,18 @@ function csvSafe(value) {
   const text = String(value ?? "");
   if (/^[+-]?[\d\s().-]+$/.test(text)) return text;   // phone numbers / amounts are safe
   return /^[=+\-@\t\r]/.test(text) ? "'" + text : text;
+}
+
+function statusPill(status) {
+  return `<span class="pill ${STATUS_CLASS[status] || "st-new"}">${escapeHTML(status || "New")}</span>`;
+}
+
+function payPill(order) {
+  const st = order.paymentStatus || "Unpaid";
+  if (order.status === "Cancelled" && st === "Unpaid") {
+    return `<span class="pill pay-refunded">No payment</span>`;
+  }
+  return `<span class="pill pay-${st.toLowerCase()}">${escapeHTML(st)}</span>`;
 }
 
 function escapeHTML(value) {
@@ -219,6 +256,10 @@ class AdminApp {
       "refreshOrders",
       "exportOrders",
       "orderSearch",
+      "orderPayFilter",
+      "orderTabs",
+      "orderDrawer",
+      "drawerBody",
       "ordersRows",
 
       "refreshProducts",
@@ -461,21 +502,53 @@ class AdminApp {
     );
 
 
-    this.dom.ordersRows?.addEventListener(
-      "change",
+    this.orderTab = "active";
+
+
+    this.dom.orderTabs?.addEventListener(
+      "click",
       e => {
-
-        const select =
-          e.target.closest("[data-status]");
-
-        if (!select) return;
-
-        this.updateOrder(
-          select.dataset.status,
-          select.value
-        );
+        const tab = e.target.closest("[data-tab]");
+        if (!tab) return;
+        this.orderTab = tab.dataset.tab;
+        this.renderOrders();
       }
     );
+
+
+    this.dom.orderPayFilter?.addEventListener(
+      "change",
+      () => this.renderOrders()
+    );
+
+
+    this.dom.ordersRows?.addEventListener(
+      "click",
+      e => {
+        const next = e.target.closest("[data-next]");
+        if (next) {
+          e.stopPropagation();
+          this.advanceOrder(next.dataset.next);
+          return;
+        }
+
+        const row = e.target.closest("[data-order]");
+        if (row) this.openOrder(row.dataset.order);
+      }
+    );
+
+
+    this.dom.orderDrawer?.addEventListener(
+      "click",
+      e => {
+        if (e.target.closest("[data-close-drawer]")) this.closeOrder();
+      }
+    );
+
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "Escape") this.closeOrder();
+    });
 
 
     /* -----------------------------------------------
@@ -1331,6 +1404,12 @@ class AdminApp {
 
       this.loadReviews();
     }
+
+
+    if (view === "orders") {
+      this.unseenOrders = 0;
+      this.updateOrderBadge?.();
+    }
   }
 
 
@@ -1444,15 +1523,22 @@ class AdminApp {
         [
           "Customers",
           stats.customers || 0
+        ],
+
+        [
+          "To collect",
+          formatCurrency(stats.toCollect || 0),
+          `${stats.unpaidOrders || 0} unpaid order${Number(stats.unpaidOrders) === 1 ? "" : "s"}`
         ]
 
       ]
         .map(
-          ([label, value]) =>
+          ([label, value, sub]) =>
             `
             <div class="stat">
               <small>${escapeHTML(label)}</small>
               <strong>${escapeHTML(value)}</strong>
+              ${sub ? `<small class="sub">${escapeHTML(sub)}</small>` : ""}
             </div>
             `
         )
@@ -1624,6 +1710,13 @@ class AdminApp {
 
       this.renderOrders();
 
+      this.checkNewOrders();
+
+      if (this.openOrderId && !this.dom.orderDrawer?.classList.contains("hidden")) {
+        // keep the open details panel in sync, unless you're typing in it
+        if (!this.dom.drawerBody?.contains(document.activeElement)) this.openOrder(this.openOrderId);
+      }
+
 
       if (this.dashboardRange()) {
         this.renderDashboard(this.lastDashboard || {});
@@ -1664,124 +1757,104 @@ class AdminApp {
     const table =
       this.dom.ordersRows;
 
-
     if (!table) {
       return;
     }
-
 
     const search =
       normalize(
         this.dom.orderSearch?.value
       );
 
+    const pay = this.dom.orderPayFilter?.value || "";
 
-    const rows =
+    this.dom.orderPayFilter?.classList.toggle("on", Boolean(pay));
+
+    const searched =
       this.orderSearchIndex
         .filter(item =>
           !search ||
           item.search.includes(search)
         )
-        .map(item => item.order);
+        .map(item => item.order)
+        .filter(order => !pay || (order.paymentStatus || "Unpaid") === pay);
 
 
-    table.innerHTML =
-      rows
-        .map(
-          order =>
-            `
-            <tr>
+    /* ---------- tabs with counts ---------- */
 
-              <td>
-                <b>
-                  ${escapeHTML(order.orderId)}
-                </b>
+    const tabs = [
+      ["active", "Needs action", o => ACTIVE_STATUSES.includes(o.status)],
+      ...ORDER_STATUSES.map(st => [st, st, o => o.status === st]),
+      ["all", "All", () => true]
+    ];
 
-                <small>
-                  ${escapeHTML(order.payment || "")}
-                </small>
-              </td>
+    const current = tabs.find(t => t[0] === this.orderTab) || tabs[0];
 
-              <td>
-                ${escapeHTML(order.fullname)}
+    if (this.dom.orderTabs) {
+      this.dom.orderTabs.innerHTML = tabs
+        .map(([key, label, test]) => {
+          const count = searched.filter(test).length;
+          const urgent = (key === "active" || key === "New") && count > 0;
+          return `<button type="button" role="tab" class="tab ${key === current[0] ? "active" : ""} ${urgent ? "urgent" : ""}"
+                    data-tab="${escapeHTML(key)}" aria-selected="${key === current[0]}">${escapeHTML(label)}<b>${count}</b></button>`;
+        })
+        .join("");
+    }
 
-                <small>
-                  ${escapeHTML(order.contact)}
-                </small>
-              </td>
+    const rows = searched.filter(current[2]);
 
-              <td>
+    if (!rows.length) {
+      table.innerHTML =
+        `<tr><td colspan="7" class="muted">${current[0] === "active" ? "Nothing to do right now. 🎉" : "No orders here."}</td></tr>`;
+      return;
+    }
+
+    table.innerHTML = rows
+      .map(order => {
+        const next = NEXT_STATUS[order.status];
+        const paid = order.amountPaid;
+        const diff = paid != null && order.paymentStatus === "Paid" && paid < Number(order.total);
+
+        return `
+          <tr data-order="${escapeHTML(order.orderId)}">
+            <td>
+              <b>${escapeHTML(order.orderId)}</b>
+              <small>${order.timestamp ? escapeHTML(new Date(order.timestamp).toLocaleString()) : ""}</small>
+            </td>
+            <td>
+              ${escapeHTML(order.fullname)}
+              <small>${escapeHTML(order.contact)}</small>
+            </td>
+            <td>
+              ${
+                Array.isArray(order.items) && order.items.length
+                  ? order.items.map(item => `${escapeHTML(item.name)} × ${escapeHTML(item.qty)}`).join("<br>")
+                  : escapeHTML(order.scent || "")
+              }
+            </td>
+            <td>
+              ${formatCurrency(order.total)}
+              ${
+                paid != null && paid !== Number(order.total)
+                  ? `<small class="${diff ? "paid-diff" : ""}">paid ${formatCurrency(paid)}</small>`
+                  : ""
+              }
+            </td>
+            <td>${payPill(order)}<small>${escapeHTML(order.payment || "")}</small></td>
+            <td>${statusPill(order.status)}</td>
+            <td>
+              <div class="order-actions">
                 ${
-                  Array.isArray(order.items) &&
-                  order.items.length
-
-                    ?
-
-                    order.items
-                      .map(
-                        item =>
-                          `${escapeHTML(item.name)}
-                           × ${escapeHTML(item.qty)}`
-                      )
-                      .join("<br>")
-
-                    :
-
-                    escapeHTML(
-                      order.scent || ""
-                    )
-                }
-              </td>
-
-              <td>
-                ${formatCurrency(order.total)}
-              </td>
-
-              <td>
-
-                <select
-                  data-status="${escapeHTML(order.orderId)}"
-                >
-
-                  ${
-                    ORDER_STATUSES
-                      .map(
-                        status =>
-                          `
-                          <option
-                            ${
-                              status === order.status
-                                ? "selected"
-                                : ""
-                            }
-                          >
-                            ${escapeHTML(status)}
-                          </option>
-                          `
-                      )
-                      .join("")
-                  }
-
-                </select>
-
-              </td>
-
-              <td>
-                ${
-                  order.timestamp
-                    ? escapeHTML(
-                        new Date(
-                          order.timestamp
-                        ).toLocaleString()
-                      )
+                  next
+                    ? `<button class="btn next-btn" type="button" data-next="${escapeHTML(order.orderId)}">${escapeHTML(NEXT_LABEL[order.status])}</button>`
                     : ""
                 }
-              </td>
-
-            </tr>
-            `
-        )
-        .join("");
+              </div>
+            </td>
+          </tr>
+        `;
+      })
+      .join("");
   }
 
 
@@ -1796,7 +1869,7 @@ class AdminApp {
 
     try {
 
-      await this.request(
+      const response = await this.request(
         "POST",
         this.params({
 
@@ -1813,17 +1886,7 @@ class AdminApp {
       /*
        * Update local state immediately.
        */
-      const order =
-        this.orders.find(
-          item =>
-            String(item.orderId) ===
-            String(orderId)
-        );
-
-
-      if (order) {
-        order.status = status;
-      }
+      this.replaceOrder(orderId, response.order, { status });
 
 
       this.rebuildOrderIndex();
@@ -1831,9 +1894,13 @@ class AdminApp {
 
 
       this.setStatus(
-        "Order updated"
+        `Order ${orderId}: ${status}`
       );
 
+      if (this.openOrderId === orderId) this.openOrder(orderId);
+
+      // Stock changes when an order is cancelled
+      if (status === "Cancelled") this.loadProducts().catch(() => {});
 
       await this.loadDashboard();
 
@@ -1859,8 +1926,15 @@ class AdminApp {
       "Contact",
       "Items",
       "Total",
+      "Amount Paid",
+      "Payment Status",
+      "Payment Method",
+      "Payment Ref",
+      "Payment Note",
       "Status",
-      "Date"
+      "Date",
+      "Delivery / Meetup",
+      "Notes"
     ];
 
 
@@ -1886,9 +1960,23 @@ class AdminApp {
 
           order.total,
 
+          order.amountPaid ?? "",
+
+          order.paymentStatus || "Unpaid",
+
+          order.payment || "",
+
+          order.paymentRef || "",
+
+          order.paymentNote || "",
+
           order.status,
 
-          order.timestamp
+          order.timestamp,
+
+          order.address || "",
+
+          order.notes || ""
         ]
       )
 
@@ -3386,7 +3474,11 @@ Object.assign(AdminApp.prototype, {
 
     const counted = orders.filter(order => order.status !== "Cancelled");
 
-    const revenue = counted.reduce((sum, order) => sum + Number(order.total || 0), 0);
+    const received = order => Number(order.amountPaid ?? order.total ?? 0);
+    const revenue = counted.reduce((sum, order) => sum + received(order), 0);
+    const unpaid = counted.filter(order => ["Unpaid", "Partial"].includes(order.paymentStatus || "Unpaid"));
+    const toCollect = unpaid.reduce((sum, order) =>
+      sum + Math.max(0, Number(order.total || 0) - Number(order.amountPaid || 0)), 0);
 
     const customers = new Set(
       orders.map(order =>
@@ -3415,6 +3507,8 @@ Object.assign(AdminApp.prototype, {
         completed: orders.filter(o => o.status === "Completed").length,
         pending: orders.filter(o => o.status !== "Completed" && o.status !== "Cancelled").length,
         customers: customers.size,
+        toCollect,
+        unpaidOrders: unpaid.length,
         averageOrderValue: counted.length ? revenue / counted.length : 0
       },
       topProducts
@@ -3598,7 +3692,7 @@ Object.assign(AdminApp.prototype, {
 
     const orders = (this.orders || [])
       .filter(o => o.status !== "Cancelled")
-      .map(o => ({ t: new Date(o.timestamp), total: Number(o.total || 0) }))
+      .map(o => ({ t: new Date(o.timestamp), total: Number(o.amountPaid ?? o.total ?? 0) }))
       .filter(o => !isNaN(o.t));
 
     let from, to;
@@ -3757,6 +3851,10 @@ Object.assign(AdminApp.prototype, {
           "Subtotal": Number(o.subtotal),
           "Discount": Number(o.discount),
           "Total": Number(o.total),
+          "Amount Paid": o.amount_paid == null ? "" : Number(o.amount_paid),
+          "Payment Status": o.payment_status || "Unpaid",
+          "Payment Ref": o.payment_ref || "",
+          "Payment Note": o.payment_note || "",
           "Promo": o.promotion_name || "",
           "Delivery / Meetup": o.address,
           "Payment": o.payment,
@@ -3799,6 +3897,342 @@ Object.assign(AdminApp.prototype, {
     } finally {
       if (button) { button.disabled = false; button.textContent = label; }
     }
+  }
+});
+
+
+/* =========================================================
+   ORDER DETAILS · PAYMENTS · NEW-ORDER ALERT
+========================================================= */
+
+function peso(value) {
+  return "₱" + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function last10(contact) {
+  return String(contact || "").replace(/\D/g, "").slice(-10);
+}
+
+// Short two-tone chime, no audio file needed. Browsers may block it
+// until you've clicked somewhere on the page; that's fine.
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1320].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.frequency.value = freq;
+      osc.type = "sine";
+      gain.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18);
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.18 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.35);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(ctx.currentTime + i * 0.18);
+      osc.stop(ctx.currentTime + i * 0.18 + 0.4);
+    });
+    setTimeout(() => ctx.close(), 1200);
+  } catch {
+    // no sound available
+  }
+}
+
+Object.assign(AdminApp.prototype, {
+
+  findOrder(orderId) {
+    return this.orders.find(o => String(o.orderId) === String(orderId));
+  },
+
+
+  replaceOrder(orderId, fresh, fallback = {}) {
+    const i = this.orders.findIndex(o => String(o.orderId) === String(orderId));
+    if (i < 0) return;
+    this.orders[i] = fresh ? fresh : { ...this.orders[i], ...fallback };
+    this.rebuildOrderIndex();
+    this.renderOrders();
+  },
+
+
+  advanceOrder(orderId) {
+    const order = this.findOrder(orderId);
+    const next = order && NEXT_STATUS[order.status];
+    if (next) this.updateOrder(orderId, next);
+  },
+
+
+  cancelOrder(orderId) {
+    const order = this.findOrder(orderId);
+    if (!order) return;
+    if (!confirm(`Cancel order ${orderId}?\n\nThe bottles go back into stock.`)) return;
+    this.updateOrder(orderId, "Cancelled");
+  },
+
+
+  setOrderStatus(orderId, status) {
+    const order = this.findOrder(orderId);
+    if (!order || !status || status === order.status) return;
+
+    if (status === "Cancelled") return this.cancelOrder(orderId);
+
+    if (order.status === "Cancelled" &&
+        !confirm(`Re-open this cancelled order as "${status}"?\n\nIts bottles will be taken out of stock again.`)) {
+      return;
+    }
+
+    this.updateOrder(orderId, status);
+  },
+
+
+  closeOrder() {
+    if (!this.dom.orderDrawer || this.dom.orderDrawer.classList.contains("hidden")) return;
+    this.dom.orderDrawer.classList.add("hidden");
+    this.dom.orderDrawer.setAttribute("aria-hidden", "true");
+    this.openOrderId = null;
+  },
+
+
+  openOrder(orderId) {
+    const order = this.findOrder(orderId);
+    const body = this.dom.drawerBody;
+    if (!order || !body) return;
+
+    this.openOrderId = order.orderId;
+
+    const items = Array.isArray(order.items) ? order.items : [];
+    const total = Number(order.total || 0);
+    const subtotal = Number(order.subtotal || 0) || items.reduce((sum, i) => sum + Number(i.price || 0) * Number(i.qty || 0), 0) || total;
+    const promoDiscount = Number(order.discount || 0);
+
+    const sameCustomer = this.orders
+      .filter(o => last10(o.contact) && last10(o.contact) === last10(order.contact))
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    const nth = sameCustomer.findIndex(o => o.orderId === order.orderId) + 1;
+    const buyerText = sameCustomer.length <= 1
+      ? "First order from this customer"
+      : `Order ${nth} of ${sameCustomer.length} from this customer · repeat buyer`;
+
+    const history = (order.history && order.history.length)
+      ? order.history
+      : [{ status: "New", at: order.timestamp, by: "customer" }];
+
+    const next = NEXT_STATUS[order.status];
+
+    body.innerHTML = `
+      <div class="drawer-head">
+        <div>
+          <p class="eyebrow">ORDER</p>
+          <h3 id="drawerTitle">${escapeHTML(order.orderId)}</h3>
+          <div class="status-row">${statusPill(order.status)} ${payPill(order)}</div>
+        </div>
+        <button class="btn ghost" type="button" data-close-drawer>Close</button>
+      </div>
+
+      <div class="drawer-sec">
+        <div class="status-row">
+          ${next ? `<button class="btn primary" type="button" data-d-next>${escapeHTML(NEXT_LABEL[order.status])}</button>` : ""}
+          ${order.status !== "Cancelled" ? `<button class="btn danger" type="button" data-d-cancel>Cancel order</button>` : ""}
+          <select data-d-status aria-label="Change status">
+            <option value="">Change status…</option>
+            ${ORDER_STATUSES.filter(st => st !== order.status).map(st => `<option>${escapeHTML(st)}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+
+      <div class="drawer-sec">
+        <h4>Customer</h4>
+        <div class="kv">
+          <span>Name</span><div>${escapeHTML(order.fullname)}</div>
+          <span>Contact</span><div>${escapeHTML(order.contact)}</div>
+          <span>Delivery / Meetup</span><div>${escapeHTML(order.address || "—")}</div>
+          <span>Payment method</span><div>${escapeHTML(order.payment || "—")}</div>
+          <span>Notes</span><div>${escapeHTML(order.notes || "—")}</div>
+          <span>History</span><div>${escapeHTML(buyerText)}</div>
+        </div>
+      </div>
+
+      <div class="drawer-sec">
+        <h4>Items</h4>
+        <table class="items">
+          <tbody>
+            ${items.map(i => `
+              <tr>
+                <td>${escapeHTML(i.name || i.id)} × ${escapeHTML(i.qty)}</td>
+                <td>${i.price != null ? peso(Number(i.price) * Number(i.qty || 0)) : ""}</td>
+              </tr>`).join("") || `<tr><td>${escapeHTML(order.scent || "—")}</td><td></td></tr>`}
+          </tbody>
+          <tfoot>
+            <tr><td>Subtotal</td><td>${peso(subtotal)}</td></tr>
+            ${promoDiscount > 0 ? `<tr><td>Promo${order.promotion ? " · " + escapeHTML(order.promotion) : ""}</td><td>−${peso(promoDiscount)}</td></tr>` : ""}
+            <tr class="total"><td>Order total</td><td>${peso(total)}</td></tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div class="drawer-sec">
+        <h4>Payment</h4>
+        <form class="pay-form" data-d-pay>
+          <label>Status
+            <select name="paymentStatus">
+              ${["Unpaid", "Partial", "Paid", "Refunded"].map(st =>
+                `<option ${st === (order.paymentStatus || "Unpaid") ? "selected" : ""}>${st}</option>`).join("")}
+            </select>
+          </label>
+          <label>Amount received (₱)
+            <input name="amountPaid" type="number" min="0" step="0.01" inputmode="decimal"
+                   placeholder="${escapeHTML(total)}" value="${order.amountPaid ?? ""}">
+          </label>
+          <label class="full">GCash / reference no.
+            <input name="paymentRef" maxlength="120" value="${escapeHTML(order.paymentRef || "")}" placeholder="optional">
+          </label>
+          <label class="full">Note (e.g. reason for discount)
+            <input name="paymentNote" maxlength="500" value="${escapeHTML(order.paymentNote || "")}" placeholder="e.g. Suki discount ₱30">
+          </label>
+          <div class="full pay-note" data-d-paysum></div>
+          <div class="full pay-actions">
+            <button class="btn primary" type="submit">Save payment</button>
+            <button class="btn" type="button" data-d-fullpay>Paid in full (${peso(total)})</button>
+          </div>
+        </form>
+      </div>
+
+      <div class="drawer-sec">
+        <h4>Timeline</h4>
+        <ul class="timeline">
+          ${history.map(h => `
+            <li><div>${escapeHTML(h.status)}
+              <small>${h.at ? escapeHTML(new Date(h.at).toLocaleString()) : ""}${h.by ? " · " + escapeHTML(h.by) : ""}</small>
+            </div></li>`).join("")}
+          ${order.paidAt ? `<li><div>Payment received<small>${escapeHTML(new Date(order.paidAt).toLocaleString())}</small></div></li>` : ""}
+        </ul>
+      </div>
+    `;
+
+    const form = body.querySelector("[data-d-pay]");
+    const summary = body.querySelector("[data-d-paysum]");
+
+    const updateSummary = () => {
+      const st = form.paymentStatus.value;
+      const raw = form.amountPaid.value.trim();
+      const amount = raw === "" ? (st === "Paid" ? total : 0) : Number(raw);
+      summary.classList.remove("warn");
+
+      if (st === "Paid" && amount < total) {
+        summary.classList.add("warn");
+        summary.textContent = `Discount given outside the system: ${peso(total - amount)} (received ${peso(amount)} of ${peso(total)})`;
+      } else if (st === "Paid" && amount > total) {
+        summary.textContent = `Received ${peso(amount - total)} more than the order total.`;
+      } else if (st === "Paid") {
+        summary.textContent = `Paid in full: ${peso(total)}`;
+      } else if (st === "Partial") {
+        summary.classList.add("warn");
+        summary.textContent = `Balance to collect: ${peso(Math.max(0, total - amount))} (received ${peso(amount)})`;
+      } else if (st === "Refunded") {
+        summary.textContent = "Refunded — this order no longer counts as money received once you set the amount to 0.";
+      } else {
+        summary.textContent = `To collect: ${peso(total)}`;
+      }
+    };
+
+    form.addEventListener("input", updateSummary);
+    updateSummary();
+
+    form.addEventListener("submit", e => {
+      e.preventDefault();
+      const st = form.paymentStatus.value;
+      let amount = form.amountPaid.value.trim();
+      if (st === "Paid" && amount === "") amount = String(total);   // blank = paid in full
+      if (st === "Refunded" && amount === "") amount = "0";
+      this.savePayment(order.orderId, {
+        paymentStatus: st,
+        amountPaid: amount,
+        paymentRef: form.paymentRef.value,
+        paymentNote: form.paymentNote.value
+      });
+    });
+
+    body.querySelector("[data-d-fullpay]")?.addEventListener("click", () => {
+      this.savePayment(order.orderId, {
+        paymentStatus: "Paid",
+        amountPaid: String(total),
+        paymentRef: form.paymentRef.value,
+        paymentNote: form.paymentNote.value
+      });
+    });
+
+    body.querySelector("[data-d-next]")?.addEventListener("click", () => this.advanceOrder(order.orderId));
+    body.querySelector("[data-d-cancel]")?.addEventListener("click", () => this.cancelOrder(order.orderId));
+    body.querySelector("[data-d-status]")?.addEventListener("change", e => {
+      const value = e.target.value;
+      e.target.value = "";
+      this.setOrderStatus(order.orderId, value);
+    });
+
+    this.dom.orderDrawer.classList.remove("hidden");
+    this.dom.orderDrawer.setAttribute("aria-hidden", "false");
+  },
+
+
+  async savePayment(orderId, payment) {
+    try {
+      const response = await this.request("POST", { action: "adminSavePayment", orderId, ...payment });
+      this.replaceOrder(orderId, response.order);
+      this.setStatus(`Payment saved for ${orderId}`);
+      if (this.openOrderId === orderId) this.openOrder(orderId);
+      this.loadDashboard(true).catch(() => {});
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  // Called after every orders refresh: chime + badge for orders we haven't seen.
+  checkNewOrders() {
+    const ids = new Set(this.orders.map(o => o.orderId));
+
+    if (!this.knownOrderIds) {
+      this.knownOrderIds = ids;      // first load: nothing is "new"
+      this.updateOrderBadge();
+      return;
+    }
+
+    const fresh = this.orders.filter(o => !this.knownOrderIds.has(o.orderId));
+    this.knownOrderIds = ids;
+
+    if (fresh.length) {
+      const viewingOrders = !document.getElementById("ordersView")?.classList.contains("hidden");
+      if (!viewingOrders || document.hidden) {
+        this.unseenOrders = (this.unseenOrders || 0) + fresh.length;
+      }
+      playChime();
+      this.setStatus(fresh.length === 1
+        ? `New order from ${fresh[0].fullname} (${peso(fresh[0].total)})`
+        : `${fresh.length} new orders`);
+    }
+
+    this.updateOrderBadge();
+  },
+
+
+  updateOrderBadge() {
+    const navButton = document.querySelector('.nav-item[data-view="orders"]');
+    if (!navButton) return;
+
+    const newCount = this.orders.filter(o => o.status === "New").length;
+    let badge = navButton.querySelector(".nav-badge");
+
+    if (newCount > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "nav-badge";
+        navButton.appendChild(badge);
+      }
+      badge.textContent = newCount;
+      badge.title = `${newCount} new order${newCount === 1 ? "" : "s"} waiting`;
+    } else {
+      badge?.remove();
+    }
+
+    const base = this.baseTitle || (this.baseTitle = document.title);
+    document.title = this.unseenOrders ? `(${this.unseenOrders}) ${base}` : base;
   }
 });
 

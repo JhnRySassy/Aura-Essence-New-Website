@@ -58,7 +58,11 @@
       <div class="panel chart-panel"><div class="panel-head"><h3>Revenue</h3><span id="chartLabel"></span></div><div id="revenueChart" class="chart"></div><div id="chartTip" class="chart-tip" hidden></div></div>
       <div class="grid-2"><div class="panel"><div class="panel-head"><h3>Top Products</h3><span>Units sold</span></div><div id="topProducts"></div></div><div class="panel"><div class="panel-head"><h3>Low Stock</h3><span id="lowStockLabel"></span></div><div id="lowStock"></div></div></div>
     </section>
-    <section id="ordersView" class="view hidden"><div class="toolbar"><input id="orderSearch" placeholder="Search order, customer, contact, scent..."><button class="btn" id="refreshOrders">Refresh</button><button class="btn" id="exportOrders">Export CSV</button></div><div class="table-wrap"><table><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Status</th><th>Date</th></tr></thead><tbody id="ordersRows"></tbody></table></div></section>
+    <section id="ordersView" class="view hidden">
+      <div class="toolbar"><input id="orderSearch" placeholder="Search order, customer, contact, scent..."><select id="orderPayFilter" aria-label="Payment"><option value="">All payments</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Refunded">Refunded</option></select><button class="btn" id="refreshOrders">Refresh</button><button class="btn" id="exportOrders">Export CSV</button></div>
+      <div class="tabs" id="orderTabs" role="tablist"></div>
+      <div class="table-wrap"><table class="orders-table"><thead><tr><th>Order</th><th>Customer</th><th>Items</th><th>Total</th><th>Payment</th><th>Status</th><th></th></tr></thead><tbody id="ordersRows"></tbody></table></div>
+    </section>
     <section id="productsView" class="view hidden"><div class="toolbar"><input id="productSearch" placeholder="Search products..."><button class="btn primary" id="newProduct">+ Add Product</button><button class="btn" id="refreshProducts">Refresh</button></div><div class="toolbar filters">
       <select id="filterCat" aria-label="Category"><option value="">All categories</option><option value="men">For Him</option><option value="women">For Her</option><option value="unisex">Unisex</option></select>
       <select id="filterStock" aria-label="Stock"><option value="">All stock</option><option value="in">In stock</option><option value="low">Low stock</option><option value="out">Out of stock</option><option value="unlimited">Unlimited</option></select>
@@ -74,6 +78,10 @@
     <section id="reviewsView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshReviews">Refresh</button><span class="muted">New reviews stay hidden until you approve them.</span></div><div class="table-wrap"><table><thead><tr><th>Photo</th><th>Customer</th><th>Rating</th><th>Review</th><th>Status</th><th></th></tr></thead><tbody id="reviewsRows"></tbody></table></div></section>
     <section id="auditView" class="view hidden"><div class="toolbar"><button class="btn" id="refreshAudit">Refresh</button></div><div class="table-wrap"><table><thead><tr><th>Timestamp</th><th>Actor</th><th>Action</th></tr></thead><tbody id="auditRows"></tbody></table></div></section>
   </main>
+  <div id="orderDrawer" class="drawer hidden" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-drawer></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawerTitle"><div id="drawerBody"></div></aside>
+  </div>
 </div>
 <script type="module" src="assets/js/admin.js"></script>
 </body>
