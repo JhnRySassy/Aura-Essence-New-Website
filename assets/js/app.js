@@ -595,7 +595,7 @@ function addToCart(id, qty = 1) {
   renderCart();
 
   showToast(
-    `Added <b>${escapeHTML(product.name)}</b> to your cart ✓`,
+    `<b>${escapeHTML(product.name)}</b> added to your bag`,
     { link: true },
   );
   bumpCart();
@@ -777,7 +777,7 @@ function renderCart() {
 
   if (!cart.length) {
     wrap.innerHTML =
-      '<div class="cart-empty">Your cart is empty. Add one or more fragrances above.</div>';
+      '<div class="cart-empty">Your bag is empty. Choose a fragrance from the collection, or add one below.</div>';
 
     return;
   }
@@ -1052,10 +1052,10 @@ function buildProductCard(p) {
     stock === null
       ? ""
       : soldOut
-        ? `<span class="stock-note out">SOLD OUT</span>`
+        ? `<span class="stock-note out">Sold out</span>`
         : stock <= 2
-          ? `<span class="stock-note low">Only ${stock} left!</span>`
-          : `<span class="stock-note">In stock</span>`;
+          ? `<span class="stock-note low">Only ${stock} left</span>`
+          : `<span class="stock-note">Available</span>`;
 
   const id = escapeHTML(p.id);
   const name = escapeHTML(p.name);
@@ -1102,7 +1102,7 @@ function buildProductCard(p) {
             class="pdetails"
             data-details-id="${id}"
           >
-            Details
+            Discover
           </button>
           <button
             type="button"
@@ -1110,7 +1110,7 @@ function buildProductCard(p) {
             data-id="${id}"
             ${soldOut ? "disabled" : ""}
           >
-            ${soldOut ? "Sold Out" : "Add"}
+            ${soldOut ? "Sold out" : "Add to bag"}
           </button>
         </div>
       </div>
@@ -1696,7 +1696,7 @@ function handleProductClick(e) {
     return;
   }
 
-  // Customers stay on the product list; the toast offers "View cart".
+  // Customers stay on the product list; the toast offers "View bag".
   if (addToCart(btn.dataset.id, 1) && scentSelect) {
     scentSelect.value =
       btn.dataset.id;
@@ -2519,7 +2519,7 @@ reviewForm?.addEventListener(
       true;
 
     reviewSubmit.textContent =
-      "UPLOADING…";
+      "Sending…";
 
     showReviewStatus(
       "Preparing your photo and review…",
@@ -2619,7 +2619,7 @@ reviewForm?.addEventListener(
         false;
 
       reviewSubmit.textContent =
-        "SUBMIT REVIEW";
+        "Submit review";
     }
   },
 );
@@ -3300,7 +3300,7 @@ document
       if (okA && okB) {
         const names = [a, b].map((id) => getProductById(id)?.name || id);
         showToast(
-          `Added duo <b>${escapeHTML(names.join(" + "))}</b> to your cart ✓`,
+          `<b>${escapeHTML(names.join(" & "))}</b> added to your bag`,
           { link: true },
         );
       }
@@ -3510,7 +3510,7 @@ form?.addEventListener(
 
     if (!cart.length) {
       showSubmitStatus(
-        "Please add at least one fragrance to your cart.",
+        "Your bag is empty — add a fragrance to continue.",
         "error",
       );
 
@@ -3636,10 +3636,10 @@ ${p.name} × ${item.qty} — ₱${(
       true;
 
     submitBtn.textContent =
-      "Saving Order…";
+      "Placing your order…";
 
     showSubmitStatus(
-      "Saving your order securely…",
+      "Placing your order…",
       "success",
     );
 
@@ -3736,7 +3736,7 @@ ${p.name} × ${item.qty} — ₱${(
       }
 
       showSubmitStatus(
-        "Order saved successfully. We received your order and will contact you soon.",
+        "Order saved successfully. We received your order and will be in touch shortly.",
         "success",
       );
 
@@ -3757,7 +3757,7 @@ ${p.name} × ${item.qty} — ₱${(
           response.total != null
             ? ` (total ₱${Number(response.total).toLocaleString()})`
             : ""
-        }. We will contact you regarding confirmation and delivery or meetup details.${
+        }. We'll message you personally to confirm payment and arrange delivery or meetup.${
           response.voucher
             ? ` Voucher ${response.voucher} applied.`
             : ""
@@ -3824,7 +3824,7 @@ ${p.name} × ${item.qty} — ₱${(
         false;
 
       submitBtn.textContent =
-        "Submit Order";
+        "Place order";
     }
 
     summaryLines.scrollIntoView({
@@ -4183,10 +4183,10 @@ var GUIDE_GROUPS = [
 ];
 
 var FEATURED_ROWS = [
-  { setting: "showBestSellers", badge: "BEST SELLER", title: "Best Sellers", tag: "Customer favorites" },
-  { setting: "showNewArrivals", badge: "NEW", title: "New Arrivals", tag: "Just added" },
-  { setting: "showFeatured", badge: "FEATURED", title: "Featured", tag: "Our picks" },
-  { setting: "showSignature", badge: "SIGNATURE", title: "Signature Collection", tag: "House signatures" },
+  { setting: "showBestSellers", badge: "BEST SELLER", title: "Most Loved", tag: "Our customers' favourites" },
+  { setting: "showNewArrivals", badge: "NEW", title: "New Arrivals", tag: "Newly blended" },
+  { setting: "showFeatured", badge: "FEATURED", title: "Featured", tag: "Chosen by the house" },
+  { setting: "showSignature", badge: "SIGNATURE", title: "Signature Collection", tag: "The house signatures" },
 ];
 
 function peso(value) {
@@ -4201,7 +4201,7 @@ function showToast(html, options = {}) {
 
   toast.innerHTML =
     `<span>${html}</span>` +
-    (options.link ? `<a href="#order" data-toast-cart>View cart</a>` : "");
+    (options.link ? `<a href="#order" data-toast-cart>View bag</a>` : "");
   toast.classList.toggle("warn", Boolean(options.warn));
   toast.hidden = false;
   requestAnimationFrame(() => toast.classList.add("show"));
@@ -4236,7 +4236,7 @@ function updateHeaderCart() {
     el.hidden = qty === 0;
   });
 
-  if (button) button.setAttribute("aria-label", `Cart, ${qty} item${qty === 1 ? "" : "s"}`);
+  if (button) button.setAttribute("aria-label", `Bag, ${qty} item${qty === 1 ? "" : "s"}`);
 }
 
 function bumpCart() {
@@ -4266,9 +4266,9 @@ document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(fa
 
 function promoText(promo) {
   if (promo.type === "fixed_total") {
-    return `<b>${escapeHTML(promo.name)}</b> — any ${Number(promo.minQty)} bottles for ${peso(promo.fixedTotal)}`;
+    return `Any ${Number(promo.minQty) === 2 ? "two" : Number(promo.minQty)} for ${peso(promo.fixedTotal)}`;
   }
-  return `<b>${escapeHTML(promo.name)}</b> — ${Number(promo.percentOff)}% off when you buy ${Number(promo.minQty)}+ bottles`;
+  return `${Number(promo.percentOff)}% off ${Number(promo.minQty)} or more`;
 }
 
 function renderPromoBar() {
@@ -4289,7 +4289,7 @@ function renderPromoBar() {
     return;
   }
 
-  text.innerHTML = "✨ " + promos.slice(0, 2).map(promoText).join(" &nbsp;·&nbsp; ");
+  text.innerHTML = promos.slice(0, 2).map(promoText).map((t) => `<span>${t}</span>`).join('<i aria-hidden="true">·</i>');
   bar.hidden = false;
 }
 
@@ -4320,13 +4320,22 @@ function renderCounts() {
   const sub = document.getElementById("heroSub");
   if (sub) {
     sub.textContent =
-      `Iconic scents, refined. ${cap(word(products.length))} signature blends inspired by the world's most recognized fragrances — ${word(men)} for him, ${word(women)} for her.`;
+      `${cap(word(products.length))} signature extraits inspired by the world's most loved fragrances — blended at 25% concentration to stay with you from morning into night.`;
   }
 
   const title = document.getElementById("blendCountTitle");
   const text = document.getElementById("blendCountText");
-  if (title) title.textContent = `${products.length} Signature Blends`;
-  if (text) text.textContent = `${cap(word(men))} for him, ${word(women)} for her — black cap for the men's line, gold cap for the women's line.`;
+  if (title) title.textContent = `${cap(word(products.length))} Signatures`;
+  if (text) text.textContent = `${cap(word(men))} for him, ${word(women)} for her. A black cap marks the men's line; gold, the women's.`;
+
+  const prices = products.map((p) => Number(p.price || PRODUCT_PRICE)).filter((n) => n > 0);
+  const heroPrice = document.getElementById("heroPrice");
+  if (heroPrice && prices.length) {
+    const min = Math.min(...prices);
+    heroPrice.textContent = "₱" + min.toLocaleString();
+    const label = heroPrice.parentElement?.querySelector("span");
+    if (label) label.textContent = Math.max(...prices) > min ? "From" : "Each bottle";
+  }
 
   document.querySelectorAll(".tab[data-cat] .count").forEach((el) => {
     const cat = el.closest(".tab").dataset.cat;
@@ -4413,8 +4422,8 @@ function renderDuo() {
 
   if (lede) {
     lede.textContent = twoFor
-      ? `Choose any two fragrances — ${twoFor.name}: both for ${peso(twoFor.fixedTotal)}.`
-      : `Choose any two fragrances for a two-bottle set at ${peso(PRODUCT_PRICE)} per bottle.`;
+      ? `Choose any two extraits — one for day, one for night, or one to give. Both for ${peso(twoFor.fixedTotal)}.`
+      : `Choose any two extraits — one for day, one for night, or one to give.`;
   }
 
   updateDuoTotal();
@@ -4728,10 +4737,10 @@ function closeFavorites() {
 function favStockInfo(p) {
   if (p.active === false) return { ok: false, text: "Not available right now", cls: "out" };
   const stock = p.stock == null || p.stock === "" ? null : Number(p.stock);
-  if (stock === null) return { ok: true, text: "In stock", cls: "" };
+  if (stock === null) return { ok: true, text: "Available", cls: "" };
   if (stock <= 0) return { ok: false, text: "Sold out", cls: "out" };
   if (stock <= 2) return { ok: true, text: `Only ${stock} left`, cls: "low" };
-  return { ok: true, text: "In stock", cls: "" };
+  return { ok: true, text: "Available", cls: "" };
 }
 
 function updateFavCount() {
@@ -4776,7 +4785,7 @@ function renderFavorites() {
           <span class="fav-stock ${info.cls}">${info.text}</span>
         </div>
         <div class="fav-actions">
-          <button type="button" class="fav-add" data-fav-add="${id}" ${info.ok ? "" : "disabled"}>${info.ok ? "Add" : "—"}</button>
+          <button type="button" class="fav-add" data-fav-add="${id}" ${info.ok ? "" : "disabled"}>${info.ok ? "Add to bag" : "—"}</button>
           ${shared ? "" : `<button type="button" class="fav-remove" data-fav-remove="${id}" aria-label="Remove ${escapeHTML(p.name)} from favorites">♥</button>`}
         </div>
       </div>`;
@@ -4786,7 +4795,7 @@ function renderFavorites() {
   const addAll = document.getElementById("favAddAll");
   if (addAll) {
     addAll.disabled = available === 0;
-    addAll.textContent = available ? `Add ${available === 1 ? "it" : `all ${available}`} to cart` : "Nothing available";
+    addAll.textContent = available ? `Add ${available === 1 ? "to bag" : `all ${available} to bag`}` : "Unavailable";
   }
 }
 
@@ -4807,8 +4816,8 @@ function onFavoritesChanged(id) {
 
   if (product && typeof showToast === "function" && !document.body.classList.contains("fav-open")) {
     showToast(saved
-      ? `Saved <b>${escapeHTML(name)}</b> to favorites ♥ <a href="#" data-open-favs>View</a>`
-      : `Removed <b>${escapeHTML(name)}</b> from favorites`);
+      ? `<b>${escapeHTML(name)}</b> saved to favorites <a href="#" data-open-favs>View</a>`
+      : `<b>${escapeHTML(name)}</b> removed from favorites`);
   }
 }
 
@@ -4838,7 +4847,7 @@ function addProductsToCart(ids) {
   if (added) bumpCart();
   showToast(
     added
-      ? `Added ${added} perfume${added === 1 ? "" : "s"} to your cart ✓${skipped ? ` (${skipped} not available)` : ""}`
+      ? `${added} fragrance${added === 1 ? "" : "s"} added to your bag${skipped ? ` · ${skipped} unavailable` : ""}`
       : "Those perfumes are not available right now.",
     { link: Boolean(added), warn: !added },
   );
@@ -5057,7 +5066,7 @@ function renderCheckoutExtras() {
   const qty = typeof cartQuantity === "function" ? cartQuantity() : 0;
   box.innerHTML = qty
     ? cartLinesHTML(true)
-    : `<p class="summary-empty">No scents yet. Tap <b>Add</b> on any perfume, or pick one on the left.</p>`;
+    : `<p class="summary-empty">Your bag is empty. Choose a fragrance from the collection to begin.</p>`;
 
   // "Add 1 more for the 2-Bottle Promo"
   const nudge = document.getElementById("promoNudge");
@@ -5070,12 +5079,12 @@ function renderCheckoutExtras() {
     if (qty > 0 && next && !appliesNow) {
       const more = Number(next.minQty) - qty;
       const deal = next.type === "fixed_total"
-        ? `any ${Number(next.minQty)} for ₱${Number(next.fixedTotal).toLocaleString()}`
+        ? `any ${Number(next.minQty) === 2 ? "two" : Number(next.minQty)} for ₱${Number(next.fixedTotal).toLocaleString()}`
         : `${Number(next.percentOff)}% off ${Number(next.minQty)}+ bottles`;
-      nudge.innerHTML = `✨ Add <b>${more} more</b> scent${more === 1 ? "" : "s"} for the ${escapeHTML(next.name)} — ${deal}.`;
+      nudge.innerHTML = `Add ${more === 1 ? "one more" : `<b>${more} more</b>`} fragrance${more === 1 ? "" : "s"} — ${deal}.`;
       nudge.hidden = false;
     } else if (appliesNow) {
-      nudge.innerHTML = `✓ ${escapeHTML(appliesNow.name)} applied.`;
+      nudge.innerHTML = `${escapeHTML(appliesNow.name)} applied to your bag.`;
       nudge.hidden = false;
     } else {
       nudge.hidden = true;
@@ -5114,8 +5123,8 @@ function renderReview() {
       <div class="review-head"><h5>Payment</h5><button type="button" class="co-edit" data-go="2">Change</button></div>
       <p>${escapeHTML(pay)}</p>
       <p class="muted">${pay === "GCash"
-        ? "After you submit, we'll show the GCash number and the exact amount to send."
-        : "Pay when you receive your order. We'll message you to confirm the schedule."}</p>
+        ? "Once you place your order, we'll show the GCash number and the exact amount to send."
+        : "Pay when your order arrives. We'll message you to confirm the schedule."}</p>
     </div>`;
 }
 
@@ -5363,7 +5372,7 @@ function renderFragranceDetails(p) {
     const b = document.getElementById(id);
     if (!b) return;
     b.disabled = !info.ok;
-    b.textContent = info.ok ? "Add to cart" : info.text;
+    b.textContent = info.ok ? "Add to bag" : info.text;
   });
   text("fdBarPrice", price);
   text("fdBarStock", info.text);
@@ -5374,7 +5383,7 @@ function renderFragranceDetails(p) {
   const promoEl = document.getElementById("fdPromo");
   if (promoEl) {
     promoEl.hidden = !promo || !info.ok;
-    if (promo) promoEl.innerHTML = `✨ Pair it with another scent — <b>any 2 for ₱${Number(promo.fixedTotal).toLocaleString()}</b>`;
+    if (promo) promoEl.innerHTML = `Pair it with a second fragrance — any two for ₱${Number(promo.fixedTotal).toLocaleString()}`;
   }
 
   /* ----- at a glance ----- */
@@ -5439,8 +5448,8 @@ function renderFragranceDetails(p) {
             <p>${escapeHTML(String(r.review || "").slice(0, 220))}${String(r.review || "").length > 220 ? "…" : ""}</p>
           </div>
         </div>`).join("") +
-      `<a class="fd-link" href="#reviews" data-fd-goto="reviews">See all reviews →</a>`
-    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to review →</a></p>`);
+      `<a class="fd-link" href="#reviews" data-fd-goto="reviews">Read all reviews</a>`
+    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to share your thoughts</a></p>`);
 
   /* ----- you may also like ----- */
   set("fdSimilar", fdSimilar(p).map((x) => {
@@ -5451,7 +5460,7 @@ function renderFragranceDetails(p) {
           ${fdPhotoHTML(x, "fd-sim-img")}
           <span><small>${fdCatLabel(x)}</small><b>${escapeHTML(x.name)}</b><em>₱${Number(x.price || PRODUCT_PRICE).toLocaleString()}</em></span>
         </button>
-        <button type="button" class="fd-sim-add" data-fd-add="${escapeHTML(x.id)}" ${xi.ok ? "" : "disabled"}>${xi.ok ? "+ Add" : xi.text}</button>
+        <button type="button" class="fd-sim-add" data-fd-add="${escapeHTML(x.id)}" ${xi.ok ? "" : "disabled"}>${xi.ok ? "Add to bag" : xi.text}</button>
       </div>`;
   }).join(""));
 
@@ -5508,7 +5517,7 @@ document.getElementById("fdNext")?.addEventListener("click", () => fdStep(1));
       const btn = e.currentTarget;
       btn.textContent = "Added ✓";
       btn.classList.add("done");
-      setTimeout(() => { btn.textContent = "Add to cart"; btn.classList.remove("done"); }, 1400);
+      setTimeout(() => { btn.textContent = "Add to bag"; btn.classList.remove("done"); }, 1400);
     }
   });
 });
@@ -5546,7 +5555,7 @@ fragranceModal?.addEventListener("click", (e) => {
   if (add) {
     if (addToCart(add.dataset.fdAdd, 1) !== false) {
       add.textContent = "Added ✓";
-      setTimeout(() => { add.textContent = "+ Add"; }, 1400);
+      setTimeout(() => { add.textContent = "Add to bag"; }, 1400);
     }
     return;
   }
@@ -5600,4 +5609,60 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
     setTimeout(attempt, 150);
   };
   attempt();
+})();
+
+// ============================================================
+// GENTLE REVEAL ON SCROLL
+// Sections and cards fade up as they come into view.
+// Skipped for "reduce motion" users and old browsers — then
+// everything is simply visible.
+// ============================================================
+
+(function setupReveal() {
+  const ok = "IntersectionObserver" in window &&
+    !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!ok) return;
+  document.documentElement.classList.add("ae-motion");
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (!entry.isIntersecting) return;
+      entry.target.classList.add("in");
+      io.unobserve(entry.target);
+    });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+
+  const SELECTOR = [
+    ".sec-eyebrow", "h2.sec-title", "p.sec-lede",
+    ".grid3 > .card", ".feature-grid > .feature-card", ".feature-section > .wrap > .feature-card",
+    ".guide-item", ".review-form-box", ".reviews-carousel-wrap", ".tracking-box",
+    ".co-steps", ".checkout-grid > *", ".pcard:not(.skeleton)", ".featured-row h3"
+  ].join(",");
+
+  const watch = (root) => {
+    const nodes = root.matches?.(SELECTOR) ? [root] : [];
+    nodes.push(...(root.querySelectorAll?.(SELECTOR) || []));
+    nodes.forEach((el) => {
+      if (el.classList.contains("reveal") || el.closest(".fragrance-modal, .fav-drawer, .confirmation-modal")) return;
+      // stagger siblings a little (cards in a row, guide rows…)
+      const parent = el.parentElement;
+      const index = parent ? [...parent.children].indexOf(el) : 0;
+      el.style.transitionDelay = `${Math.min(index % 4, 3) * 80}ms`;
+      el.classList.add("reveal");
+      // already on screen (e.g. after a re-render) → show right away
+      const r = el.getBoundingClientRect();
+      if (r.top < window.innerHeight && r.bottom > 0 && document.readyState !== "loading" && root !== document.body) {
+        requestAnimationFrame(() => el.classList.add("in"));
+      } else {
+        io.observe(el);
+      }
+    });
+  };
+
+  watch(document.body);
+
+  // product cards are rebuilt when filters/tabs change
+  new MutationObserver((mutations) => {
+    mutations.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) watch(n); }));
+  }).observe(document.body, { childList: true, subtree: true });
 })();

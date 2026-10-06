@@ -28,12 +28,13 @@
     <link rel="stylesheet" href="assets/css/styles.css" />
     <link rel="stylesheet" href="assets/css/profile-sync.css"/>
     <link rel="stylesheet" href="assets/css/storefront.css"/>
+    <link rel="stylesheet" href="assets/css/premium.css"/>
   </head>
   <body>
     <header class="nav">
       <div class="promo-bar" id="promoBar" hidden>
         <span id="promoText"></span>
-        <button type="button" id="promoClose" aria-label="Hide promo">&times;</button>
+        <button type="button" id="promoClose" aria-label="Hide this message">&times;</button>
       </div>
       <div class="navrow">
         <a class="brand" href="#top">A &amp; E</a>
@@ -48,11 +49,11 @@
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/></svg>
             <span class="cart-badge" id="headerFavCount" hidden>0</span>
           </button>
-          <a class="cart-btn" href="#order" id="headerCart" aria-label="Cart, 0 items">
+          <a class="cart-btn" href="#order" id="headerCart" aria-label="Bag, 0 items">
             <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>
             <span class="cart-badge" id="headerCartCount" hidden>0</span>
           </a>
-          <a class="cta" href="#order">Order Now</a>
+          <a class="cta" href="#collection">Shop</a>
           <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
             <span></span><span></span><span></span>
           </button>
@@ -63,20 +64,20 @@
     <section class="hero" id="top">
       <div class="wrap">
         <div>
-          <p class="eyebrow">EXTRAIT DE PARFUM &middot; UNISEX COLLECTION</p>
+          <p class="eyebrow">Extrait de Parfum &middot; 25% Concentration</p>
           <h1 class="title">AURA<em>&amp; Essence</em></h1>
           <p class="sub" id="heroSub">
-            Iconic scents, refined. Signature blends inspired by the world's
-            most recognized fragrances — for him and for her.
+            Signature extraits inspired by the world's most loved fragrances —
+            blended to stay with you from morning into night.
           </p>
           <div class="badges">
-            <span class="badge">25% Concentration</span>
-            <span class="badge">Long-lasting Projection</span>
-            <span class="badge">Gift-ready Packaging</span>
+            <span class="badge">Long-lasting</span>
+            <span class="badge">Made to be worn daily</span>
+            <span class="badge">Gift-ready</span>
           </div>
           <div class="hero-actions">
-            <div class="price-tag"><span>PRICE</span>&#8369;430</div>
-            <a class="btn-primary" href="#collection">See the Collection</a>
+            <div class="price-tag"><span>Each bottle</span><b id="heroPrice">&#8369;430</b></div>
+            <a class="btn-primary" href="#collection">Discover the Collection</a>
           </div>
         </div>
         <div class="hero-shot">
@@ -90,31 +91,32 @@
 
     <section class="details">
       <div class="wrap">
-        <h2 class="sec-title">Why people keep coming back to it</h2>
+        <p class="sec-eyebrow">The House</p>
+        <h2 class="sec-title">Crafted to linger</h2>
         <p class="sec-lede">
-          Same energy as the designer scents they're inspired by, at a price
-          that makes it easy to keep a bottle at home and one for the bag.
+          The character of the scents you love, made richer and meant to be
+          worn every day — not saved for special occasions.
         </p>
         <div class="grid3">
           <div class="card">
             <h3>25% Extrait</h3>
             <p>
-              A true parfum-strength concentration — more oil, less alcohol, for
-              a scent that lasts through a full day without reapplying.
+              A true extrait de parfum — more perfume oil, less alcohol — so the
+              scent stays close through the day without reapplying.
             </p>
           </div>
           <div class="card">
             <h3 id="blendCountTitle">Signature Blends</h3>
             <p id="blendCountText">
-              For him and for her — black cap for the men's line, gold
-              cap for the women's line.
+              For him and for her. A black cap marks the men's line; gold,
+              the women's.
             </p>
           </div>
           <div class="card">
-            <h3>Gift-Ready</h3>
+            <h3>Ready to Give</h3>
             <p>
-              Every order comes in the signature A&amp;E bag — ready to hand
-              over as-is, no extra wrapping needed.
+              Every bottle arrives in the signature A&amp;E bag — ready to
+              present as it is, with nothing more to wrap.
             </p>
           </div>
         </div>
@@ -123,12 +125,13 @@
 
     <section class="collection" id="collection">
       <div class="wrap">
-        <h2 class="sec-title">The Collection</h2>
+        <p class="sec-eyebrow">The Collection</p>
+        <h2 class="sec-title">Find your signature</h2>
         <p class="sec-lede">
-          Browse by category, then tap <b>Add</b> to put a scent in your cart.
+          Explore each line, or search by name or note.
         </p>
         <div class="collection-tools">
-          <input id="productSearch" class="collection-search" type="search" placeholder="Search a fragrance…" aria-label="Search fragrances">
+          <input id="productSearch" class="collection-search" type="search" placeholder="Search by name or note…" aria-label="Search fragrances">
           <select id="profileFilter" class="collection-filter" aria-label="Filter by scent character">
             <option value="all">All scent profiles</option>
 
@@ -187,11 +190,12 @@
 
     <section class="feature-section" id="scentFinder">
       <div class="wrap">
-        <h2 class="sec-title">Find Your Scent</h2>
-        <p class="sec-lede">Answer three quick questions and get a fragrance suggestion based on your preferred vibe, occasion, and scent character.</p>
+        <p class="sec-eyebrow">Scent Finder</p>
+        <h2 class="sec-title">Find your scent</h2>
+        <p class="sec-lede">Three questions. One recommendation — chosen for when, and how, you'll wear it.</p>
         <div class="feature-grid">
           <div class="feature-card">
-            <h3>1. Occasion</h3>
+            <h3><span>01</span>When will you wear it?</h3>
             <div class="quiz-options" data-question="occasion">
               <button class="quiz-option" data-value="day">Daytime</button>
               <button class="quiz-option" data-value="night">Date / Night</button>
@@ -200,7 +204,7 @@
             </div>
           </div>
           <div class="feature-card">
-  <h3>2. Character</h3>
+  <h3><span>02</span>What draws you in?</h3>
 
   <p class="quiz-helper">
     Select all that apply
@@ -366,17 +370,17 @@
   </div>
 </div>
           <div class="feature-card">
-            <h3>3. Strength</h3>
+            <h3><span>03</span>How present should it be?</h3>
             <div class="quiz-options" data-question="strength">
               <button class="quiz-option" data-value="subtle">Subtle</button>
               <button class="quiz-option" data-value="moderate">Moderate</button>
               <button class="quiz-option" data-value="bold">Bold</button>
             </div>
-            <button type="button" class="btn-primary" id="findScentBtn" style="margin-top:16px">Find My Scent</button>
+            <button type="button" class="btn-primary" id="findScentBtn" style="margin-top:16px">Reveal my scent</button>
             <div class="quiz-result" id="quizResult">
               <h4 id="quizResultName"></h4>
               <p id="quizResultText"></p>
-              <button type="button" class="ghost-btn" id="quizOrderBtn">Order This Scent</button>
+              <button type="button" class="ghost-btn" id="quizOrderBtn">Add to bag</button>
             </div>
           </div>
         </div>
@@ -385,23 +389,25 @@
 
     <section class="feature-section">
       <div class="wrap">
-        <h2 class="sec-title">Build Your Duo</h2>
-        <p class="sec-lede" id="duoLede">Choose any two fragrances for a two-bottle set.</p>
+        <p class="sec-eyebrow">The Pair</p>
+        <h2 class="sec-title">Build your duo</h2>
+        <p class="sec-lede" id="duoLede">Choose any two extraits — one for day, one for night, or one to give.</p>
         <div class="feature-card" style="margin-top:28px">
           <div class="duo-selects">
             <select id="duoOne" class="collection-filter"></select>
             <select id="duoTwo" class="collection-filter"></select>
           </div>
           <div class="duo-total" id="duoTotal"></div>
-          <button type="button" class="btn-primary" id="duoOrderBtn" style="margin-top:14px">Add Duo to Cart</button>
+          <button type="button" class="btn-primary" id="duoOrderBtn" style="margin-top:14px">Add the pair to bag</button>
         </div>
       </div>
     </section>
 
     <section class="feature-section">
       <div class="wrap">
-        <h2 class="sec-title">How to Choose</h2>
-        <p class="sec-lede">A quick guide if you already know the kind of scent you want.</p>
+        <p class="sec-eyebrow">Guide</p>
+        <h2 class="sec-title">Choose by mood</h2>
+        <p class="sec-lede">Start with the feeling you're after.</p>
         <div class="guide-list" id="guideList">
           <div class="guide-item"><span>Fresh &amp; Clean</span><span>Aqua Di Gio • Sauvage</span></div>
           <div class="guide-item"><span>Sweet &amp; Warm</span><span>Stronger With You • Black Opium</span></div>
@@ -414,13 +420,14 @@
 
     <section class="feature-section" id="tracking">
       <div class="wrap">
-        <h2 class="sec-title">Track Your Order</h2>
-        <p class="sec-lede">Enter the Order ID from your confirmation and the contact number used when ordering.</p>
+        <p class="sec-eyebrow">Orders</p>
+        <h2 class="sec-title">Track your order</h2>
+        <p class="sec-lede">Enter your Order ID and the mobile number you ordered with.</p>
         <div class="tracking-box">
           <div class="tracking-form">
             <input id="trackingOrderId" class="collection-search" placeholder="AE-20260928-123456-123" autocomplete="off">
-            <input id="trackingContact" class="collection-search" placeholder="Contact number" autocomplete="tel">
-            <button type="button" class="btn-primary" id="trackOrderBtn">Track Order</button>
+            <input id="trackingContact" class="collection-search" placeholder="Mobile number" autocomplete="tel">
+            <button type="button" class="btn-primary" id="trackOrderBtn">Track</button>
           </div>
           <div class="tracking-result" id="trackingResult">
             <div class="tracking-id" id="trackingResultId"></div>
@@ -433,18 +440,19 @@
 
     <section class="reviews" id="reviews">
       <div class="wrap">
-        <h2 class="sec-title">Real words from our customers</h2>
+        <p class="sec-eyebrow">Reviews</p>
+        <h2 class="sec-title">In their words</h2>
         <p class="sec-lede">
-          Tried a scent? Share your experience and a photo. Approved customer
-          reviews will appear here in the carousel.
+          Honest notes from the people who wear them. Tried a scent? We'd love
+          to hear how it wears on you.
         </p>
 
         <div class="reviews-grid">
           <div class="review-form-box">
-            <h3>Leave a review</h3>
+            <h3>Share your experience</h3>
             <p class="review-note">
-              Your review will be checked before it appears publicly. Please
-              upload a clear photo of your bottle, packaging, or purchase.
+              Reviews appear once we've read them. Add a photo of your bottle
+              or packaging.
             </p>
             <form class="review-form" id="reviewForm">
               <div>
@@ -518,7 +526,7 @@
                 >
               </div>
               <button class="review-submit" id="reviewSubmit" type="submit">
-                SUBMIT REVIEW
+                Submit review
               </button>
               <div
                 id="reviewStatus"
@@ -531,7 +539,7 @@
 
           <div class="reviews-carousel-wrap">
             <div id="reviewsLoading" class="reviews-loading">
-              Loading customer reviews…
+              Gathering reviews…
             </div>
             <div
               class="reviews-carousel"
@@ -539,8 +547,7 @@
               style="display: none"
             ></div>
             <div id="reviewsEmpty" class="reviews-empty" style="display: none">
-              No approved reviews yet. Be the first customer to share your
-              experience.
+              No reviews yet. Be the first to share how yours wears.
             </div>
           </div>
         </div>
@@ -549,15 +556,15 @@
 
     <section class="order" id="order">
       <div class="wrap">
-        <h2 class="sec-title">Reserve your bottle</h2>
+        <p class="sec-eyebrow">Checkout</p>
+        <h2 class="sec-title">Complete your order</h2>
         <p class="sec-lede">
-          Add your scents, fill in your details and submit. Your order is saved
-          right away and you'll get an Order ID to track it — we'll message you
-          to confirm payment and delivery or meetup.
+          Review your bag, add your details, and place your order. We'll message
+          you personally to confirm payment and delivery.
         </p>
 
         <ol class="co-steps" id="coSteps" aria-label="Checkout steps">
-          <li data-step="1" class="active"><button type="button" data-go="1"><span>1</span>Cart</button></li>
+          <li data-step="1" class="active"><button type="button" data-go="1"><span>1</span>Bag</button></li>
           <li data-step="2"><button type="button" data-go="2"><span>2</span>Details</button></li>
           <li data-step="3"><button type="button" data-go="3"><span>3</span>Review</button></li>
         </ol>
@@ -568,19 +575,19 @@
             <!-- STEP 1: CART -->
             <div class="co-panel" data-panel="1">
               <div class="cart-box">
-                <div class="cart-head"><h4>Your Cart</h4><span class="cart-count" id="cartCount">0 items</span></div>
-                <div id="cartItems"><div class="cart-empty">Your cart is empty. Add one or more fragrances above.</div></div>
+                <div class="cart-head"><h4>Your Bag</h4><span class="cart-count" id="cartCount">0 items</span></div>
+                <div id="cartItems"><div class="cart-empty">Your bag is empty. Choose a fragrance from the collection, or add one below.</div></div>
               </div>
               <div class="quick-add">
-                <label for="scent">Add a scent</label>
+                <label for="scent">Add a fragrance</label>
                 <div class="quick-add-row">
                   <select id="scent" name="scent"></select>
-                  <button type="button" class="add-cart-btn" id="addSelectedToCart">+ Add</button>
+                  <button type="button" class="add-cart-btn" id="addSelectedToCart">Add</button>
                 </div>
               </div>
-              <p class="co-error" id="coCartError" hidden>Add at least one scent to continue.</p>
+              <p class="co-error" id="coCartError" hidden>Add a fragrance to your bag to continue.</p>
               <div class="co-actions">
-                <a class="co-link" href="#collection">← Keep shopping</a>
+                <a class="co-link" href="#collection">← Continue browsing</a>
                 <button type="button" class="submit co-next" data-go="2">Continue to details</button>
               </div>
             </div>
@@ -607,11 +614,11 @@
                 <div class="pay-options" role="radiogroup" aria-label="Payment">
                   <label class="pay-option">
                     <input type="radio" name="payment" value="Cash on Delivery / Meetup" checked>
-                    <span><b>Cash on Delivery / Meetup</b><small>Pay when you receive your order</small></span>
+                    <span><b>Cash on Delivery / Meetup</b><small>Pay when your order arrives</small></span>
                   </label>
                   <label class="pay-option">
                     <input type="radio" name="payment" value="GCash">
-                    <span><b>GCash</b><small>We'll show the GCash number after you submit</small></span>
+                    <span><b>GCash</b><small>The GCash number appears once you place your order</small></span>
                   </label>
                 </div>
               </div>
@@ -620,7 +627,7 @@
                 <textarea id="notes" name="notes" rows="3" placeholder="Preferred schedule, landmark, etc."></textarea>
               </div>
               <div class="co-actions">
-                <button type="button" class="co-link" data-go="1">← Back to cart</button>
+                <button type="button" class="co-link" data-go="1">← Back to bag</button>
                 <button type="button" class="submit co-next" data-go="3">Review order</button>
               </div>
             </div>
@@ -630,7 +637,7 @@
               <div class="review-box" id="reviewBox"></div>
               <div class="co-actions">
                 <button type="button" class="co-link" data-go="2">← Edit details</button>
-                <button type="submit" class="submit" id="submitBtn">Submit Order</button>
+                <button type="submit" class="submit" id="submitBtn">Place order</button>
               </div>
               <div id="submitStatus" class="submit-status" role="status" aria-live="polite"></div>
             </div>
@@ -638,7 +645,7 @@
 
           <aside class="summary-box live-summary" id="liveSummary" aria-label="Order summary">
             <h4>Order Summary</h4>
-            <div class="sum-items" id="sumItems"><p class="summary-empty">No scents yet. Tap <b>Add</b> on any perfume.</p></div>
+            <div class="sum-items" id="sumItems"><p class="summary-empty">Your bag is empty.</p></div>
             <p class="promo-nudge" id="promoNudge" hidden></p>
             <div class="voucher-box" id="voucherBox">
               <label for="voucherInput">Voucher code</label>
@@ -654,7 +661,7 @@
             </div>
             <div class="cart-total"><span>Total</span><strong id="cartTotal">₱0</strong></div>
             <p class="note-small">
-              Keep your Order ID — use it in <a href="#tracking">Track Your Order</a> anytime.
+              You'll receive an Order ID to <a href="#tracking">track your order</a> anytime.
             </p>
           </aside>
         </div>
@@ -664,7 +671,7 @@
     <div class="confirmation-modal" id="confirmationModal" aria-hidden="true">
       <div class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle">
         <div class="confirmation-check">✓</div>
-        <h3 id="confirmationTitle">Order Received</h3>
+        <h3 id="confirmationTitle">Thank you</h3>
         <p id="confirmationMessage">Thank you. Your order has been received and saved.</p>
         <div class="confirmation-order-id" id="confirmationOrderId"></div>
         <button type="button" class="copy-chip" data-copy-target="confirmationOrderId">Copy Order ID</button>
@@ -677,7 +684,7 @@
         </details>
         <div class="confirmation-actions">
           <button type="button" class="btn-primary" id="confirmationTrackBtn">Track Order</button>
-          <button type="button" class="ghost-btn" id="confirmationCloseBtn">Continue Shopping</button>
+          <button type="button" class="ghost-btn" id="confirmationCloseBtn">Continue browsing</button>
         </div>
       </div>
     </div>
@@ -706,7 +713,7 @@
               <div class="fd-price-row"><span class="fd-price" id="fdPrice"></span><span class="fd-stock" id="fdStock"></span></div>
               <p class="fd-short" id="fdShort"></p>
               <div class="fd-actions">
-                <button type="button" class="fd-add" id="fdAdd">Add to cart</button>
+                <button type="button" class="fd-add" id="fdAdd">Add to bag</button>
                 <button type="button" class="fragrance-fav" id="fragranceFav" aria-pressed="false">♡ Save</button>
               </div>
               <p class="fd-promo" id="fdPromo" hidden></p>
@@ -756,7 +763,7 @@
 
         <div class="fd-buybar" id="fdBuybar">
           <span><b id="fdBarPrice"></b><small id="fdBarStock"></small></span>
-          <button type="button" class="fd-add" id="fdBarAdd">Add to cart</button>
+          <button type="button" class="fd-add" id="fdBarAdd">Add to bag</button>
         </div>
       </div>
     </div>
@@ -764,7 +771,14 @@
 
     <footer>
       <div class="mark">A &amp; E</div>
-      <p>Aura &amp; Essence &middot; Extrait de Parfum</p>
+      <p class="foot-tag">Aura &amp; Essence &middot; Extrait de Parfum</p>
+      <nav class="foot-links" aria-label="Footer">
+        <a href="#collection">Collection</a>
+        <a href="#scentFinder">Find Your Scent</a>
+        <a href="#reviews">Reviews</a>
+        <a href="#tracking">Track Order</a>
+      </nav>
+      <p class="foot-note">Inspired by iconic fragrances. Not affiliated with the original brands.</p>
     </footer>
 
     <div class="fav-drawer" id="favDrawer" aria-hidden="true">
@@ -785,12 +799,12 @@
         <div class="fav-empty" id="favEmpty">
           <div class="fav-empty-icon">♡</div>
           <p>No favorites yet.</p>
-          <small>Tap the ♡ on any perfume to save it here — handy for comparing, or for sending your wishlist to someone.</small>
+          <small>Tap ♡ on any fragrance to keep it here — for comparing, or for sharing your wishlist.</small>
           <a href="#collection" data-fav-close>Browse the collection</a>
         </div>
         <div class="fav-foot" id="favFoot" hidden>
           <button type="button" class="fav-share" id="favShare">Share list</button>
-          <button type="button" class="fav-addall" id="favAddAll">Add all to cart</button>
+          <button type="button" class="fav-addall" id="favAddAll">Add all to bag</button>
         </div>
       </aside>
     </div>
@@ -799,14 +813,14 @@
 
     <div class="co-bar" id="coBar" hidden>
       <div><b id="coBarTotal">₱0</b><small id="coBarCount">0 items</small></div>
-      <a href="#order" class="co-bar-btn" id="coBarBtn">Checkout →</a>
+      <a href="#order" class="co-bar-btn" id="coBarBtn">Checkout</a>
     </div>
 
     <nav class="bottom-bar" aria-label="Quick links">
-      <a href="#collection"><span aria-hidden="true">◇</span>Shop</a>
-      <a href="#scentFinder"><span aria-hidden="true">✦</span>Find Scent</a>
-      <a href="#tracking"><span aria-hidden="true">⌖</span>Track</a>
-      <a href="#order" class="bottom-cart"><span aria-hidden="true">👜</span>Cart<b id="bottomCartCount" hidden>0</b></a>
+      <a href="#collection"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 3 4 12l8 9 8-9-8-9Z"/></svg>Shop</a>
+      <a href="#scentFinder"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3Z"/></svg>Find Scent</a>
+      <a href="#tracking"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/></svg>Track</a>
+      <a href="#order" class="bottom-cart"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Bag<b id="bottomCartCount" hidden>0</b></a>
     </nav>
 
     <script type="module" src="assets/js/app.js"></script>
