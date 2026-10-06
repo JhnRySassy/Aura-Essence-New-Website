@@ -6113,7 +6113,7 @@ Object.assign(AdminApp.prototype, {
         ["Sales (after all discounts)", round(r.sales)],
         ["Collected (paid orders)", round(r.collected)],
         ["Still to collect", round(r.unpaid)],
-        ["Cost of bottles soldss", round(r.cost)],
+        ["Cost of bottles sold", round(r.cost)],
         ["Gross profit", round(r.profit)],
         ["Margin %", Number.isFinite(r.margin) ? round(r.margin) : ""],
         ["Spent on restocks", round(r.restockSpend)],
