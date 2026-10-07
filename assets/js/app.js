@@ -1,14 +1,6 @@
-import {
-  Product,
-  PRODUCTS,
-  PRODUCT_PRICE,
-  PRODUCT_META,
-} from "./products.js";
+import { Product, PRODUCTS, PRODUCT_PRICE, PRODUCT_META } from "./products.js";
 
-import {
-  SupabaseApi,
-  isSupabaseConfigured,
-} from "./supabase-api.js";
+import { SupabaseApi, isSupabaseConfigured } from "./supabase-api.js";
 
 // ============================================================
 // AURA & ESSENCE FRONTEND
@@ -106,9 +98,7 @@ class CartManager {
     this.storageKey = storageKey;
 
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(storageKey) || "[]",
-      );
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
       this.items = Array.isArray(saved) ? saved : [];
     } catch {
@@ -117,16 +107,11 @@ class CartManager {
   }
 
   save() {
-    localStorage.setItem(
-      this.storageKey,
-      JSON.stringify(this.items),
-    );
+    localStorage.setItem(this.storageKey, JSON.stringify(this.items));
   }
 
   find(id) {
-    return this.items.find(
-      (item) => String(item.id) === String(id),
-    );
+    return this.items.find((item) => String(item.id) === String(id));
   }
 
   clear() {
@@ -136,23 +121,15 @@ class CartManager {
   }
 
   add(product, qty = 1) {
-    if (
-      !product ||
-      product.active === false ||
-      product.stock === 0
-    ) {
+    if (!product || product.active === false || product.stock === 0) {
       return false;
     }
 
     const existing = this.find(product.id);
 
-    const nextQty =
-      (existing?.qty || 0) + qty;
+    const nextQty = (existing?.qty || 0) + qty;
 
-    if (
-      product.stock != null &&
-      nextQty > Number(product.stock)
-    ) {
+    if (product.stock != null && nextQty > Number(product.stock)) {
       return false;
     }
 
@@ -177,16 +154,10 @@ class CartManager {
       return;
     }
 
-    item.qty = Math.max(
-      0,
-      Number(item.qty || 0) + delta,
-    );
+    item.qty = Math.max(0, Number(item.qty || 0) + delta);
 
     if (product.stock != null) {
-      item.qty = Math.min(
-        item.qty,
-        Number(product.stock),
-      );
+      item.qty = Math.min(item.qty, Number(product.stock));
     }
 
     if (item.qty === 0) {
@@ -199,10 +170,7 @@ class CartManager {
   }
 
   remove(id) {
-    this.items = this.items.filter(
-      (item) =>
-        String(item.id) !== String(id),
-    );
+    this.items = this.items.filter((item) => String(item.id) !== String(id));
 
     this.save();
   }
@@ -233,13 +201,9 @@ class WishlistManager {
     this.storageKey = storageKey;
 
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(storageKey) || "[]",
-      );
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "[]");
 
-      this.items = Array.isArray(saved)
-        ? saved
-        : [];
+      this.items = Array.isArray(saved) ? saved : [];
     } catch {
       this.items = [];
     }
@@ -251,15 +215,10 @@ class WishlistManager {
 
   toggle(id) {
     this.items = this.has(id)
-      ? this.items.filter(
-          (item) => item !== id,
-        )
+      ? this.items.filter((item) => item !== id)
       : [...this.items, id];
 
-    localStorage.setItem(
-      this.storageKey,
-      JSON.stringify(this.items),
-    );
+    localStorage.setItem(this.storageKey, JSON.stringify(this.items));
 
     return this.items;
   }
@@ -275,24 +234,17 @@ class WishlistManager {
 // GLOBAL SERVICES
 // ============================================================
 
-const catalog = new ProductCatalog(
-  PRODUCTS,
-  PRODUCT_META,
-);
+const catalog = new ProductCatalog(PRODUCTS, PRODUCT_META);
 
-const cartManager =
-  new CartManager();
+const cartManager = new CartManager();
 
-const wishlistManager =
-  new WishlistManager();
+const wishlistManager = new WishlistManager();
 
 let apiClient;
 
-let favorites =
-  wishlistManager.items;
+let favorites = wishlistManager.items;
 
-let cart =
-  cartManager.items;
+let cart = cartManager.items;
 
 // ============================================================
 // PRODUCT SEARCH CACHE
@@ -302,46 +254,30 @@ let cart =
 // the user types in the search box.
 // ============================================================
 
-const productSearchCache =
-  new Map();
+const productSearchCache = new Map();
 
 function getProductSearchData(product) {
   const id = String(product.id);
 
-  const cached =
-    productSearchCache.get(id);
+  const cached = productSearchCache.get(id);
 
   if (cached) {
     return cached;
   }
 
-  const meta =
-    PRODUCT_META[product.id] || {};
+  const meta = PRODUCT_META[product.id] || {};
 
   let profiles = [];
 
   if (Array.isArray(meta.profiles)) {
-    profiles =
-      meta.profiles
-        .map((profile) =>
-          String(profile)
-            .trim()
-            .toLowerCase(),
-        )
-        .filter(Boolean);
-  } else if (
-    typeof meta.profiles ===
-    "string"
-  ) {
-    profiles =
-      meta.profiles
-        .split(",")
-        .map((profile) =>
-          String(profile)
-            .trim()
-            .toLowerCase(),
-        )
-        .filter(Boolean);
+    profiles = meta.profiles
+      .map((profile) => String(profile).trim().toLowerCase())
+      .filter(Boolean);
+  } else if (typeof meta.profiles === "string") {
+    profiles = meta.profiles
+      .split(",")
+      .map((profile) => String(profile).trim().toLowerCase())
+      .filter(Boolean);
   }
 
   const searchable = [
@@ -360,10 +296,7 @@ function getProductSearchData(product) {
     searchable,
   };
 
-  productSearchCache.set(
-    id,
-    result,
-  );
+  productSearchCache.set(id, result);
 
   return result;
 }
@@ -379,17 +312,11 @@ function getProductById(id) {
 let activePromotions = [];
 
 function getCartSubtotal() {
-  return cartManager.total(
-    catalog,
-  );
+  return cartManager.total(catalog);
 }
 
 function getCartQuantity() {
-  return cart.reduce(
-    (sum, item) =>
-      sum + Number(item.qty || 0),
-    0,
-  );
+  return cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
 }
 
 function getApplicablePromotion(quantity = getCartQuantity()) {
@@ -397,42 +324,31 @@ function getApplicablePromotion(quantity = getCartQuantity()) {
     return null;
   }
 
-  return activePromotions
-    .filter((promotion) => {
-      const minQty = Number(
-        promotion.minQty || 0,
-      );
+  return (
+    activePromotions
+      .filter((promotion) => {
+        const minQty = Number(promotion.minQty || 0);
 
-      if (
-        !promotion.active ||
-        quantity < minQty
-      ) {
+        if (!promotion.active || quantity < minQty) {
+          return false;
+        }
+
+        if (promotion.type === "fixed_total") {
+          return quantity === minQty;
+        }
+
+        if (promotion.type === "percent") {
+          return true;
+        }
+
         return false;
-      }
-
-      if (promotion.type === "fixed_total") {
-        return quantity === minQty;
-      }
-
-      if (promotion.type === "percent") {
-        return true;
-      }
-
-      return false;
-    })
-    .sort(
-      (a, b) =>
-        Number(b.minQty || 0) -
-        Number(a.minQty || 0),
-    )[0] || null;
+      })
+      .sort((a, b) => Number(b.minQty || 0) - Number(a.minQty || 0))[0] || null
+  );
 }
 
-function calculatePromotionDiscount(
-  subtotal,
-  quantity = getCartQuantity(),
-) {
-  const promotion =
-    getApplicablePromotion(quantity);
+function calculatePromotionDiscount(subtotal, quantity = getCartQuantity()) {
+  const promotion = getApplicablePromotion(quantity);
 
   if (!promotion) {
     return {
@@ -443,14 +359,9 @@ function calculatePromotionDiscount(
   }
 
   if (promotion.type === "fixed_total") {
-    const fixedTotal = Number(
-      promotion.fixedTotal || 0,
-    );
+    const fixedTotal = Number(promotion.fixedTotal || 0);
 
-    if (
-      fixedTotal > 0 &&
-      fixedTotal < subtotal
-    ) {
+    if (fixedTotal > 0 && fixedTotal < subtotal) {
       return {
         discount: subtotal - fixedTotal,
         total: fixedTotal,
@@ -462,26 +373,14 @@ function calculatePromotionDiscount(
   if (promotion.type === "percent") {
     const percent = Math.min(
       100,
-      Math.max(
-        0,
-        Number(
-          promotion.percentOff || 0,
-        ),
-      ),
+      Math.max(0, Number(promotion.percentOff || 0)),
     );
 
-    const discount = Number(
-      (subtotal * (percent / 100)).toFixed(2),
-    );
+    const discount = Number((subtotal * (percent / 100)).toFixed(2));
 
     return {
       discount,
-      total: Math.max(
-        0,
-        Number(
-          (subtotal - discount).toFixed(2),
-        ),
-      ),
+      total: Math.max(0, Number((subtotal - discount).toFixed(2))),
       promotion,
     };
   }
@@ -494,52 +393,36 @@ function calculatePromotionDiscount(
 }
 
 function getCartTotal() {
-  return calculatePromotionDiscount(
-    getCartSubtotal(),
-  ).total;
+  return calculatePromotionDiscount(getCartSubtotal()).total;
 }
 
 async function loadActivePromotions() {
-  if (
-    !isSupabaseConfigured()
-  ) {
+  if (!isSupabaseConfigured()) {
     return;
   }
 
   try {
-    const result =
-      await apiClient.get({
-        action: "promotions",
-      });
+    const result = await apiClient.get({
+      action: "promotions",
+    });
 
-    if (
-      !result.success ||
-      !Array.isArray(
-        result.promotions,
-      )
-    ) {
+    if (!result.success || !Array.isArray(result.promotions)) {
       activePromotions = [];
       return;
     }
 
-    activePromotions =
-      result.promotions.filter(
-        (promotion) =>
-          promotion.active === true ||
-          String(
-            promotion.active,
-                    ).toLowerCase() === "true",
-      );
+    activePromotions = result.promotions.filter(
+      (promotion) =>
+        promotion.active === true ||
+        String(promotion.active).toLowerCase() === "true",
+    );
 
     renderCart();
     syncQuantity();
     renderPromoBar();
     renderDuo();
   } catch (error) {
-    console.warn(
-      "Promotions unavailable; using regular prices.",
-      error,
-    );
+    console.warn("Promotions unavailable; using regular prices.", error);
     activePromotions = [];
   }
 }
@@ -553,23 +436,17 @@ function saveCart() {
 }
 
 function addToCart(id, qty = 1) {
-  const product =
-    getProductById(id);
+  const product = getProductById(id);
 
   if (!product) {
     return;
   }
 
-  const existing =
-    cartManager.find(id);
+  const existing = cartManager.find(id);
 
-  const next =
-    (existing?.qty || 0) + qty;
+  const next = (existing?.qty || 0) + qty;
 
-    if (
-    product.stock != null &&
-    next > Number(product.stock)
-  ) {
+  if (product.stock != null && next > Number(product.stock)) {
     showToast(
       Number(product.stock) === 0
         ? `${escapeHTML(product.name)} is sold out.`
@@ -580,47 +457,32 @@ function addToCart(id, qty = 1) {
     return false;
   }
 
-  if (
-    !cartManager.add(
-      product,
-      qty,
-    )
-  ) {
+  if (!cartManager.add(product, qty)) {
     return false;
   }
 
-  cart =
-    cartManager.items;
+  cart = cartManager.items;
 
   renderCart();
 
-  showToast(
-    `<b>${escapeHTML(product.name)}</b> added to your bag`,
-    { link: true },
-  );
+  showToast(`<b>${escapeHTML(product.name)}</b> added to your bag`, {
+    link: true,
+  });
   bumpCart();
 
   return true;
 }
 
-function changeCartQty(
-  id,
-  delta,
-) {
-  const product =
-    getProductById(id);
+function changeCartQty(id, delta) {
+  const product = getProductById(id);
 
   if (!product) {
     return;
   }
 
-  cartManager.change(
-    product,
-    delta,
-  );
+  cartManager.change(product, delta);
 
-  cart =
-    cartManager.items;
+  cart = cartManager.items;
 
   renderCart();
 }
@@ -628,8 +490,7 @@ function changeCartQty(
 function removeFromCart(id) {
   cartManager.remove(id);
 
-  cart =
-    cartManager.items;
+  cart = cartManager.items;
 
   renderCart();
 }
@@ -638,81 +499,39 @@ function removeFromCart(id) {
 // DOM REFERENCES
 // ============================================================
 
-const carousel =
-  document.getElementById(
-    "carousel",
-  );
+const carousel = document.getElementById("carousel");
 
-const carouselPrev =
-  document.getElementById(
-    "carouselPrev",
-  );
+const carouselPrev = document.getElementById("carouselPrev");
 
-const carouselNext =
-  document.getElementById(
-    "carouselNext",
-  );
+const carouselNext = document.getElementById("carouselNext");
 
-const scentSelect =
-  document.getElementById(
-    "scent",
-  );
+const scentSelect = document.getElementById("scent");
 
-const tabs =
-  document.querySelectorAll(
-    ".tab",
-  );
+const tabs = document.querySelectorAll(".tab");
 
 let activeCat = "men";
 
-const productSearch =
-  document.getElementById(
-    "productSearch",
-  );
+const productSearch = document.getElementById("productSearch");
 
-const profileFilter =
-  document.getElementById(
-    "profileFilter",
-  );
+const profileFilter = document.getElementById("profileFilter");
 
-const wishlistToggle =
-  document.getElementById(
-    "wishlistToggle",
-  );
+const wishlistToggle = document.getElementById("wishlistToggle");
 
-const wishlistPanel =
-  document.getElementById(
-    "wishlistPanel",
-  );
+const wishlistPanel = document.getElementById("wishlistPanel");
 
-const wishlistItems =
-  document.getElementById(
-    "wishlistItems",
-  );
+const wishlistItems = document.getElementById("wishlistItems");
 
-const wishlistEmpty =
-  document.getElementById(
-    "wishlistEmpty",
-  );
+const wishlistEmpty = document.getElementById("wishlistEmpty");
 
 // ============================================================
 // CART DOM
 // ============================================================
 
-const cartItemsElement =
-  document.getElementById(
-    "cartItems",
-  );
+const cartItemsElement = document.getElementById("cartItems");
 
-const cartCountElement =
-  document.getElementById(
-    "cartCount",
-  );
+const cartCountElement = document.getElementById("cartCount");
 
-const cartTotalElement =
-  document.getElementById(
-    "cartTotal",
-  );
+const cartTotalElement = document.getElementById("cartTotal");
 
 // ============================================================
 // CART RENDER
@@ -723,56 +542,34 @@ function renderCart() {
   scheduleVoucherRefresh();
   renderCheckoutExtras();
 
-  const wrap =
-    cartItemsElement;
+  const wrap = cartItemsElement;
 
-  const count =
-    cartCountElement;
+  const count = cartCountElement;
 
-  const total =
-    cartTotalElement;
+  const total = cartTotalElement;
 
   if (!wrap) {
     return;
   }
 
-  const valid =
-    cart.filter((item) =>
-      getProductById(item.id),
-    );
+  const valid = cart.filter((item) => getProductById(item.id));
 
-  if (
-    valid.length !==
-    cart.length
-  ) {
+  if (valid.length !== cart.length) {
     cart = valid;
 
-    cartManager.items =
-      cart;
+    cartManager.items = cart;
 
     cartManager.save();
   }
 
-  const totalQty =
-    cart.reduce(
-      (sum, item) =>
-        sum +
-        Number(item.qty || 0),
-      0,
-    );
+  const totalQty = cart.reduce((sum, item) => sum + Number(item.qty || 0), 0);
 
   if (count) {
-    count.textContent =
-      `${totalQty} ${
-        totalQty === 1
-          ? "item"
-          : "items"
-      }`;
+    count.textContent = `${totalQty} ${totalQty === 1 ? "item" : "items"}`;
   }
 
   if (total) {
-    total.textContent =
-      `₱${getCartTotal().toLocaleString()}`;
+    total.textContent = `₱${getCartTotal().toLocaleString()}`;
   }
 
   if (!cart.length) {
@@ -785,10 +582,7 @@ function renderCart() {
   const html = [];
 
   for (const item of cart) {
-    const p =
-      getProductById(
-        item.id,
-      );
+    const p = getProductById(item.id);
 
     if (!p) {
       continue;
@@ -797,14 +591,16 @@ function renderCart() {
     html.push(`
       <div class="cart-item">
 
-        ${p.img
-          ? `<img
+        ${
+          p.img
+            ? `<img
           src="${escapeHTML(p.img)}"
           alt="${escapeHTML(p.name)}"
           decoding="async"
           onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
         >`
-          : `<div class="img-ph" aria-hidden="true">A&amp;E</div>`}
+            : `<div class="img-ph" aria-hidden="true">A&amp;E</div>`
+        }
 
         <div>
 
@@ -813,10 +609,7 @@ function renderCart() {
           </div>
 
           <div class="cart-item-price">
-            ₱${Number(
-              p.price ||
-                PRODUCT_PRICE,
-            ).toLocaleString()}
+            ₱${Number(p.price || PRODUCT_PRICE).toLocaleString()}
             each
           </div>
 
@@ -857,101 +650,54 @@ function renderCart() {
     `);
   }
 
-  wrap.innerHTML =
-    html.join("");
+  wrap.innerHTML = html.join("");
 }
 
 // ============================================================
 // CART EVENTS
 // ============================================================
 
-cartItemsElement?.addEventListener(
-  "click",
-  (e) => {
-    const minus =
-      e.target.closest(
-        "[data-cart-minus]",
-      );
+cartItemsElement?.addEventListener("click", (e) => {
+  const minus = e.target.closest("[data-cart-minus]");
 
-    const plus =
-      e.target.closest(
-        "[data-cart-plus]",
-      );
+  const plus = e.target.closest("[data-cart-plus]");
 
-    const remove =
-      e.target.closest(
-        "[data-cart-remove]",
-      );
+  const remove = e.target.closest("[data-cart-remove]");
 
-    if (minus) {
-      changeCartQty(
-        minus.dataset
-          .cartMinus,
-        -1,
-      );
-    }
+  if (minus) {
+    changeCartQty(minus.dataset.cartMinus, -1);
+  }
 
-    if (plus) {
-      changeCartQty(
-        plus.dataset
-          .cartPlus,
-        1,
-      );
-    }
+  if (plus) {
+    changeCartQty(plus.dataset.cartPlus, 1);
+  }
 
-    if (remove) {
-      removeFromCart(
-        remove.dataset
-          .cartRemove,
-      );
-    }
-  },
-);
+  if (remove) {
+    removeFromCart(remove.dataset.cartRemove);
+  }
+});
 
-document
-  .getElementById(
-    "addSelectedToCart",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      if (
-        scentSelect?.value
-      ) {
-        addToCart(
-          scentSelect.value,
-          1,
-        );
-      }
-    },
-  );
+document.getElementById("addSelectedToCart")?.addEventListener("click", () => {
+  if (scentSelect?.value) {
+    addToCart(scentSelect.value, 1);
+  }
+});
 
 // ============================================================
 // PRODUCT FILTER
 // ============================================================
 
 function getVisibleProducts(cat) {
-  const query = (
-    productSearch?.value ||
-    ""
-  )
+  const query = (productSearch?.value || "").trim().toLowerCase();
+
+  const selectedProfile = String(profileFilter?.value || "all")
     .trim()
     .toLowerCase();
-
-  const selectedProfile =
-    String(
-      profileFilter?.value ||
-        "all",
-    )
-      .trim()
-      .toLowerCase();
 
   return catalog
     .all()
     .filter((p) => {
-      if (
-        p.active === false
-      ) {
+      if (p.active === false) {
         return false;
       }
 
@@ -961,33 +707,26 @@ function getVisibleProducts(cat) {
         return false;
       }
 
-      const searchData =
-        getProductSearchData(
-          p,
-        );
+      const searchData = getProductSearchData(p);
 
-      if (
-        query &&
-        !searchData.searchable.includes(
-          query,
-        )
-      ) {
+      if (query && !searchData.searchable.includes(query)) {
         return false;
       }
 
       if (
-        selectedProfile !==
-          "all" &&
-        !searchData.profiles.includes(
-          selectedProfile,
-        )
+        selectedProfile !== "all" &&
+        !searchData.profiles.includes(selectedProfile)
       ) {
         return false;
       }
 
       // Shop page: weather filter (same rules as Shop by Feel)
       const weather = document.getElementById("weatherFilter")?.value || "all";
-      if (weather !== "all" && typeof weatherOf === "function" && weatherOf(p) !== weather) {
+      if (
+        weather !== "all" &&
+        typeof weatherOf === "function" &&
+        weatherOf(p) !== weather
+      ) {
         return false;
       }
 
@@ -1000,16 +739,31 @@ function getVisibleProducts(cat) {
 function shopSorter() {
   const mode = document.getElementById("sortSelect")?.value || "featured";
   const order = (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
-  const best = (p) => ((PRODUCT_META[p.id]?.badges || p.badges || []).map((b) => String(b).toUpperCase()).includes("BEST SELLER") ? 1 : 0);
+  const best = (p) =>
+    (PRODUCT_META[p.id]?.badges || p.badges || [])
+      .map((b) => String(b).toUpperCase())
+      .includes("BEST SELLER")
+      ? 1
+      : 0;
   const stats = (p) => reviewStats[p.id] || { avg: 0, count: 0 };
   const price = (p) => Number(p.price || PRODUCT_PRICE);
   switch (mode) {
-    case "best": return (a, b) => best(b) - best(a) || stats(b).count - stats(a).count || order(a, b);
-    case "rating": return (a, b) => stats(b).avg - stats(a).avg || stats(b).count - stats(a).count || order(a, b);
-    case "name": return (a, b) => String(a.name).localeCompare(String(b.name));
-    case "priceAsc": return (a, b) => price(a) - price(b) || order(a, b);
-    case "priceDesc": return (a, b) => price(b) - price(a) || order(a, b);
-    default: return order;
+    case "best":
+      return (a, b) =>
+        best(b) - best(a) || stats(b).count - stats(a).count || order(a, b);
+    case "rating":
+      return (a, b) =>
+        stats(b).avg - stats(a).avg ||
+        stats(b).count - stats(a).count ||
+        order(a, b);
+    case "name":
+      return (a, b) => String(a.name).localeCompare(String(b.name));
+    case "priceAsc":
+      return (a, b) => price(a) - price(b) || order(a, b);
+    case "priceDesc":
+      return (a, b) => price(b) - price(a) || order(a, b);
+    default:
+      return order;
   }
 }
 
@@ -1018,51 +772,34 @@ function shopSorter() {
 // ============================================================
 
 function buildProductCard(p) {
-  const card =
-    document.createElement(
-      "div",
-    );
+  const card = document.createElement("div");
 
-  const stock =
-    p.stock == null || p.stock === ""
-      ? null
-      : Number(p.stock);
+  const stock = p.stock == null || p.stock === "" ? null : Number(p.stock);
 
   const soldOut = stock === 0;
 
-  card.className =
-    "pcard" + (soldOut ? " is-sold-out" : "");
+  card.className = "pcard" + (soldOut ? " is-sold-out" : "");
 
-  const meta =
-    PRODUCT_META[p.id] ||
-    {};
+  const meta = PRODUCT_META[p.id] || {};
 
-  const stats =
-    reviewStats[p.id] || {
-      avg: 0,
-      count: 0,
-    };
+  const stats = reviewStats[p.id] || {
+    avg: 0,
+    count: 0,
+  };
 
   // Stars only when there are reviews (no "No reviews yet")
-  const ratingText =
-    stats.count
-      ? `★ ${stats.avg.toFixed(1)} <span>(${stats.count})</span>` +
-        (stats.simCount ? `<span class="sim-mini" title="How close customers say it is to the original">${(stats.simSum / stats.simCount).toFixed(1)}/10 close</span>` : "")
-      : "";
+  const ratingText = stats.count
+    ? `★ ${stats.avg.toFixed(1)} <span>(${stats.count})</span>` +
+      (stats.simCount
+        ? `<span class="sim-mini" title="How close customers say it is to the original">${(stats.simSum / stats.simCount).toFixed(1)}/10 close</span>`
+        : "")
+    : "";
 
-  const badges = (
-    meta.badges || []
-  )
-    .map(
-      (b) =>
-        `<span class="product-badge">${escapeHTML(b)}</span>`,
-    )
+  const badges = (meta.badges || [])
+    .map((b) => `<span class="product-badge">${escapeHTML(b)}</span>`)
     .join("");
 
-  const saved =
-    favorites.includes(
-      p.id,
-    );
+  const saved = favorites.includes(p.id);
 
   const stockNote =
     stock === null
@@ -1143,26 +880,22 @@ function renderCarousel(cat) {
   }
 
   if (!isCatalogReady()) {
-    carousel.innerHTML = Array.from({ length: 4 }, () =>
-      '<div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div>').join("");
+    carousel.innerHTML = Array.from(
+      { length: 4 },
+      () =>
+        '<div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div>',
+    ).join("");
     return;
   }
 
-  carousel.innerHTML =
-    "";
+  carousel.innerHTML = "";
 
-  const products =
-    getVisibleProducts(
-      cat,
-    );
+  const products = getVisibleProducts(cat);
 
-  const fragment =
-    document.createDocumentFragment();
+  const fragment = document.createDocumentFragment();
 
   products.forEach((p) => {
-    fragment.appendChild(
-      buildProductCard(p),
-    );
+    fragment.appendChild(buildProductCard(p));
   });
 
   if (typeof updateShopMeta === "function") updateShopMeta(products.length);
@@ -1171,9 +904,7 @@ function renderCarousel(cat) {
     carousel.innerHTML =
       '<div class="summary-empty" style="min-width:100%">No fragrances match your search or filter.</div>';
   } else {
-    carousel.appendChild(
-      fragment,
-    );
+    carousel.appendChild(fragment);
   }
 
   // Featured rows use the same cards (stars, stock, favorites)
@@ -1181,64 +912,40 @@ function renderCarousel(cat) {
     renderFeaturedRows();
   }
 
-  requestAnimationFrame(
-    updateCarouselArrows,
-  );
+  requestAnimationFrame(updateCarouselArrows);
 }
-
 
 // ============================================================
 // CAROUSEL CONTROLS
 // ============================================================
 
 function updateCarouselArrows() {
-  if (
-    !carousel ||
-    !carouselPrev ||
-    !carouselNext
-  ) {
+  if (!carousel || !carouselPrev || !carouselNext) {
     return;
   }
 
-  const maxScroll =
-    carousel.scrollWidth -
-    carousel.clientWidth;
+  const maxScroll = carousel.scrollWidth - carousel.clientWidth;
 
-  const hasOverflow =
-    maxScroll > 2;
+  const hasOverflow = maxScroll > 2;
 
-  carouselPrev.disabled =
-    !hasOverflow ||
-    carousel.scrollLeft <= 2;
+  carouselPrev.disabled = !hasOverflow || carousel.scrollLeft <= 2;
 
-  carouselNext.disabled =
-    !hasOverflow ||
-    carousel.scrollLeft >=
-      maxScroll - 2;
+  carouselNext.disabled = !hasOverflow || carousel.scrollLeft >= maxScroll - 2;
 }
 
-function scrollCarousel(
-  direction,
-) {
+function scrollCarousel(direction) {
   if (!carousel) {
     return;
   }
 
-  const card =
-    carousel.querySelector(
-      ".pcard",
-    );
+  const card = carousel.querySelector(".pcard");
 
   const gap = 18;
 
-  const amount = card
-    ? card.getBoundingClientRect()
-        .width + gap
-    : 248;
+  const amount = card ? card.getBoundingClientRect().width + gap : 248;
 
   carousel.scrollBy({
-    left:
-      direction * amount,
+    left: direction * amount,
     behavior: "smooth",
   });
 }
@@ -1253,40 +960,25 @@ function updateWishlistPanel() {
 }
 
 function toggleFavorite(id) {
-  favorites =
-    wishlistManager.toggle(
-      id,
-    );
+  favorites = wishlistManager.toggle(id);
 
   onFavoritesChanged(id);
   updateWishlistPanel();
 
-  renderCarousel(
-    activeCat,
-  );
+  renderCarousel(activeCat);
 }
 
 // ============================================================
 // CAROUSEL LISTENERS
 // ============================================================
 
-carouselPrev?.addEventListener(
-  "click",
-  () => scrollCarousel(-1),
-);
+carouselPrev?.addEventListener("click", () => scrollCarousel(-1));
 
-carouselNext?.addEventListener(
-  "click",
-  () => scrollCarousel(1),
-);
+carouselNext?.addEventListener("click", () => scrollCarousel(1));
 
-carousel?.addEventListener(
-  "scroll",
-  updateCarouselArrows,
-  {
-    passive: true,
-  },
-);
+carousel?.addEventListener("scroll", updateCarouselArrows, {
+  passive: true,
+});
 
 // ============================================================
 // RESIZE OPTIMIZATION
@@ -1297,14 +989,9 @@ let resizeTimer = null;
 window.addEventListener(
   "resize",
   () => {
-    clearTimeout(
-      resizeTimer,
-    );
+    clearTimeout(resizeTimer);
 
-    resizeTimer = setTimeout(
-      updateCarouselArrows,
-      100,
-    );
+    resizeTimer = setTimeout(updateCarouselArrows, 100);
   },
   {
     passive: true,
@@ -1317,96 +1004,57 @@ window.addEventListener(
 
 let searchTimer = null;
 
-productSearch?.addEventListener(
-  "input",
-  () => {
-    clearTimeout(
-      searchTimer,
-    );
+productSearch?.addEventListener("input", () => {
+  clearTimeout(searchTimer);
 
-    searchTimer = setTimeout(
-      () => {
-        renderCarousel(
-          activeCat,
-        );
-      },
-      150,
-    );
-  },
-);
+  searchTimer = setTimeout(() => {
+    renderCarousel(activeCat);
+  }, 150);
+});
 
 // ============================================================
 // PROFILE FILTER
 // ============================================================
 
-profileFilter?.addEventListener(
-  "change",
-  () =>
-    renderCarousel(
-      activeCat,
-    ),
-);
+profileFilter?.addEventListener("change", () => renderCarousel(activeCat));
 
 // ============================================================
 // WISHLIST PANEL
 // ============================================================
 
-wishlistToggle?.addEventListener(
-  "click",
-  () => openFavorites(),
-);
+wishlistToggle?.addEventListener("click", () => openFavorites());
 
-wishlistItems?.addEventListener(
-  "click",
-  (e) => {
-    const b =
-      e.target.closest(
-        "[data-wishlist-jump]",
-      );
+wishlistItems?.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-wishlist-jump]");
 
-    if (!b) {
-      return;
-    }
+  if (!b) {
+    return;
+  }
 
-    const p =
-      catalog.find(
-        b.dataset
-          .wishlistJump,
-      );
+  const p = catalog.find(b.dataset.wishlistJump);
 
-    if (!p) {
-      return;
-    }
+  if (!p) {
+    return;
+  }
 
-    // On the homepage the full list lives on the shop page: show the scent itself
-    if (!document.documentElement.classList.contains("shop-mode")) {
-      openFragranceDetails(p.id);
-      return;
-    }
+  // On the homepage the full list lives on the shop page: show the scent itself
+  if (!document.documentElement.classList.contains("shop-mode")) {
+    openFragranceDetails(p.id);
+    return;
+  }
 
-    activeCat = p.cat;
+  activeCat = p.cat;
 
-    tabs.forEach((t) =>
-      t.classList.toggle(
-        "active",
-        t.dataset.cat ===
-          activeCat,
-      ),
-    );
+  tabs.forEach((t) =>
+    t.classList.toggle("active", t.dataset.cat === activeCat),
+  );
 
-    renderCarousel(
-      activeCat,
-    );
+  renderCarousel(activeCat);
 
-    document
-      .getElementById(
-        "collection",
-      )
-      ?.scrollIntoView({
-        behavior: "smooth",
-      });
-  },
-);
+  document.getElementById("collection")?.scrollIntoView({
+    behavior: "smooth",
+  });
+});
 
 // ============================================================
 // SCENT OPTIONS
@@ -1427,7 +1075,9 @@ function renderScentOptions() {
           `<option value="${escapeHTML(p.id)}"${p.stock != null && Number(p.stock) <= 0 ? " disabled" : ""}>${escapeHTML(p.name)} (${
             p.cat === "men"
               ? "For Him"
-              : p.cat === "unisex" ? "Unisex" : "For Her"
+              : p.cat === "unisex"
+                ? "Unisex"
+                : "For Her"
           })${p.stock != null && Number(p.stock) <= 0 ? " — sold out" : ""}</option>`,
       )
       .join("");
@@ -1437,65 +1087,33 @@ function renderScentOptions() {
 // FRAGRANCE DETAILS MODAL
 // ============================================================
 
-const fragranceModal =
-  document.getElementById(
-    "fragranceModal",
-  );
+const fragranceModal = document.getElementById("fragranceModal");
 
-const fragranceClose =
-  document.getElementById(
-    "fragranceClose",
-  );
+const fragranceClose = document.getElementById("fragranceClose");
 
-const fragranceModalTitle =
-  document.getElementById(
-    "fragranceModalTitle",
-  );
+const fragranceModalTitle = document.getElementById("fragranceModalTitle");
 
-const fragranceModalCategory =
-  document.getElementById(
-    "fragranceModalCategory",
-  );
+const fragranceModalCategory = document.getElementById(
+  "fragranceModalCategory",
+);
 
-const fragranceModalDescription =
-  document.getElementById(
-    "fragranceModalDescription",
-  );
+const fragranceModalDescription = document.getElementById(
+  "fragranceModalDescription",
+);
 
-const fragranceTopNotes =
-  document.getElementById(
-    "fragranceTopNotes",
-  );
+const fragranceTopNotes = document.getElementById("fragranceTopNotes");
 
-const fragranceHeartNotes =
-  document.getElementById(
-    "fragranceHeartNotes",
-  );
+const fragranceHeartNotes = document.getElementById("fragranceHeartNotes");
 
-const fragranceBaseNotes =
-  document.getElementById(
-    "fragranceBaseNotes",
-  );
+const fragranceBaseNotes = document.getElementById("fragranceBaseNotes");
 
-const fragranceApplication =
-  document.getElementById(
-    "fragranceApplication",
-  );
+const fragranceApplication = document.getElementById("fragranceApplication");
 
-const fragranceOccasion =
-  document.getElementById(
-    "fragranceOccasion",
-  );
+const fragranceOccasion = document.getElementById("fragranceOccasion");
 
-const fragranceProfileBars =
-  document.getElementById(
-    "fragranceProfileBars",
-  );
+const fragranceProfileBars = document.getElementById("fragranceProfileBars");
 
-const fragranceDayNight =
-  document.getElementById(
-    "fragranceDayNight",
-  );
+const fragranceDayNight = document.getElementById("fragranceDayNight");
 
 // ============================================================
 // HTML ESCAPE
@@ -1503,61 +1121,31 @@ const fragranceDayNight =
 
 function escapeHTML(value) {
   return String(value ?? "")
-    .replace(
-      /&/g,
-      "&amp;",
-    )
-    .replace(
-      /</g,
-      "&lt;",
-    )
-    .replace(
-      />/g,
-      "&gt;",
-    )
-    .replace(
-      /"/g,
-      "&quot;",
-    )
-    .replace(
-      /'/g,
-      "&#039;",
-    );
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 // ============================================================
 // STRENGTH NORMALIZATION
 // ============================================================
 
-function normalizeStrength(
-  value,
-) {
-  const strength =
-    String(
-      value || "moderate",
-    )
-      .trim()
-      .toLowerCase();
+function normalizeStrength(value) {
+  const strength = String(value || "moderate")
+    .trim()
+    .toLowerCase();
 
-  if (
-    strength === "light"
-  ) {
+  if (strength === "light") {
     return "subtle";
   }
 
-  if (
-    strength === "strong"
-  ) {
+  if (strength === "strong") {
     return "bold";
   }
 
-  if (
-    [
-      "subtle",
-      "moderate",
-      "bold",
-    ].includes(strength)
-  ) {
+  if (["subtle", "moderate", "bold"].includes(strength)) {
     return strength;
   }
 
@@ -1568,11 +1156,8 @@ function normalizeStrength(
 // OPEN FRAGRANCE DETAILS
 // ============================================================
 
-function openFragranceDetails(
-  productId,
-) {
-  const product =
-    catalog.find(productId);
+function openFragranceDetails(productId) {
+  const product = catalog.find(productId);
 
   if (!product) {
     return;
@@ -1581,17 +1166,11 @@ function openFragranceDetails(
   // Built in the PRODUCT DETAILS section at the end of this file
   renderFragranceDetails(product);
 
-  fragranceModal.classList.add(
-    "show",
-  );
+  fragranceModal.classList.add("show");
 
-  fragranceModal.setAttribute(
-    "aria-hidden",
-    "false",
-  );
+  fragranceModal.setAttribute("aria-hidden", "false");
 
-  document.body.style.overflow =
-    "hidden";
+  document.body.style.overflow = "hidden";
 }
 
 // ============================================================
@@ -1601,80 +1180,43 @@ function openFragranceDetails(
 function closeFragranceDetails() {
   clearDetailsHash();
 
-  fragranceModal.classList.remove(
-    "show",
-  );
+  fragranceModal.classList.remove("show");
 
-  fragranceModal.setAttribute(
-    "aria-hidden",
-    "true",
-  );
+  fragranceModal.setAttribute("aria-hidden", "true");
 
-  document.body.style.overflow =
-    "";
+  document.body.style.overflow = "";
 }
 
-fragranceClose?.addEventListener(
-  "click",
-  closeFragranceDetails,
-);
+fragranceClose?.addEventListener("click", closeFragranceDetails);
 
-fragranceModal?.addEventListener(
-  "click",
-  (e) => {
-    if (
-      e.target ===
-      fragranceModal
-    ) {
-      closeFragranceDetails();
-    }
-  },
-);
+fragranceModal?.addEventListener("click", (e) => {
+  if (e.target === fragranceModal) {
+    closeFragranceDetails();
+  }
+});
 
-document.addEventListener(
-  "keydown",
-  (e) => {
-    if (
-      e.key === "Escape" &&
-      fragranceModal?.classList.contains(
-        "show",
-      )
-    ) {
-      closeFragranceDetails();
-    }
-  },
-);
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && fragranceModal?.classList.contains("show")) {
+    closeFragranceDetails();
+  }
+});
 
 // ============================================================
 // CATEGORY TABS
 // ============================================================
 
 tabs.forEach((tab) => {
-  tab.addEventListener(
-    "click",
-    () => {
-      tabs.forEach((t) =>
-        t.classList.remove(
-          "active",
-        ),
-      );
+  tab.addEventListener("click", () => {
+    tabs.forEach((t) => t.classList.remove("active"));
 
-      tab.classList.add(
-        "active",
-      );
+    tab.classList.add("active");
 
-      activeCat =
-        tab.dataset.cat;
+    activeCat = tab.dataset.cat;
 
-      renderCarousel(
-        activeCat,
-      );
+    renderCarousel(activeCat);
 
-      requestAnimationFrame(
-        updateCarouselArrows,
-      );
-    },
-  );
+    requestAnimationFrame(updateCarouselArrows);
+  });
 });
 
 // ============================================================
@@ -1682,63 +1224,37 @@ tabs.forEach((tab) => {
 // ============================================================
 
 function handleProductClick(e) {
-  const wish =
-    e.target.closest(
-      ".wishlist-btn",
-    );
+  const wish = e.target.closest(".wishlist-btn");
 
   if (wish) {
-    toggleFavorite(
-      wish.dataset
-        .wishlistId,
-    );
+    toggleFavorite(wish.dataset.wishlistId);
     return;
   }
 
-  const detailsBtn =
-    e.target.closest(
-      ".pdetails",
-    );
+  const detailsBtn = e.target.closest(".pdetails");
 
   if (detailsBtn) {
-    openFragranceDetails(
-      detailsBtn.dataset
-        .detailsId,
-    );
+    openFragranceDetails(detailsBtn.dataset.detailsId);
     return;
   }
 
-  const btn =
-    e.target.closest(
-      ".porder",
-    );
+  const btn = e.target.closest(".porder");
 
-  if (
-    !btn ||
-    btn.disabled
-  ) {
+  if (!btn || btn.disabled) {
     return;
   }
 
   // Customers stay on the product list; the toast offers "View bag".
   if (addToCart(btn.dataset.id, 1) && scentSelect) {
-    scentSelect.value =
-      btn.dataset.id;
+    scentSelect.value = btn.dataset.id;
   }
 }
 
-carousel?.addEventListener(
-  "click",
-  handleProductClick,
-);
+carousel?.addEventListener("click", handleProductClick);
 
 document
   .getElementById("featuredRows")
-  ?.addEventListener(
-    "click",
-    handleProductClick,
-  );
-
+  ?.addEventListener("click", handleProductClick);
 
 // ============================================================
 // INITIAL RENDER
@@ -1748,175 +1264,102 @@ renderScentOptions();
 
 updateWishlistPanel();
 
-renderCarousel(
-  activeCat,
-);
+renderCarousel(activeCat);
 
-requestAnimationFrame(
-  updateCarouselArrows,
-);
+requestAnimationFrame(updateCarouselArrows);
 
 // ============================================================
 // SUPABASE DATABASE
 // ============================================================
 
-apiClient =
-  new SupabaseApi();
+apiClient = new SupabaseApi();
 
 // ============================================================
 // PRODUCT CATALOG SYNC
 // ============================================================
 
 async function loadManagedProducts() {
-  if (
-    !isSupabaseConfigured()
-  ) {
+  if (!isSupabaseConfigured()) {
     return;
   }
 
   try {
-    const result =
-      await apiClient.get({
-        action: "products",
-      });
+    const result = await apiClient.get({
+      action: "products",
+    });
 
-    if (
-      !result.success ||
-      !Array.isArray(
-        result.products,
-      )
-    ) {
+    if (!result.success || !Array.isArray(result.products)) {
       return;
     }
 
-    result.products.forEach(
-      (remote) => {
-        const existing =
-          catalog.find(
-            remote.id,
-          );
+    result.products.forEach((remote) => {
+      const existing = catalog.find(remote.id);
 
-        if (existing) {
-          Object.assign(
-            existing,
+      if (existing) {
+        Object.assign(existing, {
+          ...existing,
+          ...remote,
+
+          img: remote.img || existing.img,
+
+          desc: remote.desc || existing.desc,
+
+          descLong: remote.descLong || existing.descLong,
+
+          topNotes: remote.topNotes?.length
+            ? remote.topNotes
+            : existing.topNotes,
+
+          heartNotes: remote.heartNotes?.length
+            ? remote.heartNotes
+            : existing.heartNotes,
+
+          baseNotes: remote.baseNotes?.length
+            ? remote.baseNotes
+            : existing.baseNotes,
+
+          application: remote.application || existing.application,
+        });
+
+        // Product changed.
+        // Rebuild its search cache next time.
+        productSearchCache.delete(String(remote.id));
+      } else {
+        catalog.upsert(remote);
+      }
+
+      PRODUCT_META[remote.id] = Object.assign(
+        PRODUCT_META[remote.id] || {},
+
+        {
+          profiles: remote.profiles || [],
+
+          occasion: remote.occasion || "",
+
+          strength: (
             {
-              ...existing,
-              ...remote,
+              light: "subtle",
 
-              img:
-                remote.img ||
-                existing.img,
+              strong: "bold",
+            }[String(remote.strength || "moderate").toLowerCase()] ||
+            String(remote.strength || "moderate")
+          ).toLowerCase(),
 
-              desc:
-                remote.desc ||
-                existing.desc,
+          longevity: remote.longevity || 7,
 
-              descLong:
-                remote.descLong ||
-                existing.descLong,
+          projection: remote.projection || 7,
 
-              topNotes:
-                remote.topNotes
-                  ?.length
-                  ? remote.topNotes
-                  : existing.topNotes,
+          time: remote.time || [],
 
-              heartNotes:
-                remote.heartNotes
-                  ?.length
-                  ? remote.heartNotes
-                  : existing.heartNotes,
+          badges: remote.badges || [],
 
-              baseNotes:
-                remote.baseNotes
-                  ?.length
-                  ? remote.baseNotes
-                  : existing.baseNotes,
+          sortOrder: remote.sortOrder || 0,
+        },
+      );
 
-              application:
-                remote.application ||
-                existing.application,
-            },
-          );
-
-          // Product changed.
-          // Rebuild its search cache next time.
-          productSearchCache.delete(
-            String(
-              remote.id,
-            ),
-          );
-        } else {
-          catalog.upsert(
-            remote,
-          );
-        }
-
-        PRODUCT_META[
-          remote.id
-        ] = Object.assign(
-          PRODUCT_META[
-            remote.id
-          ] || {},
-
-          {
-            profiles:
-              remote.profiles ||
-              [],
-
-            occasion:
-              remote.occasion ||
-              "",
-
-            strength: (
-              {
-                light:
-                  "subtle",
-
-                strong:
-                  "bold",
-              }[
-                String(
-                  remote.strength ||
-                    "moderate",
-                ).toLowerCase()
-              ] ||
-              String(
-                remote.strength ||
-                  "moderate",
-              )
-            ).toLowerCase(),
-
-            longevity:
-              remote.longevity ||
-              7,
-
-            projection:
-              remote.projection ||
-              7,
-
-            time:
-              remote.time ||
-              [],
-
-            badges:
-              remote.badges ||
-              [],
-
-            sortOrder:
-              remote.sortOrder ||
-              0,
-          },
-        );
-
-        // Metadata changed.
-        productSearchCache.delete(
-          String(
-            remote.id,
-          ),
-        );
-      },
-    );
+      // Metadata changed.
+      productSearchCache.delete(String(remote.id));
+    });
 
     window.__aeCatalogReady = true;
 
@@ -1924,23 +1367,18 @@ async function loadManagedProducts() {
 
     renderReviewScentOptions();
 
-        // Reviews may have loaded before these products existed.
+    // Reviews may have loaded before these products existed.
     computeReviewStats();
 
     renderStoreContent();
 
-    renderCarousel(
-      activeCat,
-    );
+    renderCarousel(activeCat);
 
     renderCart();
 
     syncQuantity();
   } catch (error) {
-    console.warn(
-      "Managed catalog unavailable; using built-in catalog.",
-      error,
-    );
+    console.warn("Managed catalog unavailable; using built-in catalog.", error);
   } finally {
     if (!window.__aeCatalogReady) {
       // database unreachable: fall back to the built-in list
@@ -1958,50 +1396,23 @@ loadActivePromotions();
 // CUSTOMER REVIEWS
 // ============================================================
 
-const reviewForm =
-  document.getElementById(
-    "reviewForm",
-  );
+const reviewForm = document.getElementById("reviewForm");
 
-const reviewScent =
-  document.getElementById(
-    "reviewScent",
-  );
+const reviewScent = document.getElementById("reviewScent");
 
-const reviewRating =
-  document.getElementById(
-    "reviewRating",
-  );
+const reviewRating = document.getElementById("reviewRating");
 
-const starButtons =
-  document.querySelectorAll(
-    "#starSelect button",
-  );
+const starButtons = document.querySelectorAll("#starSelect button");
 
-const reviewSubmit =
-  document.getElementById(
-    "reviewSubmit",
-  );
+const reviewSubmit = document.getElementById("reviewSubmit");
 
-const reviewStatus =
-  document.getElementById(
-    "reviewStatus",
-  );
+const reviewStatus = document.getElementById("reviewStatus");
 
-const reviewsCarousel =
-  document.getElementById(
-    "reviewsCarousel",
-  );
+const reviewsCarousel = document.getElementById("reviewsCarousel");
 
-const reviewsLoading =
-  document.getElementById(
-    "reviewsLoading",
-  );
+const reviewsLoading = document.getElementById("reviewsLoading");
 
-const reviewsEmpty =
-  document.getElementById(
-    "reviewsEmpty",
-  );
+const reviewsEmpty = document.getElementById("reviewsEmpty");
 
 // ============================================================
 // REVIEW SCENT OPTIONS
@@ -2017,63 +1428,34 @@ function renderReviewScentOptions() {
     catalog
       .all()
       .filter((p) => p.active == true)
-      .map(
-        (p) =>
-          `<option value="${p.id}">${p.name}</option>`,
-      )
+      .map((p) => `<option value="${p.id}">${p.name}</option>`)
       .join("");
 }
 
 function setRating(rating) {
-  reviewRating.value =
-    String(rating);
+  reviewRating.value = String(rating);
 
-  starButtons.forEach(
-    (btn) => {
-      btn.classList.toggle(
-        "active",
-        Number(
-          btn.dataset.rating,
-        ) <= rating,
-      );
-    },
-  );
+  starButtons.forEach((btn) => {
+    btn.classList.toggle("active", Number(btn.dataset.rating) <= rating);
+  });
 }
 
-starButtons.forEach(
-  (btn) => {
-    btn.addEventListener(
-      "click",
-      () =>
-        setRating(
-          Number(
-            btn.dataset.rating,
-          ),
-        ),
-    );
-  },
-);
+starButtons.forEach((btn) => {
+  btn.addEventListener("click", () => setRating(Number(btn.dataset.rating)));
+});
 
 setRating(5);
 
 renderReviewScentOptions();
 
-function showReviewStatus(
-  message,
-  type,
-) {
-  reviewStatus.textContent =
-    message;
+function showReviewStatus(message, type) {
+  reviewStatus.textContent = message;
 
-  reviewStatus.className =
-    "review-status show " +
-    type;
+  reviewStatus.className = "review-status show " + type;
 }
 
 function escapeText(value) {
-  return value == null
-    ? ""
-    : String(value);
+  return value == null ? "" : String(value);
 }
 
 // ============================================================
@@ -2081,282 +1463,178 @@ function escapeText(value) {
 // ============================================================
 
 function computeReviewStats() {
-  Object.keys(
-    reviewStats,
-  ).forEach(
-    (k) =>
-      delete reviewStats[k],
-  );
+  Object.keys(reviewStats).forEach((k) => delete reviewStats[k]);
 
   const products = catalog.all();
 
-  lastReviews.forEach(
-    (r) => {
-      const scentName =
-        String(r.scent || "")
+  lastReviews.forEach((r) => {
+    const scentName = String(r.scent || "")
+      .trim()
+      .toLowerCase();
+
+    const scentId = String(r.scentId || "")
+      .trim()
+      .toLowerCase();
+
+    const p = products.find(
+      (x) =>
+        String(x.id).toLowerCase() === scentId ||
+        String(x.name || "")
           .trim()
-          .toLowerCase();
+          .toLowerCase() === scentName,
+    );
 
-      const scentId =
-        String(r.scentId || "")
-          .trim()
-          .toLowerCase();
+    if (!p) {
+      return;
+    }
 
-      const p =
-        products.find(
-          (x) =>
-            String(x.id).toLowerCase() === scentId ||
-            String(x.name || "").trim().toLowerCase() === scentName,
-        );
+    reviewStats[p.id] ||= {
+      sum: 0,
+      count: 0,
+      avg: 0,
+      simSum: 0,
+      simCount: 0,
+      simClose: 0,
+      wearSum: 0,
+      wearCount: 0,
+      proj: { soft: 0, moderate: 0, strong: 0 },
+      projCount: 0,
+    };
 
-      if (!p) {
-        return;
-      }
+    // customer performance ratings (optional fields)
+    const st = reviewStats[p.id];
+    if (r.similarity >= 1 && r.similarity <= 10) {
+      st.simSum += Number(r.similarity);
+      st.simCount += 1;
+      if (r.similarity >= 8) st.simClose += 1;
+    }
+    if ([4, 6, 8, 10].includes(Number(r.wearHours))) {
+      st.wearSum += Number(r.wearHours);
+      st.wearCount += 1;
+    }
+    if (st.proj[r.projection] !== undefined) {
+      st.proj[r.projection] += 1;
+      st.projCount += 1;
+    }
 
-      reviewStats[p.id] ||=
-        {
-          sum: 0,
-          count: 0,
-          avg: 0,
-          simSum: 0, simCount: 0, simClose: 0,
-          wearSum: 0, wearCount: 0,
-          proj: { soft: 0, moderate: 0, strong: 0 }, projCount: 0,
-        };
+    reviewStats[p.id].sum += Number(r.rating) || 0;
 
-      // customer performance ratings (optional fields)
-      const st = reviewStats[p.id];
-      if (r.similarity >= 1 && r.similarity <= 10) { st.simSum += Number(r.similarity); st.simCount += 1; if (r.similarity >= 8) st.simClose += 1; }
-      if ([4, 6, 8, 10].includes(Number(r.wearHours))) { st.wearSum += Number(r.wearHours); st.wearCount += 1; }
-      if (st.proj[r.projection] !== undefined) { st.proj[r.projection] += 1; st.projCount += 1; }
+    reviewStats[p.id].count += 1;
 
-      reviewStats[p.id].sum +=
-        Number(
-          r.rating,
-        ) || 0;
-
-      reviewStats[p.id]
-        .count += 1;
-
-      reviewStats[p.id].avg =
-        reviewStats[p.id].sum /
-        reviewStats[p.id]
-          .count;
-    },
-  );
+    reviewStats[p.id].avg = reviewStats[p.id].sum / reviewStats[p.id].count;
+  });
 }
 
-function renderReviews(
-  reviews,
-) {
-  reviewsLoading.style.display =
-    "none";
+function renderReviews(reviews) {
+  reviewsLoading.style.display = "none";
 
   lastReviews = reviews || [];
 
   computeReviewStats();
 
-  renderCarousel(
-    activeCat,
-  );
+  renderCarousel(activeCat);
 
-  reviewsCarousel.innerHTML =
-    "";
+  reviewsCarousel.innerHTML = "";
 
-  if (
-    !reviews ||
-    !reviews.length
-  ) {
-    reviewsCarousel.style.display =
-      "none";
+  if (!reviews || !reviews.length) {
+    reviewsCarousel.style.display = "none";
 
-    reviewsEmpty.style.display =
-      "block";
+    reviewsEmpty.style.display = "block";
 
     return;
   }
 
-  reviewsEmpty.style.display =
-    "none";
+  reviewsEmpty.style.display = "none";
 
-  reviewsCarousel.style.display =
-    "flex";
+  reviewsCarousel.style.display = "flex";
 
-  const fragment =
-    document.createDocumentFragment();
+  const fragment = document.createDocumentFragment();
 
-  reviews.forEach(
-    (review) => {
-      const card =
-        document.createElement(
-          "article",
-        );
+  reviews.forEach((review) => {
+    const card = document.createElement("article");
 
-      card.className =
-        "review-card";
+    card.className = "review-card";
 
-      const photo =
-        document.createElement(
-          "div",
-        );
+    const photo = document.createElement("div");
 
-      photo.className =
-        "review-photo";
+    photo.className = "review-photo";
 
-      if (
-        review.photoUrl
-      ) {
-        const img =
-          document.createElement(
-            "img",
-          );
+    if (review.photoUrl) {
+      const img = document.createElement("img");
 
-        img.src =
-          review.photoUrl;
+      img.src = review.photoUrl;
 
-        img.alt =
-          "Customer photo for " +
-          escapeText(
-            review.scent,
-          );
+      img.alt = "Customer photo for " + escapeText(review.scent);
 
-        img.loading =
-          "lazy";
+      img.loading = "lazy";
 
-                img.decoding =
-          "async";
+      img.decoding = "async";
 
-        // If the photo can't load (e.g. Drive sharing changed), show the neat empty style
-        img.onerror = () => {
-          photo.classList.add("empty");
-          photo.innerHTML = `<div>“<small>CUSTOMER REVIEW</small></div>`;
-        };
+      // If the photo can't load (e.g. Drive sharing changed), show the neat empty style
+      img.onerror = () => {
+        photo.classList.add("empty");
+        photo.innerHTML = `<div>“<small>CUSTOMER REVIEW</small></div>`;
+      };
 
-        photo.appendChild(
-          img,
-        );
-      } else {
-                photo.classList.add(
-          "empty",
-        );
+      photo.appendChild(img);
+    } else {
+      photo.classList.add("empty");
 
-        photo.innerHTML =
-          `<div>“<small>CUSTOMER REVIEW</small></div>`;
-      }
+      photo.innerHTML = `<div>“<small>CUSTOMER REVIEW</small></div>`;
+    }
 
-      const body =
-        document.createElement(
-          "div",
-        );
+    const body = document.createElement("div");
 
-      body.className =
-        "review-body";
+    body.className = "review-body";
 
-      const stars =
-        document.createElement(
-          "div",
-        );
+    const stars = document.createElement("div");
 
-      stars.className =
-        "review-stars";
+    stars.className = "review-stars";
 
-      const rating =
-        Math.max(
-          1,
-          Math.min(
-            5,
-            Number(
-              review.rating,
-            ) || 5,
-          ),
-        );
+    const rating = Math.max(1, Math.min(5, Number(review.rating) || 5));
 
-      stars.textContent =
-        "★".repeat(
-          rating,
-        ) +
-        "☆".repeat(
-          5 - rating,
-        );
+    stars.textContent = "★".repeat(rating) + "☆".repeat(5 - rating);
 
-      const text =
-        document.createElement(
-          "p",
-        );
+    const text = document.createElement("p");
 
-      text.className =
-        "review-text";
+    text.className = "review-text";
 
-      text.textContent =
-        review.review || "";
+    text.textContent = review.review || "";
 
-      const meta =
-        document.createElement(
-          "div",
-        );
+    const meta = document.createElement("div");
 
-      meta.className =
-        "review-meta";
+    meta.className = "review-meta";
 
-      const name =
-        document.createElement(
-          "span",
-        );
+    const name = document.createElement("span");
 
-      name.className =
-        "review-name";
+    name.className = "review-name";
 
-      name.textContent =
-        review.customerName ||
-        review.name ||
-        "Customer";
+    name.textContent = review.customerName || review.name || "Customer";
 
-      const scent =
-        document.createElement(
-          "span",
-        );
+    const scent = document.createElement("span");
 
-      scent.className =
-        "review-scent";
+    scent.className = "review-scent";
 
-      scent.textContent =
-        (
-          review.scent ||
-          ""
-        ).toUpperCase();
+    scent.textContent = (review.scent || "").toUpperCase();
 
-      meta.append(
-        name,
-        scent,
-      );
+    meta.append(name, scent);
 
-      const perf = reviewPerfChips(review);
-      if (perf) {
-        const chips = document.createElement("div");
-        chips.className = "review-perf";
-        chips.innerHTML = perf;
-        body.append(stars, chips, text, meta);
-      } else {
-        body.append(
-          stars,
-          text,
-          meta,
-        );
-      }
+    const perf = reviewPerfChips(review);
+    if (perf) {
+      const chips = document.createElement("div");
+      chips.className = "review-perf";
+      chips.innerHTML = perf;
+      body.append(stars, chips, text, meta);
+    } else {
+      body.append(stars, text, meta);
+    }
 
-      card.append(
-        photo,
-        body,
-      );
+    card.append(photo, body);
 
-      fragment.appendChild(
-        card,
-      );
-    },
-  );
+    fragment.appendChild(card);
+  });
 
-  reviewsCarousel.appendChild(
-    fragment,
-  );
+  reviewsCarousel.appendChild(fragment);
 }
 
 // ============================================================
@@ -2364,9 +1642,7 @@ function renderReviews(
 // ============================================================
 
 function loadReviews() {
-  if (
-    !isSupabaseConfigured()
-  ) {
+  if (!isSupabaseConfigured()) {
     reviewsLoading.textContent =
       "Connect Supabase (assets/js/supabase-config.js) to load customer reviews.";
 
@@ -2378,19 +1654,11 @@ function loadReviews() {
       action: "reviews",
     })
     .then((data) => {
-      if (
-        !data ||
-        !data.success
-      ) {
-        throw new Error(
-          data?.message ||
-            "Unable to load reviews.",
-        );
+      if (!data || !data.success) {
+        throw new Error(data?.message || "Unable to load reviews.");
       }
 
-      renderReviews(
-        data.reviews || [],
-      );
+      renderReviews(data.reviews || []);
     })
     .catch(() => {
       reviewsLoading.textContent =
@@ -2402,273 +1670,146 @@ function loadReviews() {
 // COMPRESS REVIEW IMAGE
 // ============================================================
 
-function compressReviewImage(
-  file,
-) {
-  return new Promise(
-    (resolve, reject) => {
-      const reader =
-        new FileReader();
+function compressReviewImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
 
-      reader.onload = () => {
-        const img =
-          new Image();
+    reader.onload = () => {
+      const img = new Image();
 
-        img.onload = () => {
-          const maxSide =
-            1200;
+      img.onload = () => {
+        const maxSide = 1200;
 
-          const scale =
-            Math.min(
-              1,
-              maxSide /
-                Math.max(
-                  img.width,
-                  img.height,
-                ),
-            );
+        const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
 
-          const canvas =
-            document.createElement(
-              "canvas",
-            );
+        const canvas = document.createElement("canvas");
 
-          canvas.width =
-            Math.max(
-              1,
-              Math.round(
-                img.width *
-                  scale,
-              ),
-            );
+        canvas.width = Math.max(1, Math.round(img.width * scale));
 
-          canvas.height =
-            Math.max(
-              1,
-              Math.round(
-                img.height *
-                  scale,
-              ),
-            );
+        canvas.height = Math.max(1, Math.round(img.height * scale));
 
-          const ctx =
-            canvas.getContext(
-              "2d",
-            );
+        const ctx = canvas.getContext("2d");
 
-          ctx.drawImage(
-            img,
-            0,
-            0,
-            canvas.width,
-            canvas.height,
-          );
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          resolve(
-            canvas.toDataURL(
-              "image/jpeg",
-              0.78,
-            ),
-          );
-        };
-
-        img.onerror = () =>
-          reject(
-            new Error(
-              "The selected image could not be read.",
-            ),
-          );
-
-        img.src =
-          reader.result;
+        resolve(canvas.toDataURL("image/jpeg", 0.78));
       };
 
-      reader.onerror = () =>
-        reject(
-          new Error(
-            "The selected image could not be read.",
-          ),
-        );
+      img.onerror = () =>
+        reject(new Error("The selected image could not be read."));
 
-      reader.readAsDataURL(
-        file,
-      );
-    },
-  );
+      img.src = reader.result;
+    };
+
+    reader.onerror = () =>
+      reject(new Error("The selected image could not be read."));
+
+    reader.readAsDataURL(file);
+  });
 }
 
 // ============================================================
 // REVIEW FORM
 // ============================================================
 
-reviewForm?.addEventListener(
-  "submit",
-  async function (e) {
-    e.preventDefault();
+reviewForm?.addEventListener("submit", async function (e) {
+  e.preventDefault();
 
-    if (
-      !isSupabaseConfigured()
-    ) {
-      showReviewStatus(
-        "The review service is not connected yet.",
-        "error",
+  if (!isSupabaseConfigured()) {
+    showReviewStatus("The review service is not connected yet.", "error");
+
+    return;
+  }
+
+  const file = document.getElementById("reviewPhoto")?.files?.[0];
+
+  if (!file) {
+    showReviewStatus("Please attach a photo with your review.", "error");
+
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    showReviewStatus("Please upload an image file.", "error");
+
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    showReviewStatus("Please choose an image smaller than 5 MB.", "error");
+
+    return;
+  }
+
+  reviewSubmit.disabled = true;
+
+  reviewSubmit.textContent = "Sending…";
+
+  showReviewStatus("Preparing your photo and review…", "success");
+
+  try {
+    const photoData = await compressReviewImage(file);
+
+    if (photoData.length > 1600000) {
+      throw new Error(
+        "The photo is still too large after compression. Please choose another image.",
       );
-
-      return;
     }
 
-    const file =
-      document.getElementById(
-        "reviewPhoto",
-      )?.files?.[0];
+    const selectedScent = catalog.all().find((p) => p.id === reviewScent.value);
 
-    if (!file) {
-      showReviewStatus(
-        "Please attach a photo with your review.",
-        "error",
-      );
+    const payload = new URLSearchParams({
+      action: "submitReview",
 
-      return;
+      name: document.getElementById("reviewName").value.trim(),
+
+      scent: selectedScent ? selectedScent.name : reviewScent.value,
+
+      scentId: reviewScent.value,
+
+      rating: reviewRating.value,
+
+      review: document.getElementById("reviewText").value.trim(),
+
+      photo: photoData,
+
+      similarity: document.getElementById("reviewSimilarity")?.value || "",
+      wearHours: document.getElementById("reviewWear")?.value || "",
+      projection: document.getElementById("reviewProjection")?.value || "",
+    });
+
+    const response = await apiClient.post(
+      Object.fromEntries(payload.entries()),
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || "Unable to submit review.");
     }
-
-    if (
-      !file.type.startsWith(
-        "image/",
-      )
-    ) {
-      showReviewStatus(
-        "Please upload an image file.",
-        "error",
-      );
-
-      return;
-    }
-
-    if (
-      file.size >
-      5 * 1024 * 1024
-    ) {
-      showReviewStatus(
-        "Please choose an image smaller than 5 MB.",
-        "error",
-      );
-
-      return;
-    }
-
-    reviewSubmit.disabled =
-      true;
-
-    reviewSubmit.textContent =
-      "Sending…";
 
     showReviewStatus(
-      "Preparing your photo and review…",
+      "Thank you! Your review was submitted and will appear after approval.",
       "success",
     );
 
-    try {
-      const photoData =
-        await compressReviewImage(
-          file,
-        );
+    reviewForm.reset();
 
-      if (
-        photoData.length >
-        1600000
-      ) {
-        throw new Error(
-          "The photo is still too large after compression. Please choose another image.",
-        );
-      }
+    setRating(5);
+    if (typeof resetPerfInputs === "function") resetPerfInputs();
 
-      const selectedScent =
-        catalog
-          .all()
-          .find(
-            (p) =>
-              p.id ===
-              reviewScent.value,
-          );
+    renderReviewScentOptions();
+  } catch (err) {
+    console.error(err);
 
-      const payload =
-        new URLSearchParams({
-          action:
-            "submitReview",
+    showReviewStatus(
+      err.message || "Unable to submit your review. Please try again.",
+      "error",
+    );
+  } finally {
+    reviewSubmit.disabled = false;
 
-          name: document
-            .getElementById(
-              "reviewName",
-            )
-            .value.trim(),
-
-          scent: selectedScent
-            ? selectedScent.name
-            : reviewScent.value,
-
-          scentId:
-            reviewScent.value,
-
-          rating:
-            reviewRating.value,
-
-          review: document
-            .getElementById(
-              "reviewText",
-            )
-            .value.trim(),
-
-          photo: photoData,
-
-          similarity: document.getElementById("reviewSimilarity")?.value || "",
-          wearHours: document.getElementById("reviewWear")?.value || "",
-          projection: document.getElementById("reviewProjection")?.value || "",
-        });
-
-      const response =
-        await apiClient.post(
-          Object.fromEntries(
-            payload.entries(),
-          ),
-        );
-
-      if (
-        !response.success
-      ) {
-        throw new Error(
-          response.message ||
-            "Unable to submit review.",
-        );
-      }
-
-      showReviewStatus(
-        "Thank you! Your review was submitted and will appear after approval.",
-        "success",
-      );
-
-      reviewForm.reset();
-
-      setRating(5);
-      if (typeof resetPerfInputs === "function") resetPerfInputs();
-
-      renderReviewScentOptions();
-    } catch (err) {
-      console.error(err);
-
-      showReviewStatus(
-        err.message ||
-          "Unable to submit your review. Please try again.",
-        "error",
-      );
-    } finally {
-      reviewSubmit.disabled =
-        false;
-
-      reviewSubmit.textContent =
-        "Submit review";
-    }
-  },
-);
+    reviewSubmit.textContent = "Submit review";
+  }
+});
 
 loadReviews();
 
@@ -2712,9 +1853,7 @@ const SCENT_PROFILES = [
 // NORMALIZE PROFILE
 // ============================================================
 
-function normalizeProfile(
-  value,
-) {
+function normalizeProfile(value) {
   return String(value || "")
     .trim()
     .toLowerCase();
@@ -2725,10 +1864,9 @@ function normalizeProfile(
 // ============================================================
 
 function renderScentProfileQuizOptions() {
-  const profileGroup =
-    document.querySelector(
-      '.quiz-options[data-question="profile"]',
-    );
+  const profileGroup = document.querySelector(
+    '.quiz-options[data-question="profile"]',
+  );
 
   if (!profileGroup) {
     console.warn(
@@ -2738,29 +1876,19 @@ function renderScentProfileQuizOptions() {
     return;
   }
 
-  profileGroup.innerHTML =
-    SCENT_PROFILES.map(
-      (profile) => {
-        const value =
-          normalizeProfile(
-            profile,
-          );
+  profileGroup.innerHTML = SCENT_PROFILES.map((profile) => {
+    const value = normalizeProfile(profile);
 
-        return `
+    return `
           <button
             type="button"
             class="quiz-option"
-            data-value="${escapeHTML(
-              value,
-            )}"
+            data-value="${escapeHTML(value)}"
           >
-            ${escapeHTML(
-              profile,
-            )}
+            ${escapeHTML(profile)}
           </button>
         `;
-      },
-    ).join("");
+  }).join("");
 }
 
 // ============================================================
@@ -2768,189 +1896,98 @@ function renderScentProfileQuizOptions() {
 // ============================================================
 
 function setupQuizOptions() {
-  const quizGroups =
-    document.querySelectorAll(
-      ".quiz-options",
-    );
+  const quizGroups = document.querySelectorAll(".quiz-options");
 
-  quizGroups.forEach(
-    (group) => {
-      group.addEventListener(
-        "click",
-        (e) => {
-          const btn =
-            e.target.closest(
-              ".quiz-option",
-            );
+  quizGroups.forEach((group) => {
+    group.addEventListener("click", (e) => {
+      const btn = e.target.closest(".quiz-option");
 
-          if (!btn) {
-            return;
-          }
+      if (!btn) {
+        return;
+      }
 
-          const question =
-            group.dataset
-              .question;
+      const question = group.dataset.question;
 
-          let value =
-            btn.dataset.value ||
-            "";
+      let value = btn.dataset.value || "";
 
-          // --------------------------------------------------
-          // PROFILE
-          // --------------------------------------------------
+      // --------------------------------------------------
+      // PROFILE
+      // --------------------------------------------------
 
-          if (
-            question ===
-            "profile"
-          ) {
-            const profile =
-              normalizeProfile(
-                value,
-              );
+      if (question === "profile") {
+        const profile = normalizeProfile(value);
 
-            if (!profile) {
-              return;
-            }
+        if (!profile) {
+          return;
+        }
 
-            const currentProfiles =
-              Array.isArray(
-                quizAnswers.profile,
-              )
-                ? quizAnswers.profile
-                : [];
+        const currentProfiles = Array.isArray(quizAnswers.profile)
+          ? quizAnswers.profile
+          : [];
 
-            const exists =
-              currentProfiles.includes(
-                profile,
-              );
+        const exists = currentProfiles.includes(profile);
 
-            if (exists) {
-              quizAnswers.profile =
-                currentProfiles.filter(
-                  (item) =>
-                    item !==
-                    profile,
-                );
-            } else {
-              quizAnswers.profile =
-                [
-                  ...currentProfiles,
-                  profile,
-                ];
-            }
+        if (exists) {
+          quizAnswers.profile = currentProfiles.filter(
+            (item) => item !== profile,
+          );
+        } else {
+          quizAnswers.profile = [...currentProfiles, profile];
+        }
 
-            group
-              .querySelectorAll(
-                ".quiz-option",
-              )
-              .forEach(
-                (option) => {
-                  const optionValue =
-                    normalizeProfile(
-                      option.dataset
-                        .value,
-                    );
+        group.querySelectorAll(".quiz-option").forEach((option) => {
+          const optionValue = normalizeProfile(option.dataset.value);
 
-                  option.classList.toggle(
-                    "active",
-                    quizAnswers.profile.includes(
-                      optionValue,
-                    ),
-                  );
-                },
-              );
+          option.classList.toggle(
+            "active",
+            quizAnswers.profile.includes(optionValue),
+          );
+        });
 
-            return;
-          }
+        return;
+      }
 
-          // --------------------------------------------------
-          // STRENGTH
-          // --------------------------------------------------
+      // --------------------------------------------------
+      // STRENGTH
+      // --------------------------------------------------
 
-          if (
-            question ===
-            "strength"
-          ) {
-            value =
-              normalizeStrength(
-                value,
-              );
+      if (question === "strength") {
+        value = normalizeStrength(value);
 
-            quizAnswers.strength =
-              value;
+        quizAnswers.strength = value;
 
-            group
-              .querySelectorAll(
-                ".quiz-option",
-              )
-              .forEach(
-                (option) => {
-                  option.classList.toggle(
-                    "active",
-                    option ===
-                      btn,
-                  );
-                },
-              );
+        group.querySelectorAll(".quiz-option").forEach((option) => {
+          option.classList.toggle("active", option === btn);
+        });
 
-            return;
-          }
+        return;
+      }
 
-          // --------------------------------------------------
-          // OCCASION
-          // --------------------------------------------------
+      // --------------------------------------------------
+      // OCCASION
+      // --------------------------------------------------
 
-          if (
-            question ===
-            "occasion"
-          ) {
-            quizAnswers.occasion =
-              normalizeProfile(
-                value,
-              );
+      if (question === "occasion") {
+        quizAnswers.occasion = normalizeProfile(value);
 
-            group
-              .querySelectorAll(
-                ".quiz-option",
-              )
-              .forEach(
-                (option) => {
-                  option.classList.toggle(
-                    "active",
-                    option ===
-                      btn,
-                  );
-                },
-              );
+        group.querySelectorAll(".quiz-option").forEach((option) => {
+          option.classList.toggle("active", option === btn);
+        });
 
-            return;
-          }
+        return;
+      }
 
-          // --------------------------------------------------
-          // OTHER
-          // --------------------------------------------------
+      // --------------------------------------------------
+      // OTHER
+      // --------------------------------------------------
 
-          quizAnswers[
-            question
-          ] = value;
+      quizAnswers[question] = value;
 
-          group
-            .querySelectorAll(
-              ".quiz-option",
-            )
-            .forEach(
-              (option) => {
-                option.classList.toggle(
-                  "active",
-                  option ===
-                    btn,
-                );
-              },
-            );
-        },
-      );
-    },
-  );
+      group.querySelectorAll(".quiz-option").forEach((option) => {
+        option.classList.toggle("active", option === btn);
+      });
+    });
+  });
 }
 
 // ============================================================
@@ -2965,542 +2002,243 @@ setupQuizOptions();
 // FIND MY SCENT
 // ============================================================
 
-document
-  .getElementById(
-    "findScentBtn",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      const selectedProfiles =
-        Array.isArray(
-          quizAnswers.profile,
-        )
-          ? quizAnswers.profile
-              .map(
-                (
-                  profile,
-                ) =>
-                  normalizeProfile(
-                    profile,
-                  ),
-              )
-              .filter(Boolean)
-          : [];
+document.getElementById("findScentBtn")?.addEventListener("click", () => {
+  const selectedProfiles = Array.isArray(quizAnswers.profile)
+    ? quizAnswers.profile
+        .map((profile) => normalizeProfile(profile))
+        .filter(Boolean)
+    : [];
 
-      const selectedOccasion =
-        normalizeProfile(
-          quizAnswers.occasion,
-        );
+  const selectedOccasion = normalizeProfile(quizAnswers.occasion);
 
-      const selectedStrength =
-        normalizeStrength(
-          quizAnswers.strength,
-        );
+  const selectedStrength = normalizeStrength(quizAnswers.strength);
 
-      const scores =
-        catalog
-          .all()
-          .filter(
-            (product) =>
-              product.active !==
-              false,
-          )
-          .map(
-            (product) => {
-              const meta =
-                PRODUCT_META[
-                  product.id
-                ] || {};
+  const scores = catalog
+    .all()
+    .filter((product) => product.active !== false)
+    .map((product) => {
+      const meta = PRODUCT_META[product.id] || {};
 
-              let score = 0;
+      let score = 0;
 
-              let productProfiles =
-                [];
+      let productProfiles = [];
 
-              if (
-                Array.isArray(
-                  meta.profiles,
-                )
-              ) {
-                productProfiles =
-                  meta.profiles
-                    .map(
-                      (
-                        profile,
-                      ) =>
-                        normalizeProfile(
-                          profile,
-                        ),
-                    )
-                    .filter(
-                      Boolean,
-                    );
-              } else {
-                productProfiles =
-                  String(
-                    meta.profiles ||
-                      "",
-                  )
-                    .split(",")
-                    .map(
-                      (
-                        profile,
-                      ) =>
-                        normalizeProfile(
-                          profile,
-                        ),
-                    )
-                    .filter(
-                      Boolean,
-                    );
-              }
-
-              if (
-                selectedProfiles.length
-              ) {
-                selectedProfiles.forEach(
-                  (
-                    selectedProfile,
-                  ) => {
-                    if (
-                      productProfiles.includes(
-                        selectedProfile,
-                      )
-                    ) {
-                      score += 4;
-                    }
-                  },
-                );
-              }
-
-              const productOccasions =
-                Array.isArray(
-                  meta.occasion,
-                )
-                  ? meta.occasion
-                      .map(
-                        (
-                          value,
-                        ) =>
-                          normalizeProfile(
-                            value,
-                          ),
-                      )
-                      .filter(
-                        Boolean,
-                      )
-                  : String(
-                      meta.occasion ||
-                        "",
-                    )
-                      .split(",")
-                      .map(
-                        (
-                          value,
-                        ) =>
-                          normalizeProfile(
-                            value,
-                          ),
-                      )
-                      .filter(
-                        Boolean,
-                      );
-
-              if (
-                selectedOccasion &&
-                productOccasions.includes(
-                  selectedOccasion,
-                )
-              ) {
-                score += 3;
-              }
-
-              const productStrength =
-                normalizeStrength(
-                  meta.strength,
-                );
-
-              if (
-                quizAnswers.strength &&
-                productStrength ===
-                  selectedStrength
-              ) {
-                score += 2;
-              }
-
-              return {
-                p: product,
-                score,
-                matchedProfiles:
-                  selectedProfiles.filter(
-                    (
-                      profile,
-                    ) =>
-                      productProfiles.includes(
-                        profile,
-                      ),
-                  ),
-              };
-            },
-          )
-          .sort(
-            (a, b) => {
-              if (
-                b.score !==
-                a.score
-              ) {
-                return (
-                  b.score -
-                  a.score
-                );
-              }
-
-              return (
-                b.matchedProfiles
-                  .length -
-                a.matchedProfiles
-                  .length
-              );
-            },
-          );
-
-      const winner =
-        scores[0]?.p ||
-        catalog.all()[0];
-
-      if (!winner) {
-        return;
+      if (Array.isArray(meta.profiles)) {
+        productProfiles = meta.profiles
+          .map((profile) => normalizeProfile(profile))
+          .filter(Boolean);
+      } else {
+        productProfiles = String(meta.profiles || "")
+          .split(",")
+          .map((profile) => normalizeProfile(profile))
+          .filter(Boolean);
       }
 
-      document.getElementById(
-        "quizResultName",
-      ).textContent =
-        winner.name;
-
-      const winnerMeta =
-        PRODUCT_META[
-          winner.id
-        ] || {};
-
-      const winnerProfiles =
-        Array.isArray(
-          winnerMeta.profiles,
-        )
-          ? winnerMeta.profiles
-          : String(
-              winnerMeta.profiles ||
-                "",
-            )
-              .split(",")
-              .map(
-                (profile) =>
-                  profile.trim(),
-              )
-              .filter(Boolean);
-
-      const matchedProfiles =
-        selectedProfiles.filter(
-          (selected) =>
-            winnerProfiles.some(
-              (profile) =>
-                normalizeProfile(
-                  profile,
-                ) ===
-                normalizeProfile(
-                  selected,
-                ),
-            ),
-        );
-
-      let resultText =
-        winner.desc || "";
-
-      if (
-        matchedProfiles.length
-      ) {
-        resultText +=
-          " Your selected scent character" +
-          (matchedProfiles.length >
-          1
-            ? "s are: "
-            : " is: ") +
-          matchedProfiles
-            .map(
-              (profile) =>
-                profile
-                  .charAt(0)
-                  .toUpperCase() +
-                profile.slice(
-                  1,
-                ),
-            )
-            .join(", ") +
-          ".";
+      if (selectedProfiles.length) {
+        selectedProfiles.forEach((selectedProfile) => {
+          if (productProfiles.includes(selectedProfile)) {
+            score += 4;
+          }
+        });
       }
 
-      if (
-        winner.occasion
-      ) {
-        resultText +=
-          " Best suited for: " +
-          winner.occasion +
-          ".";
+      const productOccasions = Array.isArray(meta.occasion)
+        ? meta.occasion.map((value) => normalizeProfile(value)).filter(Boolean)
+        : String(meta.occasion || "")
+            .split(",")
+            .map((value) => normalizeProfile(value))
+            .filter(Boolean);
+
+      if (selectedOccasion && productOccasions.includes(selectedOccasion)) {
+        score += 3;
       }
 
-      document.getElementById(
-        "quizResultText",
-      ).textContent =
-        resultText;
+      const productStrength = normalizeStrength(meta.strength);
 
-      document
-        .getElementById(
-          "quizResult",
-        )
-        .classList.add(
-          "show",
-        );
+      if (quizAnswers.strength && productStrength === selectedStrength) {
+        score += 2;
+      }
 
-      document.getElementById(
-        "quizOrderBtn",
-      ).dataset.id =
-        winner.id;
-    },
+      return {
+        p: product,
+        score,
+        matchedProfiles: selectedProfiles.filter((profile) =>
+          productProfiles.includes(profile),
+        ),
+      };
+    })
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+
+      return b.matchedProfiles.length - a.matchedProfiles.length;
+    });
+
+  const winner = scores[0]?.p || catalog.all()[0];
+
+  if (!winner) {
+    return;
+  }
+
+  document.getElementById("quizResultName").textContent = winner.name;
+
+  const winnerMeta = PRODUCT_META[winner.id] || {};
+
+  const winnerProfiles = Array.isArray(winnerMeta.profiles)
+    ? winnerMeta.profiles
+    : String(winnerMeta.profiles || "")
+        .split(",")
+        .map((profile) => profile.trim())
+        .filter(Boolean);
+
+  const matchedProfiles = selectedProfiles.filter((selected) =>
+    winnerProfiles.some(
+      (profile) => normalizeProfile(profile) === normalizeProfile(selected),
+    ),
   );
+
+  let resultText = winner.desc || "";
+
+  if (matchedProfiles.length) {
+    resultText +=
+      " Your selected scent character" +
+      (matchedProfiles.length > 1 ? "s are: " : " is: ") +
+      matchedProfiles
+        .map((profile) => profile.charAt(0).toUpperCase() + profile.slice(1))
+        .join(", ") +
+      ".";
+  }
+
+  if (winner.occasion) {
+    resultText += " Best suited for: " + winner.occasion + ".";
+  }
+
+  document.getElementById("quizResultText").textContent = resultText;
+
+  document.getElementById("quizResult").classList.add("show");
+
+  document.getElementById("quizOrderBtn").dataset.id = winner.id;
+});
 
 // ============================================================
 // QUIZ ORDER BUTTON
 // ============================================================
 
-document
-  .getElementById(
-    "quizOrderBtn",
-  )
-  ?.addEventListener(
-    "click",
-    (e) => {
-      const productId =
-        e.currentTarget
-          .dataset.id;
+document.getElementById("quizOrderBtn")?.addEventListener("click", (e) => {
+  const productId = e.currentTarget.dataset.id;
 
-      if (!productId) {
-        return;
-      }
+  if (!productId) {
+    return;
+  }
 
-      scentSelect.value =
-        productId;
+  scentSelect.value = productId;
 
-      syncQuantity();
+  syncQuantity();
 
-      if (typeof openBag === "function") openBag();
-    },
-  );
+  if (typeof openBag === "function") openBag();
+});
 
 // ============================================================
 // BUILD YOUR DUO
 // ============================================================
 
-const duoOne =
-  document.getElementById(
-    "duoOne",
-  );
+const duoOne = document.getElementById("duoOne");
 
-const duoTwo =
-  document.getElementById(
-    "duoTwo",
-  );
+const duoTwo = document.getElementById("duoTwo");
 
-const duoTotal =
-  document.getElementById(
-    "duoTotal",
-  );
+const duoTotal = document.getElementById("duoTotal");
 
 [duoOne, duoTwo].forEach((select) =>
   select?.addEventListener("change", () => {
-    select.dataset.touched = "1";   // keep the customer's choice when the list refreshes
+    select.dataset.touched = "1"; // keep the customer's choice when the list refreshes
     updateDuoTotal();
   }),
 );
 
-document
-  .getElementById(
-    "duoOrderBtn",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      const a = duoOne?.value;
-      const b = duoTwo?.value;
-      if (!a || !b) return;
+document.getElementById("duoOrderBtn")?.addEventListener("click", () => {
+  const a = duoOne?.value;
+  const b = duoTwo?.value;
+  if (!a || !b) return;
 
-      // Both bottles go straight into the cart (the same scent twice is fine)
-      const okA = addToCart(a, 1);
-      const okB = okA && addToCart(b, 1);
+  // Both bottles go straight into the cart (the same scent twice is fine)
+  const okA = addToCart(a, 1);
+  const okB = okA && addToCart(b, 1);
 
-      if (okA && okB) {
-        const names = [a, b].map((id) => getProductById(id)?.name || id);
-        showToast(
-          `<b>${escapeHTML(names.join(" & "))}</b> added to your bag`,
-          { link: true },
-        );
-      }
-    },
-  );
-
+  if (okA && okB) {
+    const names = [a, b].map((id) => getProductById(id)?.name || id);
+    showToast(`<b>${escapeHTML(names.join(" & "))}</b> added to your bag`, {
+      link: true,
+    });
+  }
+});
 
 // ============================================================
 // ORDER FORM
 // ============================================================
 
-const form =
-  document.getElementById(
-    "orderForm",
-  );
+const form = document.getElementById("orderForm");
 
-const summaryEmpty =
-  document.getElementById(
-    "summaryEmpty",
-  );
+const summaryEmpty = document.getElementById("summaryEmpty");
 
-const summaryLines =
-  document.getElementById(
-    "summaryLines",
-  );
+const summaryLines = document.getElementById("summaryLines");
 
-const summaryActions =
-  document.getElementById(
-    "summaryActions",
-  );
+const summaryActions = document.getElementById("summaryActions");
 
-const copyBtn =
-  document.getElementById(
-    "copyBtn",
-  );
+const copyBtn = document.getElementById("copyBtn");
 
-const qtyNumber =
-  document.getElementById(
-    "qtyNumber",
-  );
+const qtyNumber = document.getElementById("qtyNumber");
 
-const qtyHidden =
-  document.getElementById(
-    "qty",
-  );
+const qtyHidden = document.getElementById("qty");
 
-const liveTotal =
-  document.getElementById(
-    "liveTotal",
-  );
+const liveTotal = document.getElementById("liveTotal");
 
 // ============================================================
 // QUANTITY
 // ============================================================
 
 function syncQuantity() {
-  if (
-    !qtyNumber ||
-    !qtyHidden ||
-    !liveTotal
-  ) {
+  if (!qtyNumber || !qtyHidden || !liveTotal) {
     return 1;
   }
 
-  let n = Math.max(
-    1,
-    Math.min(
-      10,
-      parseInt(
-        qtyNumber.value ||
-          "1",
-        10,
-      ),
-    ),
-  );
+  let n = Math.max(1, Math.min(10, parseInt(qtyNumber.value || "1", 10)));
 
-  qtyNumber.value =
-    n;
+  qtyNumber.value = n;
 
-  qtyHidden.value =
-    n +
-    (n === 1
-      ? " bottle"
-      : " bottles");
+  qtyHidden.value = n + (n === 1 ? " bottle" : " bottles");
 
-  const selectedId =
-    scentSelect.value;
+  const selectedId = scentSelect.value;
 
-  const p =
-    getProductById(
-      selectedId,
-    );
+  const p = getProductById(selectedId);
 
   const singleItemSubtotal =
-    (p
-      ? Number(
-          p.price ||
-            PRODUCT_PRICE,
-        )
-      : PRODUCT_PRICE) *
-    n;
+    (p ? Number(p.price || PRODUCT_PRICE) : PRODUCT_PRICE) * n;
 
-  const preview =
-    calculatePromotionDiscount(
-      singleItemSubtotal,
-      n,
-    );
+  const preview = calculatePromotionDiscount(singleItemSubtotal, n);
 
-  liveTotal.textContent =
-    preview.promotion
-      ? `Estimated total: ₱${preview.total.toLocaleString()} — ${preview.promotion.name}`
-      : "Estimated total: ₱" +
-        preview.total.toLocaleString();
+  liveTotal.textContent = preview.promotion
+    ? `Estimated total: ₱${preview.total.toLocaleString()} — ${preview.promotion.name}`
+    : "Estimated total: ₱" + preview.total.toLocaleString();
 
   return n;
 }
 
-document
-  .getElementById(
-    "qtyMinus",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      qtyNumber.value =
-        Number(
-          qtyNumber.value ||
-            1,
-        ) - 1;
+document.getElementById("qtyMinus")?.addEventListener("click", () => {
+  qtyNumber.value = Number(qtyNumber.value || 1) - 1;
 
-      syncQuantity();
-    },
-  );
+  syncQuantity();
+});
 
-document
-  .getElementById(
-    "qtyPlus",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      qtyNumber.value =
-        Number(
-          qtyNumber.value ||
-            1,
-        ) + 1;
+document.getElementById("qtyPlus")?.addEventListener("click", () => {
+  qtyNumber.value = Number(qtyNumber.value || 1) + 1;
 
-      syncQuantity();
-    },
-  );
+  syncQuantity();
+});
 
-qtyNumber?.addEventListener(
-  "input",
-  syncQuantity,
-);
+qtyNumber?.addEventListener("input", syncQuantity);
 
-scentSelect?.addEventListener(
-  "change",
-  syncQuantity,
-);
+scentSelect?.addEventListener("change", syncQuantity);
 
 syncQuantity();
 
@@ -3510,478 +2248,309 @@ renderCart();
 // SUBMIT STATUS
 // ============================================================
 
-function showSubmitStatus(
-  message,
-  type,
-) {
-  const status =
-    document.getElementById(
-      "submitStatus",
-    );
+function showSubmitStatus(message, type) {
+  const status = document.getElementById("submitStatus");
 
   if (!status) {
     return;
   }
 
-  status.textContent =
-    message;
+  status.textContent = message;
 
-  status.className =
-    "submit-status show " +
-    type;
+  status.className = "submit-status show " + type;
 }
 
 // ============================================================
 // ORDER SUBMISSION
 // ============================================================
 
-form?.addEventListener(
-  "submit",
-  async function (e) {
-    e.preventDefault();
+form?.addEventListener("submit", async function (e) {
+  e.preventDefault();
 
-    const submitBtn =
-      document.getElementById(
-        "submitBtn",
-      );
+  const submitBtn = document.getElementById("submitBtn");
 
-    const data =
-      new FormData(form);
+  const data = new FormData(form);
 
-    if (!cart.length) {
-      showSubmitStatus(
-        "Your bag is empty — add a fragrance to continue.",
-        "error",
-      );
-
-      return;
-    }
-
-    const quantityNumber =
-      cart.reduce(
-        (sum, item) =>
-          sum +
-          Number(
-            item.qty || 0,
-          ),
-        0,
-      );
-
-    const orderTotal =
-      getCartTotal();
-
-    const scentName =
-      cart
-        .map(
-          (item) =>
-            getProductById(
-              item.id,
-            )?.name ||
-            item.id,
-        )
-        .join(", ");
-
-    const cartLines =
-      cart
-        .map((item) => {
-          const p =
-            getProductById(
-              item.id,
-            );
-
-          return `
-${p.name} × ${item.qty} — ₱${(
-            Number(
-              p.price ||
-                PRODUCT_PRICE,
-            ) * item.qty
-          ).toLocaleString()}`;
-        })
-        .join("\n");
-
-    const lines = [
-      "AURA & ESSENCE — Order",
-
-      "—————————————",
-
-      "Name: " +
-        data.get(
-          "fullname",
-        ),
-
-      "Contact: " +
-        data.get(
-          "contact",
-        ),
-
-      "Items:",
-
-      cartLines,
-
-      "Location: " +
-        data.get(
-          "address",
-        ),
-
-      "Payment: " +
-        data.get(
-          "payment",
-        ),
-
-      "Notes: " +
-        (data.get(
-          "notes",
-        ) || "—"),
-
-      "—————————————",
-
-      "Total items: " +
-        quantityNumber,
-
-      ...voucherSummaryLines(),
-
-      "Estimated total: ₱" +
-        estimatedOrderTotal(orderTotal).toLocaleString(),
-    ].join("\n");
-
-    summaryLines.textContent =
-      lines;
-
-    summaryEmpty.style.display =
-      "none";
-
-    summaryLines.style.display =
-      "block";
-
-    summaryActions.style.display =
-      "flex";
-
-    if (
-      !isSupabaseConfigured()
-    ) {
-      showSubmitStatus(
-        "Order summary created, but the database is not connected yet. Please send us the summary below directly.",
-        "error",
-      );
-
-      summaryLines.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-
-      return;
-    }
-
-    submitBtn.disabled =
-      true;
-
-    submitBtn.textContent =
-      "Placing your order…";
-
+  if (!cart.length) {
     showSubmitStatus(
-      "Placing your order…",
-      "success",
+      "Your bag is empty — add a fragrance to continue.",
+      "error",
     );
 
-    try {
-      const payload =
-        new URLSearchParams({
-          fullname:
-            data.get(
-              "fullname",
-            ) || "",
+    return;
+  }
 
-          contact:
-            data.get(
-              "contact",
-            ) || "",
+  const quantityNumber = cart.reduce(
+    (sum, item) => sum + Number(item.qty || 0),
+    0,
+  );
 
-          scent: scentName,
+  const orderTotal = getCartTotal();
 
-          scentId:
-            cart
-              .map(
-                (item) =>
-                  item.id,
-              )
-              .join(","),
+  const scentName = cart
+    .map((item) => getProductById(item.id)?.name || item.id)
+    .join(", ");
 
-          qty:
-            quantityNumber +
-            (quantityNumber ===
-            1
-              ? " bottle"
-              : " bottles"),
+  const cartLines = cart
+    .map((item) => {
+      const p = getProductById(item.id);
 
-          items: JSON.stringify(
-            cart.map(
-              (item) => ({
-                id: item.id,
+      return `
+${p.name} × ${item.qty} — ₱${(
+        Number(p.price || PRODUCT_PRICE) * item.qty
+      ).toLocaleString()}`;
+    })
+    .join("\n");
 
-                name:
-                  getProductById(
-                    item.id,
-                  )?.name ||
-                  item.id,
+  const lines = [
+    "AURA & ESSENCE — Order",
 
-                qty: item.qty,
-              }),
-            ),
-          ),
+    "—————————————",
 
-          address:
-            data.get(
-              "address",
-            ) || "",
+    "Name: " + data.get("fullname"),
 
-          payment:
-            data.get(
-              "payment",
-            ) || "",
+    "Contact: " + data.get("contact"),
 
-          notes:
-            data.get(
-              "notes",
-            ) || "",
+    "Items:",
 
-          price:
-            "430",
+    cartLines,
 
-          voucher:
-            getAppliedVoucherCode(),
+    "Location: " + data.get("address"),
 
-          total:
-            String(
-              orderTotal,
-            ),
-        });
+    "Payment: " + data.get("payment"),
 
-      // IMPORTANT:
-      // No automatic retry for orders.
-      // Retrying a POST could create duplicate orders.
-      const response =
-        await apiClient.post(
-          Object.fromEntries(
-            payload.entries(),
-          ),
-        );
+    "Notes: " + (data.get("notes") || "—"),
 
-      if (
-        !response.success
-      ) {
-        throw new Error(
-          response.message ||
-            "Unable to save the order.",
-        );
-      }
+    "—————————————",
 
-      showSubmitStatus(
-        "Order saved successfully. We received your order and will be in touch shortly.",
-        "success",
-      );
+    "Total items: " + quantityNumber,
 
-      document.getElementById(
-        "confirmationOrderId",
-      ).textContent =
-        response.orderId ||
-        "ORDER RECEIVED";
+    ...voucherSummaryLines(),
 
-      document.getElementById(
-        "confirmationMessage",
-      ).textContent =
-        `Thank you, ${
-          data.get(
-            "fullname",
-          ) || "customer"
-        }. Your order has been received${
-          response.total != null
-            ? ` (total ₱${Number(response.total).toLocaleString()})`
-            : ""
-        }. We'll message you personally to confirm payment and arrange delivery or meetup.${
-          response.voucher
-            ? ` Voucher ${response.voucher} applied.`
-            : ""
-        }${
-          response.voucherNote
-            ? ` ${response.voucherNote}`
-            : ""
-        }`;
+    "Estimated total: ₱" + estimatedOrderTotal(orderTotal).toLocaleString(),
+  ].join("\n");
 
-      clearVoucher();
+  summaryLines.textContent = lines;
 
-      const payBox = document.getElementById("payInstructions");
-      if (payBox) {
-        payBox.innerHTML = payInstructionsHTML({
-          payment: data.get("payment"),
-          amount: response.total != null ? Number(response.total) : estimatedOrderTotal(orderTotal),
-          orderId: response.orderId,
-        });
-      }
-      goCheckoutStep(1, { silent: true });
+  summaryEmpty.style.display = "none";
 
-      if (typeof closeBag === "function") closeBag();
+  summaryLines.style.display = "block";
 
-      document
-        .getElementById(
-          "confirmationModal",
-        )
-        .classList.add(
-          "show",
-        );
+  summaryActions.style.display = "flex";
 
-      document
-        .getElementById(
-          "confirmationModal",
-        )
-        .setAttribute(
-          "aria-hidden",
-          "false",
-        );
-
-      form.reset();
-
-      if (qtyNumber) qtyNumber.value = 1;
-
-      cart = [];
-
-      cartManager.clear();
-
-      syncQuantity();
-
-      renderCart();
-
-      renderScentOptions();
-    } catch (err) {
-      console.error(err);
-
-      // Show the real reason (e.g. "Sauvage has only 1 bottle(s) in stock.")
-      showSubmitStatus(
-        err && err.message
-          ? err.message
-          : "The order summary was created, but saving to the database failed. Please try again or contact us directly.",
-        "error",
-      );
-    } finally {
-      submitBtn.disabled =
-        false;
-
-      submitBtn.textContent =
-        "Place order";
-    }
+  if (!isSupabaseConfigured()) {
+    showSubmitStatus(
+      "Order summary created, but the database is not connected yet. Please send us the summary below directly.",
+      "error",
+    );
 
     summaryLines.scrollIntoView({
       behavior: "smooth",
       block: "nearest",
     });
-  },
-);
+
+    return;
+  }
+
+  submitBtn.disabled = true;
+
+  submitBtn.textContent = "Placing your order…";
+
+  showSubmitStatus("Placing your order…", "success");
+
+  try {
+    const payload = new URLSearchParams({
+      fullname: data.get("fullname") || "",
+
+      contact: data.get("contact") || "",
+
+      scent: scentName,
+
+      scentId: cart.map((item) => item.id).join(","),
+
+      qty: quantityNumber + (quantityNumber === 1 ? " bottle" : " bottles"),
+
+      items: JSON.stringify(
+        cart.map((item) => ({
+          id: item.id,
+
+          name: getProductById(item.id)?.name || item.id,
+
+          qty: item.qty,
+        })),
+      ),
+
+      address: data.get("address") || "",
+
+      payment: data.get("payment") || "",
+
+      notes: data.get("notes") || "",
+
+      price: "430",
+
+      voucher: getAppliedVoucherCode(),
+
+      total: String(orderTotal),
+    });
+
+    // IMPORTANT:
+    // No automatic retry for orders.
+    // Retrying a POST could create duplicate orders.
+    const response = await apiClient.post(
+      Object.fromEntries(payload.entries()),
+    );
+
+    if (!response.success) {
+      throw new Error(response.message || "Unable to save the order.");
+    }
+
+    showSubmitStatus(
+      "Order saved successfully. We received your order and will be in touch shortly.",
+      "success",
+    );
+
+    document.getElementById("confirmationOrderId").textContent =
+      response.orderId || "ORDER RECEIVED";
+
+    document.getElementById("confirmationMessage").textContent = `Thank you, ${
+      data.get("fullname") || "customer"
+    }. Your order has been received${
+      response.total != null
+        ? ` (total ₱${Number(response.total).toLocaleString()})`
+        : ""
+    }. We'll message you personally to confirm payment and arrange delivery or meetup.${
+      response.voucher ? ` Voucher ${response.voucher} applied.` : ""
+    }${response.voucherNote ? ` ${response.voucherNote}` : ""}`;
+
+    clearVoucher();
+
+    const payBox = document.getElementById("payInstructions");
+    if (payBox) {
+      payBox.innerHTML = payInstructionsHTML({
+        payment: data.get("payment"),
+        amount:
+          response.total != null
+            ? Number(response.total)
+            : estimatedOrderTotal(orderTotal),
+        orderId: response.orderId,
+      });
+    }
+    goCheckoutStep(1, { silent: true });
+
+    if (typeof closeBag === "function") closeBag();
+
+    document.getElementById("confirmationModal").classList.add("show");
+
+    document
+      .getElementById("confirmationModal")
+      .setAttribute("aria-hidden", "false");
+
+    form.reset();
+
+    if (qtyNumber) qtyNumber.value = 1;
+
+    cart = [];
+
+    cartManager.clear();
+
+    syncQuantity();
+
+    renderCart();
+
+    renderScentOptions();
+  } catch (err) {
+    console.error(err);
+
+    // Show the real reason (e.g. "Sauvage has only 1 bottle(s) in stock.")
+    showSubmitStatus(
+      err && err.message
+        ? err.message
+        : "The order summary was created, but saving to the database failed. Please try again or contact us directly.",
+      "error",
+    );
+  } finally {
+    submitBtn.disabled = false;
+
+    submitBtn.textContent = "Place order";
+  }
+
+  summaryLines.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest",
+  });
+});
 
 // ============================================================
 // ORDER CONFIRMATION MODAL
 // ============================================================
 
-const confirmationModal =
-  document.getElementById(
-    "confirmationModal",
-  );
+const confirmationModal = document.getElementById("confirmationModal");
 
 document
-  .getElementById(
-    "confirmationCloseBtn",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      confirmationModal.classList.remove(
-        "show",
-      );
+  .getElementById("confirmationCloseBtn")
+  ?.addEventListener("click", () => {
+    confirmationModal.classList.remove("show");
 
-      confirmationModal.setAttribute(
-        "aria-hidden",
-        "true",
-      );
-    },
-  );
+    confirmationModal.setAttribute("aria-hidden", "true");
+  });
 
 document
-  .getElementById(
-    "confirmationTrackBtn",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      const id =
-        document
-          .getElementById(
-            "confirmationOrderId",
-          )
-          .textContent.trim();
+  .getElementById("confirmationTrackBtn")
+  ?.addEventListener("click", () => {
+    const id = document
+      .getElementById("confirmationOrderId")
+      .textContent.trim();
 
-      document.getElementById(
-        "trackingOrderId",
-      ).value = id;
+    document.getElementById("trackingOrderId").value = id;
 
-      confirmationModal.classList.remove(
-        "show",
-      );
+    confirmationModal.classList.remove("show");
 
-      document
-        .getElementById(
-          "tracking",
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
-    },
-  );
+    document.getElementById("tracking")?.scrollIntoView({
+      behavior: "smooth",
+    });
+  });
 
-confirmationModal?.addEventListener(
-  "click",
-  (e) => {
-    if (
-      e.target ===
-      confirmationModal
-    ) {
-      document
-        .getElementById(
-          "confirmationCloseBtn",
-        )
-        ?.click();
-    }
-  },
-);
+confirmationModal?.addEventListener("click", (e) => {
+  if (e.target === confirmationModal) {
+    document.getElementById("confirmationCloseBtn")?.click();
+  }
+});
 
 // ============================================================
 // ORDER TRACKING
 // ============================================================
 
-const trackingResult =
-  document.getElementById(
-    "trackingResult",
-  );
+const trackingResult = document.getElementById("trackingResult");
 
-const trackingStatus =
-  document.getElementById(
-    "trackingStatus",
-  );
+const trackingStatus = document.getElementById("trackingStatus");
 
-const trackingResultId =
-  document.getElementById(
-    "trackingResultId",
-  );
+const trackingResultId = document.getElementById("trackingResultId");
 
-const trackingResultSummary =
-  document.getElementById(
-    "trackingResultSummary",
-  );
+const trackingResultSummary = document.getElementById("trackingResultSummary");
 
 // Same steps and names as the admin Orders page.
 const trackSteps = [
   { status: "New", label: "Order received", hint: "We got your order." },
-  { status: "Confirmed", label: "Confirmed", hint: "We've confirmed your order." },
-  { status: "Preparing", label: "Preparing", hint: "Your scents are being packed." },
-  { status: "Out for Delivery", label: "Out for delivery", hint: "On the way, or ready for meetup." },
-  { status: "Completed", label: "Completed", hint: "Enjoy your Aura & Essence!" },
+  {
+    status: "Confirmed",
+    label: "Confirmed",
+    hint: "We've confirmed your order.",
+  },
+  {
+    status: "Preparing",
+    label: "Preparing",
+    hint: "Your scents are being packed.",
+  },
+  {
+    status: "Out for Delivery",
+    label: "Out for delivery",
+    hint: "On the way, or ready for meetup.",
+  },
+  {
+    status: "Completed",
+    label: "Completed",
+    hint: "Enjoy your Aura & Essence!",
+  },
 ];
 
 function trackDate(value) {
@@ -3989,25 +2558,34 @@ function trackDate(value) {
   const d = new Date(value);
   return isNaN(d)
     ? ""
-    : d.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+    : d.toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      });
 }
 
 function trackPeso(value) {
-  return "₱" + Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return (
+    "₱" +
+    Number(value || 0).toLocaleString(undefined, { maximumFractionDigits: 2 })
+  );
 }
 
-function renderTracking(
-  data,
-) {
+function renderTracking(data) {
   const status = data.status || "New";
   const cancelled = status === "Cancelled";
 
   // Latest time each status was set (older orders may not have a timeline)
-  const history = Array.isArray(data.history) && data.history.length
-    ? data.history
-    : [{ status: "New", at: data.timestamp }];
+  const history =
+    Array.isArray(data.history) && data.history.length
+      ? data.history
+      : [{ status: "New", at: data.timestamp }];
   const when = {};
-  history.forEach((h) => { when[h.status] = h.at; });
+  history.forEach((h) => {
+    when[h.status] = h.at;
+  });
   if (!when.New) when.New = data.timestamp;
 
   const current = trackSteps.findIndex((s) => s.status === status);
@@ -4016,9 +2594,12 @@ function renderTracking(
 
   /* ---------- order summary ---------- */
 
-  const items = Array.isArray(data.items) && data.items.length
-    ? data.items.map((i) => `${escapeHTML(i.name)} × ${escapeHTML(i.qty)}`).join(", ")
-    : escapeHTML(data.scent || "Order");
+  const items =
+    Array.isArray(data.items) && data.items.length
+      ? data.items
+          .map((i) => `${escapeHTML(i.name)} × ${escapeHTML(i.qty)}`)
+          .join(", ")
+      : escapeHTML(data.scent || "Order");
 
   const total = Number(data.total || 0);
   const paid = data.amountPaid == null ? null : Number(data.amountPaid);
@@ -4027,7 +2608,10 @@ function renderTracking(
 
   let paymentLine;
   if (cancelled) {
-    paymentLine = payStatus === "Refunded" ? `Refunded${method}` : `No payment due${method}`;
+    paymentLine =
+      payStatus === "Refunded"
+        ? `Refunded${method}`
+        : `No payment due${method}`;
   } else if (payStatus === "Paid") {
     paymentLine = `<span class="track-ok">Paid ${trackPeso(paid ?? total)}</span>${method}`;
   } else if (payStatus === "Partial") {
@@ -4041,7 +2625,7 @@ function renderTracking(
   trackingResultSummary.innerHTML = `
     <div class="track-summary">
       <div class="track-badge ${cancelled ? "is-cancelled" : status === "Completed" ? "is-done" : ""}">
-        ${escapeHTML(cancelled ? "Cancelled" : (trackSteps[current]?.label || status))}
+        ${escapeHTML(cancelled ? "Cancelled" : trackSteps[current]?.label || status)}
       </div>
       <dl>
         <dt>Items</dt><dd>${items}</dd>
@@ -4051,14 +2635,19 @@ function renderTracking(
         <dt>Customer</dt><dd>${escapeHTML(data.fullname || "")}</dd>
       </dl>
     </div>
-    ${!cancelled && (payStatus === "Unpaid" || payStatus === "Partial")
-      ? payInstructionsHTML({
-          payment: data.payment,
-          amount: payStatus === "Partial" ? Math.max(0, total - (paid || 0)) : total,
-          orderId: data.orderId,
-          compact: true,
-        })
-      : ""}
+    ${
+      !cancelled && (payStatus === "Unpaid" || payStatus === "Partial")
+        ? payInstructionsHTML({
+            payment: data.payment,
+            amount:
+              payStatus === "Partial"
+                ? Math.max(0, total - (paid || 0))
+                : total,
+            orderId: data.orderId,
+            compact: true,
+          })
+        : ""
+    }
   `;
 
   /* ---------- progress ---------- */
@@ -4074,7 +2663,8 @@ function renderTracking(
     trackingStatus.innerHTML = trackSteps
       .map((step, i) => {
         const state = i < current ? "done" : i === current ? "current" : "";
-        const time = i <= current && when[step.status] ? trackDate(when[step.status]) : "";
+        const time =
+          i <= current && when[step.status] ? trackDate(when[step.status]) : "";
         return `
           <div class="track-step ${state}">
             <span class="track-dot">${i < current ? "✓" : i === current ? "●" : "○"}</span>
@@ -4088,20 +2678,13 @@ function renderTracking(
       .join("");
   }
 
-  trackingResult.classList.add(
-    "show",
-  );
+  trackingResult.classList.add("show");
 }
 
-function showTrackingError(
-  msg,
-) {
-  trackingResult.classList.add(
-    "show",
-  );
+function showTrackingError(msg) {
+  trackingResult.classList.add("show");
 
-  trackingResultId.textContent =
-    "NOT FOUND";
+  trackingResultId.textContent = "NOT FOUND";
 
   trackingResultSummary.innerHTML = `
     <p
@@ -4113,97 +2696,57 @@ function showTrackingError(
     </p>
   `;
 
-  trackingStatus.innerHTML =
-    "";
+  trackingStatus.innerHTML = "";
 }
 
-document
-  .getElementById(
-    "trackOrderBtn",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      const orderId =
-        document
-          .getElementById(
-            "trackingOrderId",
-          )
-          .value.trim();
+document.getElementById("trackOrderBtn")?.addEventListener("click", () => {
+  const orderId = document.getElementById("trackingOrderId").value.trim();
 
-      const contact =
-        document
-          .getElementById(
-            "trackingContact",
-          )
-          .value.trim();
+  const contact = document.getElementById("trackingContact").value.trim();
 
-      if (
-        !orderId ||
-        !contact
-      ) {
-        showTrackingError(
-          "Please enter both your Order ID and contact number.",
-        );
+  if (!orderId || !contact) {
+    showTrackingError("Please enter both your Order ID and contact number.");
 
-        return;
+    return;
+  }
+
+  apiClient
+    .get({
+      action: "trackOrder",
+      orderId,
+      contact,
+    })
+    .then((data) => {
+      if (!data?.success) {
+        throw new Error(data?.message || "Order not found.");
       }
 
-      apiClient
-        .get({
-          action: "trackOrder",
-          orderId,
-          contact,
-        })
-        .then((data) => {
-          if (
-            !data?.success
-          ) {
-            throw new Error(
-              data?.message ||
-                "Order not found.",
-            );
-          }
-
-          renderTracking(
-            data,
-          );
-        })
-        .catch((e) => {
-          showTrackingError(
-            e.message ||
-              "The tracking service is temporarily unavailable.",
-          );
-        });
-    },
-  );
+      renderTracking(data);
+    })
+    .catch((e) => {
+      showTrackingError(
+        e.message || "The tracking service is temporarily unavailable.",
+      );
+    });
+});
 
 // ============================================================
 // COPY ORDER SUMMARY
 // ============================================================
 
-copyBtn?.addEventListener(
-  "click",
-  async function () {
-    try {
-      await navigator.clipboard.writeText(
-        summaryLines.textContent,
-      );
+copyBtn?.addEventListener("click", async function () {
+  try {
+    await navigator.clipboard.writeText(summaryLines.textContent);
 
-      copyBtn.textContent =
-        "Copied!";
+    copyBtn.textContent = "Copied!";
 
-      setTimeout(() => {
-        copyBtn.textContent =
-          "Copy Order Summary";
-      }, 1800);
-    } catch (err) {
-      copyBtn.textContent =
-        "Select the text above to copy";
-    }
-  },
-);
-
+    setTimeout(() => {
+      copyBtn.textContent = "Copy Order Summary";
+    }, 1800);
+  } catch (err) {
+    copyBtn.textContent = "Select the text above to copy";
+  }
+});
 
 // ============================================================
 // STOREFRONT UPGRADES
@@ -4216,8 +2759,14 @@ var storeSettings = {};
 var toastTimer = null;
 
 var GUIDE_GROUPS = [
-  { label: "Fresh & Clean", profiles: ["fresh", "aquatic", "marine", "citrus"] },
-  { label: "Sweet & Warm", profiles: ["sweet", "warm", "vanilla", "chestnut", "coffee"] },
+  {
+    label: "Fresh & Clean",
+    profiles: ["fresh", "aquatic", "marine", "citrus"],
+  },
+  {
+    label: "Sweet & Warm",
+    profiles: ["sweet", "warm", "vanilla", "chestnut", "coffee"],
+  },
   { label: "Floral & Elegant", profiles: ["floral", "rose", "powdery"] },
   { label: "Woody & Amber", profiles: ["woody", "amber", "smoky"] },
   { label: "Fruity & Playful", profiles: ["fruity"] },
@@ -4225,12 +2774,42 @@ var GUIDE_GROUPS = [
 ];
 
 var FEATURED_ROWS = [
-  { setting: "showBestSellers", badge: "BEST SELLER", title: "Most Loved", tag: "Our customers' favourites" },
-  { setting: "showNewArrivals", badge: "NEW", title: "New Arrivals", tag: "Newly blended" },
-  { setting: "showFeatured", badge: "FEATURED", title: "Featured", tag: "Chosen by the house" },
-  { setting: "showSignature", badge: "SIGNATURE", title: "Signature Collection", tag: "The house signatures" },
-  { setting: "showEveryday", badge: "EVERYDAY", title: "Everyday Essentials", tag: "Easy to wear, any day of the week" },
-  { setting: "showHiddenGems", badge: "HIDDEN GEM", title: "Hidden Gems", tag: "Quietly loved — worth discovering" },
+  {
+    setting: "showBestSellers",
+    badge: "BEST SELLER",
+    title: "Most Loved",
+    tag: "Our customers' favourites",
+  },
+  {
+    setting: "showNewArrivals",
+    badge: "NEW",
+    title: "New Arrivals",
+    tag: "Newly blended",
+  },
+  {
+    setting: "showFeatured",
+    badge: "FEATURED",
+    title: "Featured",
+    tag: "Chosen by the house",
+  },
+  {
+    setting: "showSignature",
+    badge: "SIGNATURE",
+    title: "Signature Collection",
+    tag: "The house signatures",
+  },
+  {
+    setting: "showEveryday",
+    badge: "EVERYDAY",
+    title: "Everyday Essentials",
+    tag: "Easy to wear, any day of the week",
+  },
+  {
+    setting: "showHiddenGems",
+    badge: "HIDDEN GEM",
+    title: "Hidden Gems",
+    tag: "Quietly loved — worth discovering",
+  },
 ];
 
 function peso(value) {
@@ -4251,10 +2830,15 @@ function showToast(html, options = {}) {
   requestAnimationFrame(() => toast.classList.add("show"));
 
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => { toast.hidden = true; }, 250);
-  }, options.warn ? 3800 : 2800);
+  toastTimer = setTimeout(
+    () => {
+      toast.classList.remove("show");
+      setTimeout(() => {
+        toast.hidden = true;
+      }, 250);
+    },
+    options.warn ? 3800 : 2800,
+  );
 }
 
 document.getElementById("toast")?.addEventListener("click", (e) => {
@@ -4280,7 +2864,11 @@ function updateHeaderCart() {
     el.hidden = qty === 0;
   });
 
-  if (button) button.setAttribute("aria-label", `Bag, ${qty} item${qty === 1 ? "" : "s"}`);
+  if (button)
+    button.setAttribute(
+      "aria-label",
+      `Bag, ${qty} item${qty === 1 ? "" : "s"}`,
+    );
 }
 
 function bumpCart() {
@@ -4302,9 +2890,15 @@ function setMenu(open) {
   menuBtn?.setAttribute("aria-label", open ? "Close menu" : "Open menu");
 }
 
-menuBtn?.addEventListener("click", () => setMenu(!navLinks?.classList.contains("open")));
-navLinks?.addEventListener("click", (e) => { if (e.target.closest("a")) setMenu(false); });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") setMenu(false); });
+menuBtn?.addEventListener("click", () =>
+  setMenu(!navLinks?.classList.contains("open")),
+);
+navLinks?.addEventListener("click", (e) => {
+  if (e.target.closest("a")) setMenu(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") setMenu(false);
+});
 
 /* ---------- Promo bar (from active Promotions in the admin) ---------- */
 
@@ -4321,11 +2915,16 @@ function renderPromoBar() {
   if (!bar || !text) return;
 
   let dismissed = false;
-  try { dismissed = sessionStorage.getItem("aePromoClosed") === "1"; } catch { /* ignore */ }
+  try {
+    dismissed = sessionStorage.getItem("aePromoClosed") === "1";
+  } catch {
+    /* ignore */
+  }
 
-  const promos = (activePromotions || []).filter((p) =>
-    (p.type === "fixed_total" && Number(p.fixedTotal) > 0) ||
-    (p.type === "percent" && Number(p.percentOff) > 0),
+  const promos = (activePromotions || []).filter(
+    (p) =>
+      (p.type === "fixed_total" && Number(p.fixedTotal) > 0) ||
+      (p.type === "percent" && Number(p.percentOff) > 0),
   );
 
   if (!promos.length || dismissed) {
@@ -4333,14 +2932,22 @@ function renderPromoBar() {
     return;
   }
 
-  text.innerHTML = promos.slice(0, 2).map(promoText).map((t) => `<span>${t}</span>`).join('<i aria-hidden="true">·</i>');
+  text.innerHTML = promos
+    .slice(0, 2)
+    .map(promoText)
+    .map((t) => `<span>${t}</span>`)
+    .join('<i aria-hidden="true">·</i>');
   bar.hidden = false;
 }
 
 document.getElementById("promoClose")?.addEventListener("click", () => {
   const bar = document.getElementById("promoBar");
   if (bar) bar.hidden = true;
-  try { sessionStorage.setItem("aePromoClosed", "1"); } catch { /* ignore */ }
+  try {
+    sessionStorage.setItem("aePromoClosed", "1");
+  } catch {
+    /* ignore */
+  }
 });
 
 /* ---------- Live counts ---------- */
@@ -4350,35 +2957,59 @@ function activeProducts() {
 }
 
 function renderCounts() {
-  if (!isCatalogReady()) return;   // don't flash the built-in list's numbers
+  if (!isCatalogReady()) return; // don't flash the built-in list's numbers
   const products = activeProducts();
   if (!products.length) return;
 
   const men = products.filter((p) => p.cat === "men").length;
   const women = products.filter((p) => p.cat === "women").length;
-  const words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten",
-                 "eleven", "twelve", "thirteen", "fourteen", "fifteen", "sixteen", "seventeen", "eighteen", "nineteen", "twenty"];
+  const words = [
+    "zero",
+    "one",
+    "two",
+    "three",
+    "four",
+    "five",
+    "six",
+    "seven",
+    "eight",
+    "nine",
+    "ten",
+    "eleven",
+    "twelve",
+    "thirteen",
+    "fourteen",
+    "fifteen",
+    "sixteen",
+    "seventeen",
+    "eighteen",
+    "nineteen",
+    "twenty",
+  ];
   const word = (n) => words[n] || String(n);
   const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 
   const sub = document.getElementById("heroSub");
   if (sub) {
-    sub.textContent =
-      `${cap(word(products.length))} signature extraits inspired by the world's most loved fragrances — blended at 25% concentration to stay with you from morning into night.`;
+    sub.textContent = `${cap(word(products.length))} signature extraits inspired by the world's most loved fragrances — blended at 25% concentration to stay with you from morning into night.`;
   }
 
   const title = document.getElementById("blendCountTitle");
   const text = document.getElementById("blendCountText");
   if (title) title.textContent = `${cap(word(products.length))} Signatures`;
-  if (text) text.textContent = `${cap(word(men))} for him, ${word(women)} for her. A black cap marks the men's line; gold, the women's.`;
+  if (text)
+    text.textContent = `${cap(word(men))} for him, ${word(women)} for her. A black cap marks the men's line; gold, the women's.`;
 
-  const prices = products.map((p) => Number(p.price || PRODUCT_PRICE)).filter((n) => n > 0);
+  const prices = products
+    .map((p) => Number(p.price || PRODUCT_PRICE))
+    .filter((n) => n > 0);
   const heroPrice = document.getElementById("heroPrice");
   if (heroPrice && prices.length) {
     const min = Math.min(...prices);
     heroPrice.textContent = "₱" + min.toLocaleString();
     const label = heroPrice.parentElement?.querySelector("span");
-    if (label) label.textContent = Math.max(...prices) > min ? "From" : "Each bottle";
+    if (label)
+      label.textContent = Math.max(...prices) > min ? "From" : "Each bottle";
   }
 
   document.querySelectorAll(".tab[data-cat] .count").forEach((el) => {
@@ -4400,13 +3031,18 @@ function renderGuide() {
     const picks = products
       .map((p) => {
         const profiles = getProductSearchData(p).profiles || [];
-        return { p, hits: group.profiles.filter((g) => profiles.includes(g)).length };
+        return {
+          p,
+          hits: group.profiles.filter((g) => profiles.includes(g)).length,
+        };
       })
       .filter((x) => x.hits > 0)
-      .sort((a, b) =>
-        (Number(a.p.stock) === 0) - (Number(b.p.stock) === 0) ||
-        b.hits - a.hits ||
-        String(a.p.name).localeCompare(String(b.p.name)))
+      .sort(
+        (a, b) =>
+          (Number(a.p.stock) === 0) - (Number(b.p.stock) === 0) ||
+          b.hits - a.hits ||
+          String(a.p.name).localeCompare(String(b.p.name)),
+      )
       .slice(0, 4)
       .map((x) => x.p);
 
@@ -4435,7 +3071,9 @@ function renderDuo() {
   if (!isCatalogReady()) return;
   if (!duoOne || !duoTwo) return;
 
-  const products = activeProducts().slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+  const products = activeProducts()
+    .slice()
+    .sort((a, b) => String(a.name).localeCompare(String(b.name)));
   const inStock = products.filter((p) => Number(p.stock) !== 0);
   const keepA = duoOne.value;
   const keepB = duoTwo.value;
@@ -4451,18 +3089,27 @@ function renderDuo() {
   duoTwo.innerHTML = options;
 
   const valid = (id) => inStock.some((p) => p.id === id);
-  const isBest = (p) => (PRODUCT_META[p.id]?.badges || []).includes("BEST SELLER");
-  const preferred = inStock.slice().sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
+  const isBest = (p) =>
+    (PRODUCT_META[p.id]?.badges || []).includes("BEST SELLER");
+  const preferred = inStock
+    .slice()
+    .sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
 
   const keepOne = duoOne.dataset.touched && valid(keepA);
   const keepTwo = duoTwo.dataset.touched && valid(keepB);
 
-  duoOne.value = keepOne ? keepA : (preferred[0]?.id || "");
-  duoTwo.value = keepTwo ? keepB : (preferred.find((p) => p.id !== duoOne.value)?.id || duoOne.value);
+  duoOne.value = keepOne ? keepA : preferred[0]?.id || "";
+  duoTwo.value = keepTwo
+    ? keepB
+    : preferred.find((p) => p.id !== duoOne.value)?.id || duoOne.value;
 
   const lede = document.getElementById("duoLede");
-  const twoFor = (activePromotions || []).find((p) =>
-    p.type === "fixed_total" && Number(p.minQty) === 2 && Number(p.fixedTotal) > 0);
+  const twoFor = (activePromotions || []).find(
+    (p) =>
+      p.type === "fixed_total" &&
+      Number(p.minQty) === 2 &&
+      Number(p.fixedTotal) > 0,
+  );
 
   if (lede) {
     lede.textContent = twoFor
@@ -4484,12 +3131,14 @@ function updateDuoTotal() {
     return;
   }
 
-  const subtotal = Number(a.price || PRODUCT_PRICE) + Number(b.price || PRODUCT_PRICE);
+  const subtotal =
+    Number(a.price || PRODUCT_PRICE) + Number(b.price || PRODUCT_PRICE);
   const result = calculatePromotionDiscount(subtotal, 2);
 
-  duoTotal.innerHTML = result.discount > 0
-    ? `2 bottles • <b>${peso(result.total)}</b> <s>${peso(subtotal)}</s><span class="save">Save ${peso(result.discount)}</span>`
-    : `2 bottles • <b>${peso(subtotal)}</b>`;
+  duoTotal.innerHTML =
+    result.discount > 0
+      ? `2 bottles • <b>${peso(result.total)}</b> <s>${peso(subtotal)}</s><span class="save">Save ${peso(result.discount)}</span>`
+      : `2 bottles • <b>${peso(subtotal)}</b>`;
 }
 
 /* ---------- Featured rows (follow the admin Homepage switches) ---------- */
@@ -4503,19 +3152,20 @@ function renderFeaturedRows() {
   box.innerHTML = "";
 
   (FEATURED_ROWS || []).forEach((row) => {
-    if (String((storeSettings || {})[row.setting] ?? "true") === "false") return;
+    if (String((storeSettings || {})[row.setting] ?? "true") === "false")
+      return;
 
     const picks = products.filter((p) =>
       (PRODUCT_META[p.id]?.badges || p.badges || [])
         .map((b) => String(b).toUpperCase())
-        .includes(row.badge));
+        .includes(row.badge),
+    );
 
     if (!picks.length) return;
 
     const section = document.createElement("div");
     section.className = "featured-row";
-    section.innerHTML =
-      `<h3>${escapeHTML(row.title)}<small>${escapeHTML(row.tag)}</small></h3><div class="mini-row"></div>`;
+    section.innerHTML = `<h3>${escapeHTML(row.title)}<small>${escapeHTML(row.tag)}</small></h3><div class="mini-row"></div>`;
 
     const strip = section.querySelector(".mini-row");
     picks.forEach((p) => strip.appendChild(buildProductCard(p)));
@@ -4560,12 +3210,14 @@ loadStoreSettings();
 //  part of the file, so nothing here may be in a TDZ.)
 // ============================================================
 
-var voucherState = null;   // { code, result, error }
+var voucherState = null; // { code, result, error }
 var voucherTimer = null;
 var voucherSeq = 0;
 
 function getAppliedVoucherCode() {
-  return voucherState && voucherState.result && voucherState.result.applies === "voucher"
+  return voucherState &&
+    voucherState.result &&
+    voucherState.result.applies === "voucher"
     ? voucherState.code
     : "";
 }
@@ -4580,13 +3232,16 @@ function estimatedOrderTotal(fallback) {
 
 function voucherSummaryLines() {
   if (!voucherWins()) return [];
-  return [`Voucher: ${voucherState.code} (−₱${Number(voucherState.result.voucherDiscount).toLocaleString()})`];
+  return [
+    `Voucher: ${voucherState.code} (−₱${Number(voucherState.result.voucherDiscount).toLocaleString()})`,
+  ];
 }
 
 function scheduleVoucherRefresh() {
   clearTimeout(voucherTimer);
   voucherTimer = setTimeout(() => {
-    if (voucherState && voucherState.code) checkVoucherCode(voucherState.code, true);
+    if (voucherState && voucherState.code)
+      checkVoucherCode(voucherState.code, true);
     else renderCartLines();
   }, 250);
 }
@@ -4600,7 +3255,10 @@ function clearVoucher() {
 }
 
 async function checkVoucherCode(rawCode, quiet) {
-  const code = String(rawCode || "").trim().toUpperCase().replace(/\s+/g, "");
+  const code = String(rawCode || "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
   if (!code) {
     clearVoucher();
     return;
@@ -4613,14 +3271,21 @@ async function checkVoucherCode(rawCode, quiet) {
   }
 
   if (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured()) {
-    voucherState = { code, result: null, error: "Vouchers need the online store connection." };
+    voucherState = {
+      code,
+      result: null,
+      error: "Vouchers need the online store connection.",
+    };
     renderVoucher();
     return;
   }
 
   const seq = ++voucherSeq;
   const button = document.getElementById("voucherApply");
-  if (button && !quiet) { button.disabled = true; button.textContent = "Checking…"; }
+  if (button && !quiet) {
+    button.disabled = true;
+    button.textContent = "Checking…";
+  }
 
   try {
     const res = await apiClient.post({
@@ -4630,12 +3295,23 @@ async function checkVoucherCode(rawCode, quiet) {
       contact: document.getElementById("contact")?.value || "",
     });
     if (seq !== voucherSeq) return;
-    voucherState = res && res.success
-      ? { code: res.code || code, result: res, error: null }
-      : { code, result: null, error: (res && res.message) || "Voucher code not found." };
+    voucherState =
+      res && res.success
+        ? { code: res.code || code, result: res, error: null }
+        : {
+            code,
+            result: null,
+            error: (res && res.message) || "Voucher code not found.",
+          };
   } catch (err) {
     if (seq !== voucherSeq) return;
-    voucherState = { code, result: null, error: (err && err.message) || "Could not check the voucher. Please try again." };
+    voucherState = {
+      code,
+      result: null,
+      error:
+        (err && err.message) ||
+        "Could not check the voucher. Please try again.",
+    };
   } finally {
     if (button) button.disabled = false;
   }
@@ -4672,7 +3348,9 @@ function renderVoucher() {
     status.className = "voucher-status" + (kind ? " " + kind : "");
   }
 
-  const applied = Boolean(voucherState && (voucherState.result || voucherState.waiting));
+  const applied = Boolean(
+    voucherState && (voucherState.result || voucherState.waiting),
+  );
   if (input && voucherState && applied) input.value = voucherState.code;
   if (button) button.textContent = applied ? "Remove" : "Apply";
   box?.classList.toggle("applied", voucherWins());
@@ -4722,7 +3400,7 @@ document.getElementById("voucherApply")?.addEventListener("click", () => {
 
 document.getElementById("voucherInput")?.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    e.preventDefault();   // don't submit the order
+    e.preventDefault(); // don't submit the order
     checkVoucherCode(e.currentTarget.value);
   }
 });
@@ -4738,7 +3416,8 @@ document.getElementById("voucherInput")?.addEventListener("input", (e) => {
 
 // "Once per customer" vouchers depend on the contact number
 document.getElementById("contact")?.addEventListener("change", () => {
-  if (voucherState && voucherState.code) checkVoucherCode(voucherState.code, true);
+  if (voucherState && voucherState.code)
+    checkVoucherCode(voucherState.code, true);
 });
 
 // Share links like  https://yoursite/?voucher=SUKI50#order
@@ -4750,7 +3429,9 @@ document.getElementById("contact")?.addEventListener("change", () => {
       if (input) input.value = code.toUpperCase();
       checkVoucherCode(code, true);
     }
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 })();
 
 // ============================================================
@@ -4758,7 +3439,7 @@ document.getElementById("contact")?.addEventListener("change", () => {
 // Saved on this device. Can be shared as a link (?favs=id1,id2).
 // ============================================================
 
-var favSharedIds = null;   // set while viewing a list someone shared
+var favSharedIds = null; // set while viewing a list someone shared
 
 function favDrawerEl() {
   return document.getElementById("favDrawer");
@@ -4783,7 +3464,8 @@ function closeFavorites() {
 }
 
 function favStockInfo(p) {
-  if (p.active === false) return { ok: false, text: "Not available right now", cls: "out" };
+  if (p.active === false)
+    return { ok: false, text: "Not available right now", cls: "out" };
   const stock = p.stock == null || p.stock === "" ? null : Number(p.stock);
   if (stock === null) return { ok: true, text: "Available", cls: "" };
   if (stock <= 0) return { ok: false, text: "Sold out", cls: "out" };
@@ -4794,8 +3476,13 @@ function favStockInfo(p) {
 function updateFavCount() {
   const n = (favorites || []).length;
   const badge = document.getElementById("headerFavCount");
-  if (badge) { badge.textContent = n; badge.hidden = n === 0; }
-  document.getElementById("headerFav")?.setAttribute("aria-label", `Favorites, ${n} saved`);
+  if (badge) {
+    badge.textContent = n;
+    badge.hidden = n === 0;
+  }
+  document
+    .getElementById("headerFav")
+    ?.setAttribute("aria-label", `Favorites, ${n} saved`);
   const toggle = document.getElementById("wishlistToggle");
   if (toggle) toggle.textContent = n ? `♡ Favorites (${n})` : "♡ Favorites";
 }
@@ -4806,22 +3493,31 @@ function renderFavorites() {
   if (!list || typeof catalog === "undefined") return;
 
   const shared = Array.isArray(favSharedIds);
-  const ids = shared ? favSharedIds : (favorites || []);
+  const ids = shared ? favSharedIds : favorites || [];
   const items = ids.map((id) => catalog.find(id)).filter(Boolean);
 
   document.getElementById("favShared").hidden = !shared;
-  document.getElementById("favTitle").textContent = shared ? "Shared list" : "Favorites";
-  document.getElementById("favEyebrow").textContent =
-    items.length ? `${items.length} perfume${items.length === 1 ? "" : "s"}` : "Your list";
+  document.getElementById("favTitle").textContent = shared
+    ? "Shared list"
+    : "Favorites";
+  document.getElementById("favEyebrow").textContent = items.length
+    ? `${items.length} perfume${items.length === 1 ? "" : "s"}`
+    : "Your list";
   document.getElementById("favEmpty").hidden = items.length > 0;
   document.getElementById("favFoot").hidden = items.length === 0;
   document.getElementById("favShare").hidden = shared;
 
-  list.innerHTML = items.map((p) => {
-    const info = favStockInfo(p);
-    const id = escapeHTML(p.id);
-    const tag = p.cat === "women" ? "For Her" : p.cat === "unisex" ? "Unisex" : "For Him";
-    return `
+  list.innerHTML = items
+    .map((p) => {
+      const info = favStockInfo(p);
+      const id = escapeHTML(p.id);
+      const tag =
+        p.cat === "women"
+          ? "For Her"
+          : p.cat === "unisex"
+            ? "Unisex"
+            : "For Him";
+      return `
       <div class="fav-item">
         <button type="button" class="fav-thumb${p.img ? "" : " ph"}" data-fav-details="${id}" aria-label="Details of ${escapeHTML(p.name)}">
           ${p.img ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;this.parentNode.classList.add('ph');this.remove()">` : ""}
@@ -4837,13 +3533,16 @@ function renderFavorites() {
           ${shared ? "" : `<button type="button" class="fav-remove" data-fav-remove="${id}" aria-label="Remove ${escapeHTML(p.name)} from favorites">♥</button>`}
         </div>
       </div>`;
-  }).join("");
+    })
+    .join("");
 
   const available = items.filter((p) => favStockInfo(p).ok).length;
   const addAll = document.getElementById("favAddAll");
   if (addAll) {
     addAll.disabled = available === 0;
-    addAll.textContent = available ? `Add ${available === 1 ? "to bag" : `all ${available} to bag`}` : "Unavailable";
+    addAll.textContent = available
+      ? `Add ${available === 1 ? "to bag" : `all ${available} to bag`}`
+      : "Unavailable";
   }
 }
 
@@ -4857,15 +3556,24 @@ function onFavoritesChanged(id) {
     if (btn.dataset.wishlistId !== id) return;
     btn.classList.toggle("active", saved);
     btn.textContent = saved ? "♥" : "♡";
-    btn.setAttribute("aria-label", `${saved ? "Remove" : "Add"} ${name} ${saved ? "from" : "to"} favorites`);
+    btn.setAttribute(
+      "aria-label",
+      `${saved ? "Remove" : "Add"} ${name} ${saved ? "from" : "to"} favorites`,
+    );
   });
 
   syncModalFav(document.getElementById("fragranceModal")?.dataset.productId);
 
-  if (product && typeof showToast === "function" && !document.body.classList.contains("fav-open")) {
-    showToast(saved
-      ? `<b>${escapeHTML(name)}</b> saved to favorites <a href="#" data-open-favs>View</a>`
-      : `<b>${escapeHTML(name)}</b> removed from favorites`);
+  if (
+    product &&
+    typeof showToast === "function" &&
+    !document.body.classList.contains("fav-open")
+  ) {
+    showToast(
+      saved
+        ? `<b>${escapeHTML(name)}</b> saved to favorites <a href="#" data-open-favs>View</a>`
+        : `<b>${escapeHTML(name)}</b> removed from favorites`,
+    );
   }
 }
 
@@ -4885,9 +3593,15 @@ function addProductsToCart(ids) {
   let skipped = 0;
   ids.forEach((id) => {
     const p = getProductById(id);
-    if (!p || !favStockInfo(p).ok) { skipped++; return; }
+    if (!p || !favStockInfo(p).ok) {
+      skipped++;
+      return;
+    }
     const inCart = cartManager.find(id)?.qty || 0;
-    if (p.stock != null && inCart + 1 > Number(p.stock)) { skipped++; return; }
+    if (p.stock != null && inCart + 1 > Number(p.stock)) {
+      skipped++;
+      return;
+    }
     if (cartManager.add(p, 1)) added++;
   });
   cart = cartManager.items;
@@ -4921,10 +3635,16 @@ favDrawerEl()?.addEventListener("click", (e) => {
     return;
   }
   const add = e.target.closest("[data-fav-add]");
-  if (add) { addToCart(add.dataset.favAdd, 1); return; }
+  if (add) {
+    addToCart(add.dataset.favAdd, 1);
+    return;
+  }
 
   const remove = e.target.closest("[data-fav-remove]");
-  if (remove) { toggleFavorite(remove.dataset.favRemove); return; }
+  if (remove) {
+    toggleFavorite(remove.dataset.favRemove);
+    return;
+  }
 
   const details = e.target.closest("[data-fav-details]");
   if (details) {
@@ -4957,7 +3677,8 @@ document.getElementById("favShare")?.addEventListener("click", async () => {
 
 document.getElementById("favSaveShared")?.addEventListener("click", () => {
   (favSharedIds || []).forEach((id) => {
-    if (!(favorites || []).includes(id) && catalog.find(id)) favorites = wishlistManager.toggle(id);
+    if (!(favorites || []).includes(id) && catalog.find(id))
+      favorites = wishlistManager.toggle(id);
   });
   favSharedIds = null;
   favorites.forEach((id) => onFavoritesChanged(id));
@@ -4971,7 +3692,8 @@ document.getElementById("favShowMine")?.addEventListener("click", () => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && favDrawerEl()?.classList.contains("show")) closeFavorites();
+  if (e.key === "Escape" && favDrawerEl()?.classList.contains("show"))
+    closeFavorites();
 });
 
 // Someone opened a shared favorites link
@@ -4979,12 +3701,18 @@ document.addEventListener("keydown", (e) => {
   try {
     const raw = new URLSearchParams(location.search).get("favs");
     if (!raw) return;
-    const ids = raw.split(",").map((s) => decodeURIComponent(s).trim()).filter(Boolean).slice(0, 30);
+    const ids = raw
+      .split(",")
+      .map((s) => decodeURIComponent(s).trim())
+      .filter(Boolean)
+      .slice(0, 30);
     if (!ids.length) return;
     favSharedIds = ids;
     // wait a moment so live products/stock from the database are loaded
     setTimeout(openFavorites, 900);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 })();
 
 updateFavCount();
@@ -5000,8 +3728,10 @@ var coStep = 1;
 var DEFAULT_GCASH = "09351936851";
 
 function isCatalogReady() {
-  return window.__aeCatalogReady === true ||
-    (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured());
+  return (
+    window.__aeCatalogReady === true ||
+    (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured())
+  );
 }
 
 function phoneDigits(value) {
@@ -5013,11 +3743,16 @@ function phoneDigits(value) {
 
 function prettyPhone(value) {
   const d = phoneDigits(value);
-  return /^09\d{9}$/.test(d) ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}` : String(value || "");
+  return /^09\d{9}$/.test(d)
+    ? `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`
+    : String(value || "");
 }
 
 function payMethod() {
-  return document.querySelector('#orderForm input[name="payment"]:checked')?.value || "Cash on Delivery / Meetup";
+  return (
+    document.querySelector('#orderForm input[name="payment"]:checked')?.value ||
+    "Cash on Delivery / Meetup"
+  );
 }
 
 /* ---------- validation ---------- */
@@ -5038,8 +3773,18 @@ function validateDetails(focus) {
 
   const checks = [
     ["fullname", name.length >= 2 ? "" : "Please enter your full name."],
-    ["contact", /^09\d{9}$/.test(phoneDigits(contact)) ? "" : "Enter a valid mobile number, e.g. 0917 123 4567."],
-    ["address", address.length >= 4 ? "" : "Please enter where we'll deliver or meet you."],
+    [
+      "contact",
+      /^09\d{9}$/.test(phoneDigits(contact))
+        ? ""
+        : "Enter a valid mobile number, e.g. 0917 123 4567.",
+    ],
+    [
+      "address",
+      address.length >= 4
+        ? ""
+        : "Please enter where we'll deliver or meet you.",
+    ],
   ];
 
   let firstBad = null;
@@ -5072,7 +3817,10 @@ function goCheckoutStep(n, opts) {
     const step = Number(li.dataset.step);
     li.classList.toggle("active", step === n);
     li.classList.toggle("done", step < n);
-    li.querySelector("button")?.setAttribute("aria-current", step === n ? "step" : "false");
+    li.querySelector("button")?.setAttribute(
+      "aria-current",
+      step === n ? "step" : "false",
+    );
   });
 
   if (n === 3) renderReview();
@@ -5085,27 +3833,32 @@ function goCheckoutStep(n, opts) {
     if (top && top.getBoundingClientRect().top < 110) {
       top.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    if (n === 2) setTimeout(() => {
-      const first = ["fullname", "contact", "address"].map((id) => document.getElementById(id)).find((el) => el && !el.value);
-      first?.focus({ preventScroll: true });
-    }, 60);
+    if (n === 2)
+      setTimeout(() => {
+        const first = ["fullname", "contact", "address"]
+          .map((id) => document.getElementById(id))
+          .find((el) => el && !el.value);
+        first?.focus({ preventScroll: true });
+      }, 60);
   }
 }
 
 /* ---------- live summary ---------- */
 
 function cartLinesHTML(withThumbs) {
-  return (cart || []).map((item) => {
-    const p = getProductById(item.id);
-    if (!p) return "";
-    const price = Number(p.price || PRODUCT_PRICE);
-    const thumb = withThumbs
-      ? (p.img
+  return (cart || [])
+    .map((item) => {
+      const p = getProductById(item.id);
+      if (!p) return "";
+      const price = Number(p.price || PRODUCT_PRICE);
+      const thumb = withThumbs
+        ? p.img
           ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<span class=&quot;img-ph sm&quot;>A&amp;E</span>'">`
-          : `<span class="img-ph sm">A&amp;E</span>`)
-      : "";
-    return `<div class="sum-line">${thumb}<span>${escapeHTML(p.name)} <small>× ${item.qty}</small></span><b>₱${(price * item.qty).toLocaleString()}</b></div>`;
-  }).join("");
+          : `<span class="img-ph sm">A&amp;E</span>`
+        : "";
+      return `<div class="sum-line">${thumb}<span>${escapeHTML(p.name)} <small>× ${item.qty}</small></span><b>₱${(price * item.qty).toLocaleString()}</b></div>`;
+    })
+    .join("");
 }
 
 function renderCheckoutExtras() {
@@ -5120,16 +3873,24 @@ function renderCheckoutExtras() {
   // "Add 1 more for the 2-Bottle Promo"
   const nudge = document.getElementById("promoNudge");
   if (nudge) {
-    const promos = (typeof activePromotions !== "undefined" && Array.isArray(activePromotions) ? activePromotions : [])
+    const promos = (
+      typeof activePromotions !== "undefined" && Array.isArray(activePromotions)
+        ? activePromotions
+        : []
+    )
       .filter((p) => p.active !== false && Number(p.minQty) > qty)
       .sort((a, b) => Number(a.minQty) - Number(b.minQty));
     const next = promos[0];
-    const appliesNow = qty && typeof getApplicablePromotion === "function" && getApplicablePromotion(qty);
+    const appliesNow =
+      qty &&
+      typeof getApplicablePromotion === "function" &&
+      getApplicablePromotion(qty);
     if (qty > 0 && next && !appliesNow) {
       const more = Number(next.minQty) - qty;
-      const deal = next.type === "fixed_total"
-        ? `any ${Number(next.minQty) === 2 ? "two" : Number(next.minQty)} for ₱${Number(next.fixedTotal).toLocaleString()}`
-        : `${Number(next.percentOff)}% off ${Number(next.minQty)}+ bottles`;
+      const deal =
+        next.type === "fixed_total"
+          ? `any ${Number(next.minQty) === 2 ? "two" : Number(next.minQty)} for ₱${Number(next.fixedTotal).toLocaleString()}`
+          : `${Number(next.percentOff)}% off ${Number(next.minQty)}+ bottles`;
       nudge.innerHTML = `Add ${more === 1 ? "one more" : `<b>${more} more</b>`} fragrance${more === 1 ? "" : "s"} — ${deal}.`;
       nudge.hidden = false;
     } else if (appliesNow) {
@@ -5152,9 +3913,10 @@ function renderReview() {
   const pay = payMethod();
   const total = document.getElementById("cartTotal")?.textContent || "";
   const linesEl = document.getElementById("cartLines");
-  const discount = linesEl && !linesEl.hidden
-    ? `<div class="sum-line muted"><span>${escapeHTML(document.getElementById("cartDiscountLabel")?.textContent || "Discount")}</span><b>${escapeHTML(document.getElementById("cartDiscount")?.textContent || "")}</b></div>`
-    : "";
+  const discount =
+    linesEl && !linesEl.hidden
+      ? `<div class="sum-line muted"><span>${escapeHTML(document.getElementById("cartDiscountLabel")?.textContent || "Discount")}</span><b>${escapeHTML(document.getElementById("cartDiscount")?.textContent || "")}</b></div>`
+      : "";
 
   box.innerHTML = `
     <div class="review-sec">
@@ -5171,9 +3933,11 @@ function renderReview() {
     <div class="review-sec">
       <div class="review-head"><h5>Payment</h5><button type="button" class="co-edit" data-go="2">Change</button></div>
       <p>${escapeHTML(pay)}</p>
-      <p class="muted">${pay === "GCash"
-        ? "Once you place your order, we'll show the GCash number and the exact amount to send."
-        : "Pay when your order arrives. We'll message you to confirm the schedule."}</p>
+      <p class="muted">${
+        pay === "GCash"
+          ? "Once you place your order, we'll show the GCash number and the exact amount to send."
+          : "Pay when your order arrives. We'll message you to confirm the schedule."
+      }</p>
     </div>`;
 }
 
@@ -5188,25 +3952,44 @@ function updateCoBar(total) {
   if (count) count.textContent = `${qty} item${qty === 1 ? "" : "s"}`;
   document.body.classList.toggle("has-cobar", qty > 0);
   const t = document.getElementById("coBarTotal");
-  if (t) t.textContent = total != null ? "₱" + Number(total).toLocaleString() : (document.getElementById("cartTotal")?.textContent || "");
+  if (t)
+    t.textContent =
+      total != null
+        ? "₱" + Number(total).toLocaleString()
+        : document.getElementById("cartTotal")?.textContent || "";
 }
 
 (function watchOrderSection() {
   const section = document.getElementById("order");
   if (!section || !("IntersectionObserver" in window)) return;
-  new IntersectionObserver((entries) => {
-    document.body.classList.toggle("order-in-view", entries[0].isIntersecting);
-  }, { threshold: 0.05 }).observe(section);
+  new IntersectionObserver(
+    (entries) => {
+      document.body.classList.toggle(
+        "order-in-view",
+        entries[0].isIntersecting,
+      );
+    },
+    { threshold: 0.05 },
+  ).observe(section);
 })();
 
 /* ---------- payment instructions (confirmation + Track Order) ---------- */
 
 function messengerLink(orderId) {
   const raw = String((storeSettings || {}).messengerUrl || "").trim();
-  if (!/^https:\/\/(m\.me|(www\.)?messenger\.com|(www\.|m\.)?facebook\.com)\//i.test(raw)) return "";
+  if (
+    !/^https:\/\/(m\.me|(www\.)?messenger\.com|(www\.|m\.)?facebook\.com)\//i.test(
+      raw,
+    )
+  )
+    return "";
   try {
     const url = new URL(raw);
-    if (orderId && /m\.me$/i.test(url.hostname)) url.searchParams.set("text", `Hi! Here's my payment for order ${orderId}.`);
+    if (orderId && /m\.me$/i.test(url.hostname))
+      url.searchParams.set(
+        "text",
+        `Hi! Here's my payment for order ${orderId}.`,
+      );
     return url.toString();
   } catch {
     return "";
@@ -5217,7 +4000,8 @@ function payInstructionsHTML(opts) {
   const o = opts || {};
   const settings = storeSettings || {};
   const amount = Number(o.amount || 0);
-  const amountText = "₱" + amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const amountText =
+    "₱" + amount.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const orderId = escapeHTML(o.orderId || "");
   const msg = messengerLink(o.orderId);
   const msgBtn = msg
@@ -5273,7 +4057,10 @@ document.addEventListener("click", async (e) => {
 
   const copy = e.target.closest("[data-copy], [data-copy-target]");
   if (copy) {
-    const text = copy.dataset.copy ?? document.getElementById(copy.dataset.copyTarget)?.textContent.trim() ?? "";
+    const text =
+      copy.dataset.copy ??
+      document.getElementById(copy.dataset.copyTarget)?.textContent.trim() ??
+      "";
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -5281,25 +4068,36 @@ document.addEventListener("click", async (e) => {
       t.value = text;
       document.body.appendChild(t);
       t.select();
-      try { document.execCommand("copy"); } catch { /* ignore */ }
+      try {
+        document.execCommand("copy");
+      } catch {
+        /* ignore */
+      }
       t.remove();
     }
     const label = copy.textContent;
     copy.textContent = "Copied ✓";
     copy.classList.add("done");
-    setTimeout(() => { copy.textContent = label; copy.classList.remove("done"); }, 1500);
+    setTimeout(() => {
+      copy.textContent = label;
+      copy.classList.remove("done");
+    }, 1500);
   }
 });
 
 // Enter in a field moves to the next step instead of submitting early
-document.addEventListener("submit", (e) => {
-  if (e.target?.id !== "orderForm") return;
-  if (coStep !== 3 || !cart.length || !validateDetails(true)) {
-    e.preventDefault();
-    e.stopPropagation();
-    goCheckoutStep(Math.min(3, coStep + 1));
-  }
-}, true);
+document.addEventListener(
+  "submit",
+  (e) => {
+    if (e.target?.id !== "orderForm") return;
+    if (coStep !== 3 || !cart.length || !validateDetails(true)) {
+      e.preventDefault();
+      e.stopPropagation();
+      goCheckoutStep(Math.min(3, coStep + 1));
+    }
+  },
+  true,
+);
 
 ["fullname", "contact", "address"].forEach((id) => {
   const el = document.getElementById(id);
@@ -5310,14 +4108,19 @@ document.addEventListener("submit", (e) => {
 
 document.getElementById("contact")?.addEventListener("blur", (e) => {
   const pretty = prettyPhone(e.target.value);
-  if (pretty !== e.target.value && /^09/.test(phoneDigits(e.target.value))) e.target.value = pretty;
+  if (pretty !== e.target.value && /^09/.test(phoneDigits(e.target.value)))
+    e.target.value = pretty;
 });
 
 document.querySelectorAll('#orderForm input[name="payment"]').forEach((r) =>
-  r.addEventListener("change", () => { if (coStep === 3) renderReview(); }));
+  r.addEventListener("change", () => {
+    if (coStep === 3) renderReview();
+  }),
+);
 
 document.getElementById("coBarBtn")?.addEventListener("click", () => {
-  if (coStep === 1 && cart.length) setTimeout(() => goCheckoutStep(1, { silent: true }), 0);
+  if (coStep === 1 && cart.length)
+    setTimeout(() => goCheckoutStep(1, { silent: true }), 0);
 });
 
 renderCheckoutExtras();
@@ -5338,12 +4141,20 @@ function fdMeta(p) {
 }
 
 function fdListOf(value) {
-  if (Array.isArray(value)) return value.map((v) => String(v).trim()).filter(Boolean);
-  return String(value || "").split(/[,•·|]/).map((v) => v.trim()).filter(Boolean);
+  if (Array.isArray(value))
+    return value.map((v) => String(v).trim()).filter(Boolean);
+  return String(value || "")
+    .split(/[,•·|]/)
+    .map((v) => v.trim())
+    .filter(Boolean);
 }
 
 function fdCatLabel(p) {
-  return p.cat === "men" ? "For Him" : p.cat === "unisex" ? "Unisex" : "For Her";
+  return p.cat === "men"
+    ? "For Him"
+    : p.cat === "unisex"
+      ? "Unisex"
+      : "For Her";
 }
 
 function fdStars(avg) {
@@ -5352,11 +4163,19 @@ function fdStars(avg) {
 }
 
 function fdReviewsFor(p) {
-  const name = String(p.name || "").trim().toLowerCase();
+  const name = String(p.name || "")
+    .trim()
+    .toLowerCase();
   const id = String(p.id).toLowerCase();
-  return (lastReviews || []).filter((r) =>
-    String(r.scentId || "").trim().toLowerCase() === id ||
-    String(r.scent || "").trim().toLowerCase() === name);
+  return (lastReviews || []).filter(
+    (r) =>
+      String(r.scentId || "")
+        .trim()
+        .toLowerCase() === id ||
+      String(r.scent || "")
+        .trim()
+        .toLowerCase() === name,
+  );
 }
 
 // Products the ‹ › buttons walk through: what the customer is browsing
@@ -5364,7 +4183,9 @@ function fdNavList(p) {
   let list = [];
   try {
     list = getVisibleProducts(activeCat).filter((x) => x.active !== false);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   if (!list.some((x) => x.id === p.id)) {
     list = catalog.all().filter((x) => x.active !== false && x.cat === p.cat);
   }
@@ -5372,16 +4193,25 @@ function fdNavList(p) {
 }
 
 function fdSimilar(p) {
-  const mine = new Set(fdListOf(fdMeta(p).profiles).map((x) => x.toLowerCase()));
-  return catalog.all()
+  const mine = new Set(
+    fdListOf(fdMeta(p).profiles).map((x) => x.toLowerCase()),
+  );
+  return catalog
+    .all()
     .filter((x) => x.id !== p.id && x.active !== false)
     .map((x) => {
       const theirs = fdListOf(fdMeta(x).profiles).map((t) => t.toLowerCase());
       const shared = theirs.filter((t) => mine.has(t)).length;
       const available = favStockInfo(x).ok ? 1 : 0;
-      return { x, score: shared * 3 + (x.cat === p.cat ? 1 : 0) + available * 2 };
+      return {
+        x,
+        score: shared * 3 + (x.cat === p.cat ? 1 : 0) + available * 2,
+      };
     })
-    .sort((a, b) => b.score - a.score || String(a.x.name).localeCompare(String(b.x.name)))
+    .sort(
+      (a, b) =>
+        b.score - a.score || String(a.x.name).localeCompare(String(b.x.name)),
+    )
     .slice(0, 3)
     .map((s) => s.x);
 }
@@ -5397,24 +4227,41 @@ function renderFragranceDetails(p) {
   const meta = fdMeta(p);
   const info = favStockInfo(p);
   const price = "₱" + Number(p.price || PRODUCT_PRICE).toLocaleString();
-  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
-  const text = (id, value) => { const el = document.getElementById(id); if (el) el.textContent = value; };
+  const set = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
+  const text = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value;
+  };
 
   /* ----- top: photo, name, rating, price, stock ----- */
-  const badges = fdListOf(meta.badges || p.badges).slice(0, 2)
-    .map((b) => `<span class="product-badge">${escapeHTML(b)}</span>`).join("");
-  set("fdPhoto", `${badges ? `<div class="product-badges">${badges}</div>` : ""}${fdPhotoHTML(p, "fd-img")}`);
+  const badges = fdListOf(meta.badges || p.badges)
+    .slice(0, 2)
+    .map((b) => `<span class="product-badge">${escapeHTML(b)}</span>`)
+    .join("");
+  set(
+    "fdPhoto",
+    `${badges ? `<div class="product-badges">${badges}</div>` : ""}${fdPhotoHTML(p, "fd-img")}`,
+  );
   text("fragranceModalCategory", `${fdCatLabel(p)} · Extrait de Parfum`);
   text("fragranceModalTitle", p.name);
 
   const stats = reviewStats[p.id];
-  set("fdRating", stats && stats.count
-    ? `<span class="stars">${fdStars(stats.avg)}</span> ${stats.avg.toFixed(1)} · ${stats.count} review${stats.count === 1 ? "" : "s"}`
-    : `<span class="muted">No reviews yet</span>`);
+  set(
+    "fdRating",
+    stats && stats.count
+      ? `<span class="stars">${fdStars(stats.avg)}</span> ${stats.avg.toFixed(1)} · ${stats.count} review${stats.count === 1 ? "" : "s"}`
+      : `<span class="muted">No reviews yet</span>`,
+  );
 
   text("fdPrice", price);
   const stockEl = document.getElementById("fdStock");
-  if (stockEl) { stockEl.textContent = info.text; stockEl.className = `fd-stock ${info.cls}`; }
+  if (stockEl) {
+    stockEl.textContent = info.text;
+    stockEl.className = `fd-stock ${info.cls}`;
+  }
   text("fdShort", p.desc || "");
 
   ["fdAdd", "fdBarAdd"].forEach((id) => {
@@ -5427,19 +4274,32 @@ function renderFragranceDetails(p) {
   text("fdBarStock", info.text);
   syncModalFav(p.id);
 
-  const promo = (activePromotions || [])
-    .filter((x) => x.active !== false && x.type === "fixed_total" && Number(x.minQty) === 2)[0];
+  const promo = (activePromotions || []).filter(
+    (x) =>
+      x.active !== false && x.type === "fixed_total" && Number(x.minQty) === 2,
+  )[0];
   const promoEl = document.getElementById("fdPromo");
   if (promoEl) {
     promoEl.hidden = !promo || !info.ok;
-    if (promo) promoEl.innerHTML = `Pair it with a second fragrance — any two for ₱${Number(promo.fixedTotal).toLocaleString()}`;
+    if (promo)
+      promoEl.innerHTML = `Pair it with a second fragrance — any two for ₱${Number(promo.fixedTotal).toLocaleString()}`;
   }
 
   /* ----- at a glance ----- */
-  const longevity = Math.max(1, Math.min(10, Number(meta.longevity || p.longevity) || 7));
-  const projection = Math.max(1, Math.min(10, Number(meta.projection || p.projection) || 7));
+  const longevity = Math.max(
+    1,
+    Math.min(10, Number(meta.longevity || p.longevity) || 7),
+  );
+  const projection = Math.max(
+    1,
+    Math.min(10, Number(meta.projection || p.projection) || 7),
+  );
   const strengthKey = normalizeStrength(meta.strength || p.strength);
-  const strength = { subtle: ["Subtle", 4], moderate: ["Moderate", 7], bold: ["Bold", 10] }[strengthKey] || ["Moderate", 7];
+  const strength = {
+    subtle: ["Subtle", 4],
+    moderate: ["Moderate", 7],
+    bold: ["Bold", 10],
+  }[strengthKey] || ["Moderate", 7];
   const times = fdListOf(meta.time || p.time).map((t) => t.toLowerCase());
   const occasion = String(meta.occasion || p.occasion || "").trim();
   const profiles = fdListOf(meta.profiles || p.profiles);
@@ -5449,17 +4309,27 @@ function renderFragranceDetails(p) {
       <span class="fd-track"><i style="width:${n * 10}%"></i></span>
       <span class="fd-v">${caption}</span></div>`;
 
-  set("fdGlance", `
+  set(
+    "fdGlance",
+    `
     ${bar("Longevity", longevity, `${word(longevity)} · ${longevity}/10`)}
     ${bar("Projection", projection, `${projection >= 8 ? "Fills the room" : projection >= 5 ? "Arm's length" : "Close to skin"} · ${projection}/10`)}
     ${bar("Strength", strength[1], strength[0])}
     <div class="fd-chips">
       <span class="fd-chip ${times.includes("day") ? "on" : ""}">☀ Day</span>
       <span class="fd-chip ${times.includes("night") ? "on" : ""}">☾ Night</span>
-      ${occasion ? fdListOf(occasion).slice(0, 4).map((o) => `<span class="fd-chip">${escapeHTML(o)}</span>`).join("") : ""}
+      ${
+        occasion
+          ? fdListOf(occasion)
+              .slice(0, 4)
+              .map((o) => `<span class="fd-chip">${escapeHTML(o)}</span>`)
+              .join("")
+          : ""
+      }
     </div>
     ${profiles.length ? `<div class="fd-tags">${profiles.map((t) => `<span class="profile-tag">${escapeHTML(t)}</span>`).join("")}</div>` : ""}
-  `);
+  `,
+  );
 
   /* ----- timeline ----- */
   const notes = (v) => fdListOf(v).join(" · ") || "—";
@@ -5476,7 +4346,9 @@ function renderFragranceDetails(p) {
     if (more) {
       more.textContent = "Read more";
       more.hidden = true;
-      requestAnimationFrame(() => { more.hidden = desc.scrollHeight <= desc.clientHeight + 2; });
+      requestAnimationFrame(() => {
+        more.hidden = desc.scrollHeight <= desc.clientHeight + 2;
+      });
     }
   }
   const apply = document.getElementById("fdApply");
@@ -5488,8 +4360,14 @@ function renderFragranceDetails(p) {
 
   /* ----- reviews ----- */
   const reviews = fdReviewsFor(p);
-  set("fdReviewList", (reviews.length ? fdCustomerSays(reviewStats[p.id]) : "") + (reviews.length
-    ? reviews.slice(0, 3).map((r) => `
+  set(
+    "fdReviewList",
+    (reviews.length ? fdCustomerSays(reviewStats[p.id]) : "") +
+      (reviews.length
+        ? reviews
+            .slice(0, 3)
+            .map(
+              (r) => `
         <div class="fd-review">
           ${r.photoUrl ? `<img src="${escapeHTML(r.photoUrl)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
           <div>
@@ -5497,14 +4375,20 @@ function renderFragranceDetails(p) {
             ${reviewPerfChips(r) ? `<div class="review-perf">${reviewPerfChips(r)}</div>` : ""}
             <p>${escapeHTML(String(r.review || "").slice(0, 220))}${String(r.review || "").length > 220 ? "…" : ""}</p>
           </div>
-        </div>`).join("") +
-      `<a class="fd-link" href="#reviews" data-fd-goto="reviews">Read all reviews</a>`
-    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to share your thoughts</a></p>`));
+        </div>`,
+            )
+            .join("") +
+          `<a class="fd-link" href="#reviews" data-fd-goto="reviews">Read all reviews</a>`
+        : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to share your thoughts</a></p>`),
+  );
 
   /* ----- you may also like ----- */
-  set("fdSimilar", fdSimilar(p).map((x) => {
-    const xi = favStockInfo(x);
-    return `
+  set(
+    "fdSimilar",
+    fdSimilar(p)
+      .map((x) => {
+        const xi = favStockInfo(x);
+        return `
       <div class="fd-sim">
         <button type="button" class="fd-sim-open" data-fd-open="${escapeHTML(x.id)}" aria-label="View ${escapeHTML(x.name)}">
           ${fdPhotoHTML(x, "fd-sim-img")}
@@ -5512,12 +4396,17 @@ function renderFragranceDetails(p) {
         </button>
         <button type="button" class="fd-sim-add" data-fd-add="${escapeHTML(x.id)}" ${xi.ok ? "" : "disabled"}>${xi.ok ? "Add to bag" : xi.text}</button>
       </div>`;
-  }).join(""));
+      })
+      .join(""),
+  );
 
   /* ----- ‹ › navigation ----- */
   fdList = fdNavList(p);
   const idx = fdList.findIndex((x) => x.id === p.id);
-  text("fdPos", fdList.length > 1 && idx >= 0 ? `${idx + 1} / ${fdList.length}` : "");
+  text(
+    "fdPos",
+    fdList.length > 1 && idx >= 0 ? `${idx + 1} / ${fdList.length}` : "",
+  );
   ["fdPrev", "fdNext"].forEach((id) => {
     const b = document.getElementById(id);
     if (b) b.hidden = fdList.length < 2 || idx < 0;
@@ -5537,19 +4426,33 @@ function fdStep(dir) {
 /* ----- shareable link ----- */
 
 function setDetailsHash(id) {
-  try { history.replaceState(null, "", `${location.pathname}${location.search}#scent-${encodeURIComponent(id)}`); } catch { /* ignore */ }
+  try {
+    history.replaceState(
+      null,
+      "",
+      `${location.pathname}${location.search}#scent-${encodeURIComponent(id)}`,
+    );
+  } catch {
+    /* ignore */
+  }
 }
 
 function clearDetailsHash() {
   if (!/^#scent-/.test(location.hash)) return;
-  try { history.replaceState(null, "", `${location.pathname}${location.search}`); } catch { /* ignore */ }
+  try {
+    history.replaceState(null, "", `${location.pathname}${location.search}`);
+  } catch {
+    /* ignore */
+  }
 }
 
 function openFromHash() {
   const m = location.hash.match(/^#scent-(.+)$/);
   if (!m) return false;
   const id = decodeURIComponent(m[1]);
-  const p = catalog.find(id) || catalog.all().find((x) => String(x.id).toLowerCase() === id.toLowerCase());
+  const p =
+    catalog.find(id) ||
+    catalog.all().find((x) => String(x.id).toLowerCase() === id.toLowerCase());
   if (!p) return false;
   openFragranceDetails(p.id);
   return true;
@@ -5567,7 +4470,10 @@ document.getElementById("fdNext")?.addEventListener("click", () => fdStep(1));
       const btn = e.currentTarget;
       btn.textContent = "Added ✓";
       btn.classList.add("done");
-      setTimeout(() => { btn.textContent = "Add to bag"; btn.classList.remove("done"); }, 1400);
+      setTimeout(() => {
+        btn.textContent = "Add to bag";
+        btn.classList.remove("done");
+      }, 1400);
     }
   });
 });
@@ -5585,7 +4491,11 @@ document.getElementById("fdShare")?.addEventListener("click", async (e) => {
   const btn = e.currentTarget;
   try {
     if (navigator.share) {
-      await navigator.share({ title: `${p.name} — Aura & Essence`, text: p.desc || p.name, url });
+      await navigator.share({
+        title: `${p.name} — Aura & Essence`,
+        text: p.desc || p.name,
+        url,
+      });
       return;
     }
     await navigator.clipboard.writeText(url);
@@ -5594,18 +4504,25 @@ document.getElementById("fdShare")?.addEventListener("click", async (e) => {
     if (err && err.name === "AbortError") return;
     window.prompt("Copy this link:", url);
   }
-  setTimeout(() => { btn.textContent = "Share"; }, 1600);
+  setTimeout(() => {
+    btn.textContent = "Share";
+  }, 1600);
 });
 
 fragranceModal?.addEventListener("click", (e) => {
   const open = e.target.closest("[data-fd-open]");
-  if (open) { renderFragranceDetails(catalog.find(open.dataset.fdOpen)); return; }
+  if (open) {
+    renderFragranceDetails(catalog.find(open.dataset.fdOpen));
+    return;
+  }
 
   const add = e.target.closest("[data-fd-add]");
   if (add) {
     if (addToCart(add.dataset.fdAdd, 1) !== false) {
       add.textContent = "Added ✓";
-      setTimeout(() => { add.textContent = "Add to bag"; }, 1400);
+      setTimeout(() => {
+        add.textContent = "Add to bag";
+      }, 1400);
     }
     return;
   }
@@ -5614,20 +4531,25 @@ fragranceModal?.addEventListener("click", (e) => {
   if (go) {
     e.preventDefault();
     closeFragranceDetails();
-    document.getElementById(go.dataset.fdGoto)?.scrollIntoView({ behavior: "smooth" });
+    document
+      .getElementById(go.dataset.fdGoto)
+      ?.scrollIntoView({ behavior: "smooth" });
     return;
   }
 
   const rating = e.target.closest("#fdRating");
   if (rating) {
     e.preventDefault();
-    document.getElementById("fdReviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("fdReviews")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 });
 
 document.addEventListener("keydown", (e) => {
   if (!fragranceModal?.classList.contains("show")) return;
-  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "")) return;
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || ""))
+    return;
   if (e.key === "ArrowLeft") fdStep(-1);
   if (e.key === "ArrowRight") fdStep(1);
 });
@@ -5636,25 +4558,43 @@ document.addEventListener("keydown", (e) => {
 (function swipeDetails() {
   const body = document.getElementById("fdBody");
   if (!body) return;
-  let x0 = null, y0 = null;
-  body.addEventListener("touchstart", (e) => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
-  body.addEventListener("touchend", (e) => {
-    if (x0 === null) return;
-    const dx = e.changedTouches[0].clientX - x0;
-    const dy = e.changedTouches[0].clientY - y0;
-    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5) fdStep(dx < 0 ? 1 : -1);
-    x0 = y0 = null;
-  }, { passive: true });
+  let x0 = null,
+    y0 = null;
+  body.addEventListener(
+    "touchstart",
+    (e) => {
+      x0 = e.touches[0].clientX;
+      y0 = e.touches[0].clientY;
+    },
+    { passive: true },
+  );
+  body.addEventListener(
+    "touchend",
+    (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      const dy = e.changedTouches[0].clientY - y0;
+      if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 1.5)
+        fdStep(dx < 0 ? 1 : -1);
+      x0 = y0 = null;
+    },
+    { passive: true },
+  );
 })();
 
 // Opening a shared link (…/#scent-sauvage) shows that perfume
-window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)) openFromHash(); });
+window.addEventListener("hashchange", () => {
+  if (/^#scent-/.test(location.hash)) openFromHash();
+});
 (function openSharedScent() {
   if (!/^#scent-/.test(location.hash)) return;
   let tries = 0;
   const attempt = () => {
     // wait for live products (stock/price) when the database is connected
-    if (isCatalogReady() || tries > 20) { openFromHash(); return; }
+    if (isCatalogReady() || tries > 20) {
+      openFromHash();
+      return;
+    }
     tries++;
     setTimeout(attempt, 150);
   };
@@ -5669,31 +4609,49 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
 // ============================================================
 
 (function setupReveal() {
-  const ok = "IntersectionObserver" in window &&
+  const ok =
+    "IntersectionObserver" in window &&
     !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (!ok) return;
   document.documentElement.classList.add("ae-motion");
 
-  const io = new IntersectionObserver((entries) => {
-    entries.forEach((entry) => {
-      if (!entry.isIntersecting) return;
-      entry.target.classList.add("in");
-      io.unobserve(entry.target);
-    });
-  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.08 });
+  const io = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("in");
+        io.unobserve(entry.target);
+      });
+    },
+    { rootMargin: "0px 0px -8% 0px", threshold: 0.08 },
+  );
 
   const SELECTOR = [
-    ".sec-eyebrow", "h2.sec-title", "p.sec-lede",
-    ".grid3 > .card", ".feature-grid > .feature-card", ".feature-section > .wrap > .feature-card",
-    ".guide-item", ".review-form-box", ".reviews-carousel-wrap", ".tracking-box",
-    ".co-steps", ".checkout-grid > *", ".pcard:not(.skeleton)", ".featured-row h3"
+    ".sec-eyebrow",
+    "h2.sec-title",
+    "p.sec-lede",
+    ".grid3 > .card",
+    ".feature-grid > .feature-card",
+    ".feature-section > .wrap > .feature-card",
+    ".guide-item",
+    ".review-form-box",
+    ".reviews-carousel-wrap",
+    ".tracking-box",
+    ".co-steps",
+    ".checkout-grid > *",
+    ".pcard:not(.skeleton)",
+    ".featured-row h3",
   ].join(",");
 
   const watch = (root) => {
     const nodes = root.matches?.(SELECTOR) ? [root] : [];
     nodes.push(...(root.querySelectorAll?.(SELECTOR) || []));
     nodes.forEach((el) => {
-      if (el.classList.contains("reveal") || el.closest(".fragrance-modal, .fav-drawer, .confirmation-modal")) return;
+      if (
+        el.classList.contains("reveal") ||
+        el.closest(".fragrance-modal, .fav-drawer, .confirmation-modal")
+      )
+        return;
       // stagger siblings a little (cards in a row, guide rows…)
       const parent = el.parentElement;
       const index = parent ? [...parent.children].indexOf(el) : 0;
@@ -5701,7 +4659,12 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
       el.classList.add("reveal");
       // already on screen (e.g. after a re-render) → show right away
       const r = el.getBoundingClientRect();
-      if (r.top < window.innerHeight && r.bottom > 0 && document.readyState !== "loading" && root !== document.body) {
+      if (
+        r.top < window.innerHeight &&
+        r.bottom > 0 &&
+        document.readyState !== "loading" &&
+        root !== document.body
+      ) {
         requestAnimationFrame(() => el.classList.add("in"));
       } else {
         io.observe(el);
@@ -5713,7 +4676,11 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
 
   // product cards are rebuilt when filters/tabs change
   new MutationObserver((mutations) => {
-    mutations.forEach((m) => m.addedNodes.forEach((n) => { if (n.nodeType === 1) watch(n); }));
+    mutations.forEach((m) =>
+      m.addedNodes.forEach((n) => {
+        if (n.nodeType === 1) watch(n);
+      }),
+    );
   }).observe(document.body, { childList: true, subtree: true });
 })();
 
@@ -5735,7 +4702,8 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
     }
     if (theme === "light") root.setAttribute("data-theme", "light");
     else root.removeAttribute("data-theme");
-    if (meta) meta.setAttribute("content", theme === "light" ? "#f6f1e8" : "#0e0d0c");
+    if (meta)
+      meta.setAttribute("content", theme === "light" ? "#f6f1e8" : "#0e0d0c");
     if (btn) {
       const next = theme === "light" ? "dark" : "light";
       btn.setAttribute("aria-label", `Switch to ${next} mode`);
@@ -5748,7 +4716,11 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
   btn?.addEventListener("click", () => {
     const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
     apply(next, true);
-    try { localStorage.setItem("aeTheme", next); } catch { /* private mode */ }
+    try {
+      localStorage.setItem("aeTheme", next);
+    } catch {
+      /* private mode */
+    }
   });
 })();
 
@@ -5762,53 +4734,140 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
 //  renderHomeExtras() before this part of the file has run.)
 // ============================================================
 
-var homeStats = null;          // from store_stats(); null until loaded
+var homeStats = null; // from store_stats(); null until loaded
 var homeStatsLoading = false;
-var feelState = null;          // { kind: "weather" | "accord", key }
+var feelState = null; // { kind: "weather" | "accord", key }
 var homeExtrasWired = false;
 
 var WEATHERS = [
-  { key: "hot",  label: "For the heat",      line: "Bright, fresh and airy — made for humid days.",
-    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' },
-  { key: "cold", label: "For cool evenings", line: "Warm and rich — for rainy days, cold offices and nights out.",
-    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M19.5 14.2A7.6 7.6 0 0 1 9.8 4.5a7.6 7.6 0 1 0 9.7 9.7Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M17 3.5v4M15 5.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>' },
-  { key: "any",  label: "Any weather",       line: "Balanced scents that wear well all year round.",
-    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17Z" fill="currentColor" opacity=".35"/></svg>' },
+  {
+    key: "hot",
+    label: "For the heat",
+    line: "Bright, fresh and airy — made for humid days.",
+    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>',
+  },
+  {
+    key: "cold",
+    label: "For cool evenings",
+    line: "Warm and rich — for rainy days, cold offices and nights out.",
+    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M19.5 14.2A7.6 7.6 0 0 1 9.8 4.5a7.6 7.6 0 1 0 9.7 9.7Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M17 3.5v4M15 5.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>',
+  },
+  {
+    key: "any",
+    label: "Any weather",
+    line: "Balanced scents that wear well all year round.",
+    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17Z" fill="currentColor" opacity=".35"/></svg>',
+  },
 ];
 
 var ACCORDS = [
-  { key: "fresh",  label: "Fresh & Aquatic",  line: "Sea air, clean skin",       color: "#8fb5a8", words: ["fresh", "aquatic", "marine", "green", "minty", "mint", "clean"] },
-  { key: "citrus", label: "Citrus",           line: "Bright and zesty",          color: "#d6bf5e", words: ["citrus", "bergamot", "lemon"] },
-  { key: "floral", label: "Floral",           line: "Petals and powder",         color: "#d79aa3", words: ["floral", "rose", "powdery", "jasmine"] },
-  { key: "fruity", label: "Fruity",           line: "Juicy and playful",         color: "#e0937a", words: ["fruity"] },
-  { key: "sweet",  label: "Sweet & Gourmand", line: "Vanilla, coffee, caramel",  color: "#e2c48a", words: ["sweet", "vanilla", "coffee", "chestnut", "gourmand", "caramel"] },
-  { key: "woody",  label: "Woody & Amber",    line: "Warm woods and resin",      color: "#a98458", words: ["woody", "amber", "musky", "musk", "smoky", "leather", "oud"] },
-  { key: "spicy",  label: "Spicy & Aromatic", line: "Pepper, spice and herbs",   color: "#c97a4a", words: ["spicy", "warm", "aromatic", "pepper"] },
+  {
+    key: "fresh",
+    label: "Fresh & Aquatic",
+    line: "Sea air, clean skin",
+    color: "#8fb5a8",
+    words: ["fresh", "aquatic", "marine", "green", "minty", "mint", "clean"],
+  },
+  {
+    key: "citrus",
+    label: "Citrus",
+    line: "Bright and zesty",
+    color: "#d6bf5e",
+    words: ["citrus", "bergamot", "lemon"],
+  },
+  {
+    key: "floral",
+    label: "Floral",
+    line: "Petals and powder",
+    color: "#d79aa3",
+    words: ["floral", "rose", "powdery", "jasmine"],
+  },
+  {
+    key: "fruity",
+    label: "Fruity",
+    line: "Juicy and playful",
+    color: "#e0937a",
+    words: ["fruity"],
+  },
+  {
+    key: "sweet",
+    label: "Sweet & Gourmand",
+    line: "Vanilla, coffee, caramel",
+    color: "#e2c48a",
+    words: ["sweet", "vanilla", "coffee", "chestnut", "gourmand", "caramel"],
+  },
+  {
+    key: "woody",
+    label: "Woody & Amber",
+    line: "Warm woods and resin",
+    color: "#a98458",
+    words: ["woody", "amber", "musky", "musk", "smoky", "leather", "oud"],
+  },
+  {
+    key: "spicy",
+    label: "Spicy & Aromatic",
+    line: "Pepper, spice and herbs",
+    color: "#c97a4a",
+    words: ["spicy", "warm", "aromatic", "pepper"],
+  },
 ];
 
 // Profile words that lean warm-weather or cool-weather
-var WEATHER_HOT = { fresh: 2, citrus: 2, aquatic: 2, marine: 2, minty: 2, green: 2, aromatic: 1, fruity: 1, floral: 0.5 };
-var WEATHER_COLD = { warm: 2, amber: 2, vanilla: 2, coffee: 2, chestnut: 2, smoky: 2, leather: 2, oud: 2,
-                     spicy: 1.5, sweet: 1, musky: 1, powdery: 1, woody: 0.5 };
+var WEATHER_HOT = {
+  fresh: 2,
+  citrus: 2,
+  aquatic: 2,
+  marine: 2,
+  minty: 2,
+  green: 2,
+  aromatic: 1,
+  fruity: 1,
+  floral: 0.5,
+};
+var WEATHER_COLD = {
+  warm: 2,
+  amber: 2,
+  vanilla: 2,
+  coffee: 2,
+  chestnut: 2,
+  smoky: 2,
+  leather: 2,
+  oud: 2,
+  spicy: 1.5,
+  sweet: 1,
+  musky: 1,
+  powdery: 1,
+  woody: 0.5,
+};
 
 function homeProfiles(p) {
-  try { return getProductSearchData(p).profiles || []; } catch { return []; }
+  try {
+    return getProductSearchData(p).profiles || [];
+  } catch {
+    return [];
+  }
 }
 
 function weatherMap() {
   try {
     const raw = (storeSettings || {}).weatherMap;
-    const map = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+    const map = typeof raw === "string" ? JSON.parse(raw || "{}") : raw || {};
     return map && typeof map === "object" ? map : {};
-  } catch { return {}; }
+  } catch {
+    return {};
+  }
 }
 
 // "hot" | "cold" | "any" — the admin's choice wins, otherwise worked out from the profiles
 function weatherOf(p) {
   const forced = weatherMap()[p.id];
   if (forced === "hot" || forced === "cold" || forced === "any") return forced;
-  let hot = 0, cold = 0;
-  homeProfiles(p).forEach((w) => { hot += WEATHER_HOT[w] || 0; cold += WEATHER_COLD[w] || 0; });
+  let hot = 0,
+    cold = 0;
+  homeProfiles(p).forEach((w) => {
+    hot += WEATHER_HOT[w] || 0;
+    cold += WEATHER_COLD[w] || 0;
+  });
   fdListOf(fdMeta(p).time || p.time).forEach((t) => {
     t = t.toLowerCase();
     if (/day|morning|office|summer/.test(t)) hot += 1;
@@ -5824,11 +4883,20 @@ function accordMatches(p, accord) {
 }
 
 function homeSort(list) {
-  const best = (p) => (fdListOf(fdMeta(p).badges || p.badges).map((b) => b.toUpperCase()).includes("BEST SELLER") ? 1 : 0);
-  return list.slice().sort((a, b) =>
-    (Number(a.stock) === 0) - (Number(b.stock) === 0) ||
-    best(b) - best(a) ||
-    String(a.name).localeCompare(String(b.name)));
+  const best = (p) =>
+    fdListOf(fdMeta(p).badges || p.badges)
+      .map((b) => b.toUpperCase())
+      .includes("BEST SELLER")
+      ? 1
+      : 0;
+  return list
+    .slice()
+    .sort(
+      (a, b) =>
+        (Number(a.stock) === 0) - (Number(b.stock) === 0) ||
+        best(b) - best(a) ||
+        String(a.name).localeCompare(String(b.name)),
+    );
 }
 
 function settingOn(key, fallback) {
@@ -5839,7 +4907,7 @@ function settingOn(key, fallback) {
 
 function renderHomeExtras() {
   if (typeof isCatalogReady !== "function" || !isCatalogReady()) return;
-  if (!WEATHER_COLD || !homeExtrasWired) return;   // this part of the file hasn't run yet
+  if (!WEATHER_COLD || !homeExtrasWired) return; // this part of the file hasn't run yet
   if (!feelState) feelState = { kind: "weather", key: "hot" };
   renderShopByFeel();
   renderScentOfWeek();
@@ -5849,11 +4917,14 @@ function renderHomeExtras() {
 }
 
 async function loadHomeStats() {
-  if (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured()) { homeStats = {}; return; }
+  if (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured()) {
+    homeStats = {};
+    return;
+  }
   homeStatsLoading = true;
   try {
     const result = await apiClient.get({ action: "storeStats" });
-    homeStats = result && result.success ? (result.stats || {}) : {};
+    homeStats = result && result.success ? result.stats || {} : {};
   } catch {
     homeStats = {};
   }
@@ -5909,7 +4980,8 @@ function renderShopByFeel() {
   }
 
   const head = document.getElementById("feelResultsTitle");
-  if (head) head.innerHTML = `${escapeHTML(title)}<small>${list.length} ${list.length === 1 ? "scent" : "scents"}</small>`;
+  if (head)
+    head.innerHTML = `${escapeHTML(title)}<small>${list.length} ${list.length === 1 ? "scent" : "scents"}</small>`;
   const clear = document.getElementById("feelClear");
   if (clear) clear.hidden = feelState.kind !== "accord";
 
@@ -5932,8 +5004,10 @@ function scentOfWeekProduct() {
     const picked = products.find((p) => p.id === choice);
     return usable(picked) ? picked : null;
   }
-  if (homeStats === null) return null;                      // wait for this week's numbers
-  const top = homeStats.weekTop ? products.find((p) => p.id === homeStats.weekTop) : null;
+  if (homeStats === null) return null; // wait for this week's numbers
+  const top = homeStats.weekTop
+    ? products.find((p) => p.id === homeStats.weekTop)
+    : null;
   if (top && Number(top.stock) !== 0) return top;
   // No sales data yet: the first in-stock Best Seller
   return homeSort(products).find((p) => Number(p.stock) !== 0) || null;
@@ -5943,25 +5017,49 @@ function renderScentOfWeek() {
   const sec = document.getElementById("scentOfWeek");
   if (!sec) return;
   const p = scentOfWeekProduct();
-  if (!p) { sec.hidden = true; return; }
+  if (!p) {
+    sec.hidden = true;
+    return;
+  }
 
   const meta = fdMeta(p);
   const info = favStockInfo(p);
-  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  const set = (id, html) => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+  };
 
   sec.dataset.id = p.id;
   set("sotwPhoto", fdPhotoHTML(p, "sotw-img"));
   set("sotwName", escapeHTML(p.name));
-  set("sotwLine", escapeHTML(p.desc || meta.desc || `${fdCatLabel(p)} · Extrait de Parfum`));
+  set(
+    "sotwLine",
+    escapeHTML(p.desc || meta.desc || `${fdCatLabel(p)} · Extrait de Parfum`),
+  );
 
   const note = document.getElementById("sotwNote");
   const noteText = String((storeSettings || {}).scentOfWeekNote || "").trim();
-  if (note) { note.hidden = !noteText; note.textContent = noteText; }
+  if (note) {
+    note.hidden = !noteText;
+    note.textContent = noteText;
+  }
 
-  const tiers = [["Top", p.topNotes || meta.topNotes], ["Heart", p.heartNotes || meta.heartNotes], ["Base", p.baseNotes || meta.baseNotes]]
+  const tiers = [
+    ["Top", p.topNotes || meta.topNotes],
+    ["Heart", p.heartNotes || meta.heartNotes],
+    ["Base", p.baseNotes || meta.baseNotes],
+  ]
     .map(([k, v]) => [k, fdListOf(v)])
     .filter(([, v]) => v.length);
-  set("sotwNotes", tiers.map(([k, v]) => `<div><dt>${k}</dt><dd>${v.map(escapeHTML).join(" · ")}</dd></div>`).join(""));
+  set(
+    "sotwNotes",
+    tiers
+      .map(
+        ([k, v]) =>
+          `<div><dt>${k}</dt><dd>${v.map(escapeHTML).join(" · ")}</dd></div>`,
+      )
+      .join(""),
+  );
 
   set("sotwPrice", `₱${Number(p.price || PRODUCT_PRICE).toLocaleString()}`);
   const add = document.getElementById("sotwAdd");
@@ -5985,42 +5083,73 @@ function renderTrustStrip() {
   const strip = document.getElementById("trustStrip");
   const row = document.getElementById("trustRow");
   if (!strip || !row) return;
-  if (!settingOn("showTrust", true) || !homeStats) { strip.hidden = true; return; }
+  if (!settingOn("showTrust", true) || !homeStats) {
+    strip.hidden = true;
+    return;
+  }
 
-  const sold = Number(homeStats.bottlesSold || 0) + Number((storeSettings || {}).soldOffset || 0);
+  const sold =
+    Number(homeStats.bottlesSold || 0) +
+    Number((storeSettings || {}).soldOffset || 0);
   const rating = Number(homeStats.avgRating || 0);
   const reviews = Number(homeStats.reviewCount || 0);
   const customers = Number(homeStats.customers || 0);
 
   const items = [];
-  if (sold > 0) items.push([roundedCount(sold), sold === 1 ? "bottle sold" : "bottles sold"]);
-  if (reviews > 0 && rating > 0) items.push([`${rating.toFixed(1)}<i aria-hidden="true">★</i>`, `from ${reviews.toLocaleString()} ${reviews === 1 ? "review" : "reviews"}`, "#reviews"]);
+  if (sold > 0)
+    items.push([
+      roundedCount(sold),
+      sold === 1 ? "bottle sold" : "bottles sold",
+    ]);
+  if (reviews > 0 && rating > 0)
+    items.push([
+      `${rating.toFixed(1)}<i aria-hidden="true">★</i>`,
+      `from ${reviews.toLocaleString()} ${reviews === 1 ? "review" : "reviews"}`,
+      "#reviews",
+    ]);
   if (customers >= 10) items.push([roundedCount(customers), "happy customers"]);
   items.push(["25%", "extrait concentration"]);
 
-  if (items.length < 2) { strip.hidden = true; return; }
-  row.innerHTML = items.map(([big, small, href]) =>
-    `<${href ? `a href="${href}"` : "div"} class="trust-item"><b>${big}</b><span>${escapeHTML(small)}</span></${href ? "a" : "div"}>`
-  ).join("");
+  if (items.length < 2) {
+    strip.hidden = true;
+    return;
+  }
+  row.innerHTML = items
+    .map(
+      ([big, small, href]) =>
+        `<${href ? `a href="${href}"` : "div"} class="trust-item"><b>${big}</b><span>${escapeHTML(small)}</span></${href ? "a" : "div"}>`,
+    )
+    .join("");
   strip.hidden = false;
 }
 
 /* ---------- Welcome offer ---------- */
 
-var WELCOME_KEY = "aeWelcome";   // { seen: timestamp, joined: true, code }
+var WELCOME_KEY = "aeWelcome"; // { seen: timestamp, joined: true, code }
 
 function welcomeStore(update) {
   let data = {};
-  try { data = JSON.parse(localStorage.getItem(WELCOME_KEY) || "{}") || {}; } catch { data = {}; }
+  try {
+    data = JSON.parse(localStorage.getItem(WELCOME_KEY) || "{}") || {};
+  } catch {
+    data = {};
+  }
   if (update) {
     data = { ...data, ...update };
-    try { localStorage.setItem(WELCOME_KEY, JSON.stringify(data)); } catch { /* private mode */ }
+    try {
+      localStorage.setItem(WELCOME_KEY, JSON.stringify(data));
+    } catch {
+      /* private mode */
+    }
   }
   return data;
 }
 
 function welcomeEnabled() {
-  return settingOn("welcomeEnabled", false) && !!String((storeSettings || {}).welcomeCode || "").trim();
+  return (
+    settingOn("welcomeEnabled", false) &&
+    !!String((storeSettings || {}).welcomeCode || "").trim()
+  );
 }
 
 var welcomeTimer = null;
@@ -6036,14 +5165,18 @@ function setupWelcomeOffer() {
 
   const saved = welcomeStore();
   if (saved.joined) return;
-  if (saved.seen && Date.now() - Number(saved.seen) < 14 * 864e5) return;   // shown in the last 2 weeks
+  if (saved.seen && Date.now() - Number(saved.seen) < 14 * 864e5) return; // shown in the last 2 weeks
   if (/[?&]nowelcome\b/.test(location.search)) return;
 
   // Show once the visitor has looked around a little (not on arrival)
   const show = () => {
     window.removeEventListener("scroll", onScroll);
     clearTimeout(welcomeTimer);
-    if (document.querySelector(".fragrance-modal.open, .fav-drawer.open, .confirmation-modal.open")) {
+    if (
+      document.querySelector(
+        ".fragrance-modal.open, .fav-drawer.open, .confirmation-modal.open",
+      )
+    ) {
       welcomeTimer = setTimeout(show, 8000);
       return;
     }
@@ -6060,13 +5193,16 @@ function openWelcome() {
   const modal = document.getElementById("welcomeModal");
   if (!modal || !welcomeEnabled()) return;
   const saved = welcomeStore({ seen: Date.now() });
-  if (saved.joined && saved.code) showWelcomeCode(saved.code, saved.label, false);
+  if (saved.joined && saved.code)
+    showWelcomeCode(saved.code, saved.label, false);
   modal.hidden = false;
   requestAnimationFrame(() => modal.classList.add("open"));
   modal.setAttribute("aria-hidden", "false");
   document.body.classList.add("welcome-open");
   setTimeout(() => {
-    const field = saved.joined ? document.getElementById("welcomeShop") : document.getElementById("welcomeContact");
+    const field = saved.joined
+      ? document.getElementById("welcomeShop")
+      : document.getElementById("welcomeContact");
     field?.focus({ preventScroll: true });
   }, 60);
 }
@@ -6077,7 +5213,9 @@ function closeWelcome() {
   modal.classList.remove("open");
   modal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("welcome-open");
-  setTimeout(() => { modal.hidden = true; }, 260);
+  setTimeout(() => {
+    modal.hidden = true;
+  }, 260);
 }
 
 function showWelcomeCode(code, label, returning) {
@@ -6088,19 +5226,26 @@ function showWelcomeCode(code, label, returning) {
   if (form) form.hidden = true;
   if (done) done.hidden = false;
   if (returning) {
-    if (text) text.textContent = "Welcome back — you've ordered with us before, so this gift is reserved for first orders. Thank you for coming back to the House.";
+    if (text)
+      text.textContent =
+        "Welcome back — you've ordered with us before, so this gift is reserved for first orders. Thank you for coming back to the House.";
     if (box) box.hidden = true;
     return;
   }
   if (box) box.hidden = false;
   const el = document.getElementById("welcomeCode");
   if (el) el.textContent = code;
-  if (text) text.textContent = `${label ? `Here's ${label} your first order.` : "Here's your welcome code."} We've saved it to your bag — it applies at checkout.`;
+  if (text)
+    text.textContent = `${label ? `Here's ${label} your first order.` : "Here's your welcome code."} We've saved it to your bag — it applies at checkout.`;
   // Put it in the voucher box so it applies at checkout
   const input = document.getElementById("voucherInput");
   if (input && !input.value.trim()) {
     input.value = code;
-    try { checkVoucherCode(code, true); } catch { /* checkout not ready */ }
+    try {
+      checkVoucherCode(code, true);
+    } catch {
+      /* checkout not ready */
+    }
   }
 }
 
@@ -6116,24 +5261,43 @@ async function submitWelcome(e) {
   const looksEmail = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(value);
   const looksPhone = /^(63|0)?9\d{9}$/.test(digits);
   if (!looksEmail && !looksPhone) {
-    if (err) err.textContent = "Enter a mobile number (09XX XXX XXXX) or an email address.";
+    if (err)
+      err.textContent =
+        "Enter a mobile number (09XX XXX XXXX) or an email address.";
     input?.focus();
     return;
   }
 
-  if (btn) { btn.disabled = true; btn.textContent = "One moment…"; }
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = "One moment…";
+  }
   try {
-    const result = await apiClient.post({ action: "joinWelcome", contact: value });
+    const result = await apiClient.post({
+      action: "joinWelcome",
+      contact: value,
+    });
     if (result && result.ok) {
-      welcomeStore({ joined: true, code: result.code, label: result.label || "" });
+      welcomeStore({
+        joined: true,
+        code: result.code,
+        label: result.label || "",
+      });
       showWelcomeCode(result.code, result.label || "", !!result.returning);
     } else if (err) {
-      err.textContent = (result && (result.message || result.error)) || "Something went wrong. Please try again.";
+      err.textContent =
+        (result && (result.message || result.error)) ||
+        "Something went wrong. Please try again.";
     }
   } catch (ex) {
-    if (err) err.textContent = "Couldn't connect. Please check your internet and try again.";
+    if (err)
+      err.textContent =
+        "Couldn't connect. Please check your internet and try again.";
   }
-  if (btn) { btn.disabled = false; btn.textContent = "Get my code"; }
+  if (btn) {
+    btn.disabled = false;
+    btn.textContent = "Get my code";
+  }
 }
 
 /* ---------- events (wired once) ---------- */
@@ -6152,16 +5316,19 @@ async function submitWelcome(e) {
     const b = e.target.closest("[data-feel-accord]");
     if (!b) return;
     const key = b.dataset.feelAccord;
-    feelState = feelState && feelState.kind === "accord" && feelState.key === key
-      ? { kind: "weather", key: "hot" }
-      : { kind: "accord", key };
+    feelState =
+      feelState && feelState.kind === "accord" && feelState.key === key
+        ? { kind: "weather", key: "hot" }
+        : { kind: "accord", key };
     renderShopByFeel();
   });
   document.getElementById("feelClear")?.addEventListener("click", () => {
     feelState = { kind: "weather", key: "hot" };
     renderShopByFeel();
   });
-  document.getElementById("feelRow")?.addEventListener("click", handleProductClick);
+  document
+    .getElementById("feelRow")
+    ?.addEventListener("click", handleProductClick);
 
   document.getElementById("sotwAdd")?.addEventListener("click", (e) => {
     const id = document.getElementById("scentOfWeek")?.dataset.id;
@@ -6169,7 +5336,9 @@ async function submitWelcome(e) {
     if (addToCart(id, 1)) {
       const btn = e.currentTarget;
       btn.textContent = "Added ✓";
-      setTimeout(() => { btn.textContent = "Add to bag"; }, 1600);
+      setTimeout(() => {
+        btn.textContent = "Add to bag";
+      }, 1600);
     }
   });
   const openSotw = () => {
@@ -6179,19 +5348,29 @@ async function submitWelcome(e) {
   document.getElementById("sotwMore")?.addEventListener("click", openSotw);
   document.getElementById("sotwPhoto")?.addEventListener("click", openSotw);
 
-  document.getElementById("welcomeForm")?.addEventListener("submit", submitWelcome);
+  document
+    .getElementById("welcomeForm")
+    ?.addEventListener("submit", submitWelcome);
   document.getElementById("welcomeModal")?.addEventListener("click", (e) => {
     if (e.target.closest("[data-welcome-close]")) closeWelcome();
   });
   document.getElementById("welcomeShop")?.addEventListener("click", () => {
     closeWelcome();
-    document.getElementById("collection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("collection")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   });
-  document.getElementById("welcomeCopy")?.addEventListener("click", async (e) => {
-    const code = document.getElementById("welcomeCode")?.textContent || "";
-    try { await navigator.clipboard.writeText(code); e.currentTarget.textContent = "Copied ✓"; }
-    catch { e.currentTarget.textContent = code; }
-  });
+  document
+    .getElementById("welcomeCopy")
+    ?.addEventListener("click", async (e) => {
+      const code = document.getElementById("welcomeCode")?.textContent || "";
+      try {
+        await navigator.clipboard.writeText(code);
+        e.currentTarget.textContent = "Copied ✓";
+      } catch {
+        e.currentTarget.textContent = code;
+      }
+    });
   document.getElementById("welcomeFootLink")?.addEventListener("click", (e) => {
     e.preventDefault();
     openWelcome();
@@ -6216,7 +5395,8 @@ renderHomeExtras();
   if (!video || !btn || !box) return;
 
   const tallQuery = window.matchMedia("(max-width: 700px)");
-  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+  const calm =
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
     (navigator.connection && navigator.connection.saveData);
   let userPaused = false;
   let loaded = "";
@@ -6227,7 +5407,9 @@ renderHomeExtras();
     video.poster = tall ? video.dataset.tallPoster : video.dataset.widePoster;
     const mp4 = tall ? video.dataset.tall : video.dataset.wide;
     // WebM is smaller; Safari (and older iPhones) get the MP4
-    return video.canPlayType('video/webm; codecs="vp9"') ? mp4.replace(/\.mp4$/, ".webm") : mp4;
+    return video.canPlayType('video/webm; codecs="vp9"')
+      ? mp4.replace(/\.mp4$/, ".webm")
+      : mp4;
   };
 
   const load = () => {
@@ -6242,34 +5424,50 @@ renderHomeExtras();
   const setState = () => {
     const playing = !video.paused;
     box.classList.toggle("playing", playing);
-    btn.setAttribute("aria-label", playing ? "Pause the film" : "Play the film");
+    btn.setAttribute(
+      "aria-label",
+      playing ? "Pause the film" : "Play the film",
+    );
   };
 
-  const play = () => { load(); video.play().catch(() => {}); };
+  const play = () => {
+    load();
+    video.play().catch(() => {});
+  };
 
   pick();
   video.addEventListener("play", setState);
   video.addEventListener("pause", setState);
   btn.addEventListener("click", () => {
-    if (video.paused) { userPaused = false; play(); }
-    else { userPaused = true; video.pause(); }
+    if (video.paused) {
+      userPaused = false;
+      play();
+    } else {
+      userPaused = true;
+      video.pause();
+    }
   });
   video.addEventListener("click", () => btn.click());
-  tallQuery.addEventListener?.("change", () => { if (loaded) load(); else pick(); });
+  tallQuery.addEventListener?.("change", () => {
+    if (loaded) load();
+    else pick();
+  });
 
   if ("IntersectionObserver" in window) {
-    new IntersectionObserver((entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting && e.intersectionRatio >= 0.55) {
-          if (!calm && !userPaused) play();
-        } else if (!video.paused) {
-          video.pause();
-        }
-      });
-    }, { threshold: [0, 0.55] }).observe(box);
+    new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+            if (!calm && !userPaused) play();
+          } else if (!video.paused) {
+            video.pause();
+          }
+        });
+      },
+      { threshold: [0, 0.55] },
+    ).observe(box);
   }
 })();
-
 
 // ============================================================
 // SHOP PAGE (For Him / For Her)
@@ -6279,8 +5477,16 @@ renderHomeExtras();
 // ============================================================
 
 var SHOP_COPY = {
-  men:   { label: "For Him", title: "For Him", lede: "The black cap line — bold, fresh and warm extraits made to last from day into night." },
-  women: { label: "For Her", title: "For Her", lede: "The gold cap line — floral, sweet and luminous extraits with a trail that lingers." },
+  men: {
+    label: "For Him",
+    title: "For Him",
+    lede: "The black cap line — bold, fresh and warm extraits made to last from day into night.",
+  },
+  women: {
+    label: "For Her",
+    title: "For Her",
+    lede: "The gold cap line — floral, sweet and luminous extraits with a trail that lingers.",
+  },
 };
 
 function isShopMode() {
@@ -6294,7 +5500,10 @@ function shopLineFromUrl() {
 
 function updateShopMeta(count) {
   const el = document.getElementById("shopCount");
-  if (el) el.textContent = isShopMode() ? `${count} ${count === 1 ? "fragrance" : "fragrances"}` : "";
+  if (el)
+    el.textContent = isShopMode()
+      ? `${count} ${count === 1 ? "fragrance" : "fragrances"}`
+      : "";
 }
 
 function updateLineCards() {
@@ -6318,13 +5527,17 @@ function applyShopLine(cat, push) {
     t.classList.toggle("active", on);
     t.setAttribute("aria-selected", on ? "true" : "false");
   });
-  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  const set = (id, text) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+  };
   set("shopCrumb", copy.label);
   set("collectionEyebrow", "Shop the collection");
   set("collectionTitle", copy.title);
   set("collectionLede", copy.lede);
   document.title = `${copy.label} — Aura & Essence`;
-  if (push) history.pushState({ line: cat }, "", `${location.pathname}?line=${cat}`);
+  if (push)
+    history.pushState({ line: cat }, "", `${location.pathname}?line=${cat}`);
   renderCarousel(cat);
 }
 
@@ -6340,7 +5553,8 @@ function applyShopLine(cat, push) {
   document.querySelector(".tabs")?.addEventListener("click", (e) => {
     const tab = e.target.closest(".tab");
     if (!tab || !isShopMode()) return;
-    if (shopLineFromUrl() !== tab.dataset.cat) applyShopLine(tab.dataset.cat, true);
+    if (shopLineFromUrl() !== tab.dataset.cat)
+      applyShopLine(tab.dataset.cat, true);
   });
 
   // Back/forward between lines. (Plain #hash links also fire popstate — ignore those.)
@@ -6352,28 +5566,44 @@ function applyShopLine(cat, push) {
         applyShopLine(l, false);
       }
     } else if (isShopMode()) {
-      location.reload();   // went back from the shop page to the homepage
+      location.reload(); // went back from the shop page to the homepage
     }
   });
 
   ["weatherFilter", "sortSelect"].forEach((id) =>
-    document.getElementById(id)?.addEventListener("change", () => renderCarousel(activeCat)));
+    document
+      .getElementById(id)
+      ?.addEventListener("change", () => renderCarousel(activeCat)),
+  );
 
   // On the shop page, homepage links (#order, #tracking, #reviews…) go back to the homepage
-  document.addEventListener("click", (e) => {
-    if (!isShopMode()) return;
-    const a = e.target.closest('a[href^="#"]');
-    if (!a) return;
-    const hash = a.getAttribute("href");
-    if (hash === "#" || hash === "#top" || hash === "#order" || hash.startsWith("#scent-")) return;
-    if (hash === "#collection") { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-    e.preventDefault();
-    location.href = "index.html" + hash;
-  }, true);
+  document.addEventListener(
+    "click",
+    (e) => {
+      if (!isShopMode()) return;
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const hash = a.getAttribute("href");
+      if (
+        hash === "#" ||
+        hash === "#top" ||
+        hash === "#order" ||
+        hash.startsWith("#scent-")
+      )
+        return;
+      if (hash === "#collection") {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      e.preventDefault();
+      location.href = "index.html" + hash;
+    },
+    true,
+  );
 
   updateLineCards();
 })();
-
 
 // ============================================================
 // BAG / CHECKOUT AS A MODAL
@@ -6400,7 +5630,11 @@ function openBag() {
   const sheet = document.getElementById("order");
   if (sheet) sheet.scrollTop = 0;
   updateBagTitle();
-  setTimeout(() => document.querySelector("#order .bag-x")?.focus({ preventScroll: true }), 60);
+  setTimeout(
+    () =>
+      document.querySelector("#order .bag-x")?.focus({ preventScroll: true }),
+    60,
+  );
 }
 
 function closeBag() {
@@ -6409,35 +5643,57 @@ function closeBag() {
   modal.classList.remove("open");
   modal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("bag-open", "order-in-view");
-  setTimeout(() => { if (!isBagOpen()) modal.hidden = true; }, 260);
-  if (bagLastFocus && document.contains(bagLastFocus)) bagLastFocus.focus({ preventScroll: true });
+  setTimeout(() => {
+    if (!isBagOpen()) modal.hidden = true;
+  }, 260);
+  if (bagLastFocus && document.contains(bagLastFocus))
+    bagLastFocus.focus({ preventScroll: true });
 }
 
 function updateBagTitle() {
   const t = document.getElementById("bagTitle");
   if (!t) return;
   const step = typeof coStep === "number" ? coStep : 1;
-  t.textContent = step === 1 ? "Your bag" : step === 2 ? "Your details" : "Review & place order";
+  t.textContent =
+    step === 1
+      ? "Your bag"
+      : step === 2
+        ? "Your details"
+        : "Review & place order";
 }
 
 (function wireBag() {
   // any link to #order opens the bag instead of jumping to the bottom
-  document.addEventListener("click", (e) => {
-    const a = e.target.closest('a[href="#order"], a[href$="index.html#order"]');
-    if (a) {
-      if (!document.getElementById("bagModal")) return;
-      e.preventDefault();
-      openBag();
-      return;
-    }
-    if (e.target.closest("[data-bag-close]")) { closeBag(); return; }
-    // other in-page links inside the bag (e.g. Track Order) close it first
-    const inner = e.target.closest('#order a[href^="#"]');
-    if (inner && isBagOpen()) closeBag();
-  }, true);
+  document.addEventListener(
+    "click",
+    (e) => {
+      const a = e.target.closest(
+        'a[href="#order"], a[href$="index.html#order"]',
+      );
+      if (a) {
+        if (!document.getElementById("bagModal")) return;
+        e.preventDefault();
+        openBag();
+        return;
+      }
+      if (e.target.closest("[data-bag-close]")) {
+        closeBag();
+        return;
+      }
+      // other in-page links inside the bag (e.g. Track Order) close it first
+      const inner = e.target.closest('#order a[href^="#"]');
+      if (inner && isBagOpen()) closeBag();
+    },
+    true,
+  );
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isBagOpen() && !document.querySelector(".fragrance-modal.open, .confirmation-modal.show")) closeBag();
+    if (
+      e.key === "Escape" &&
+      isBagOpen() &&
+      !document.querySelector(".fragrance-modal.open, .confirmation-modal.show")
+    )
+      closeBag();
   });
 
   // keep the title in step with the checkout steps
@@ -6463,22 +5719,49 @@ function updateBagTitle() {
 // ============================================================
 
 var DEFAULT_FAQ = [
-  { q: "How do I order?", a: "Choose a scent and tap Add to bag. Open your bag from the top of the page, add your name, mobile number and delivery or meetup location, then place your order. You'll get an Order ID right away." },
-  { q: "What payment methods do you accept?", a: "Cash on delivery / meetup, and GCash. For GCash, the number appears after you place your order — send your payment screenshot on our Messenger page so we can confirm it." },
-  { q: "How long does delivery take?", a: "Metro Manila: about 1–3 days. Luzon: about 2–5 days. Visayas & Mindanao: about 3–7 days, depending on the courier. We'll message you once your order is on its way." },
-  { q: "How much is shipping?", a: "It depends on your location and the courier. We'll confirm the exact fee when we message you about your order." },
-  { q: "How long does the scent last?", a: "Our perfumes are 25% extrait de parfum — more perfume oil than a typical eau de toilette — so they stay on the skin longer. How long exactly depends on your skin and the scent. Tip: spray on pulse points (wrists, neck) right after moisturising." },
-  { q: "What does “inspired by” mean?", a: "Each blend is our own take on the character of a well-loved designer fragrance. We are not affiliated with the original brands, and their names belong to their owners — we use them only so you know which scent family to expect." },
-  { q: "Can I track my order?", a: "Yes. Enter your Order ID and the mobile number you ordered with in Track Order." },
-  { q: "Is it ready to give as a gift?", a: "Yes — every bottle comes in the signature A&E bag, ready to give as it is." },
+  {
+    q: "How do I order?",
+    a: "Choose a scent and tap Add to bag. Open your bag from the top of the page, add your name, mobile number and delivery or meetup location, then place your order. You'll get an Order ID right away.",
+  },
+  {
+    q: "What payment methods do you accept?",
+    a: "Cash on delivery / meetup, and GCash. For GCash, the number appears after you place your order — send your payment screenshot on our Messenger page so we can confirm it.",
+  },
+  {
+    q: "How long does delivery take?",
+    a: "Metro Manila: about 1–3 days. Luzon: about 2–5 days. Visayas & Mindanao: about 3–7 days, depending on the courier. We'll message you once your order is on its way.",
+  },
+  {
+    q: "How much is shipping?",
+    a: "It depends on your location and the courier. We'll confirm the exact fee when we message you about your order.",
+  },
+  {
+    q: "How long does the scent last?",
+    a: "Our perfumes are 25% extrait de parfum — more perfume oil than a typical eau de toilette — so they stay on the skin longer. How long exactly depends on your skin and the scent. Tip: spray on pulse points (wrists, neck) right after moisturising.",
+  },
+  {
+    q: "What does “inspired by” mean?",
+    a: "Each blend is our own take on the character of a well-loved designer fragrance. We are not affiliated with the original brands, and their names belong to their owners — we use them only so you know which scent family to expect.",
+  },
+  {
+    q: "Can I track my order?",
+    a: "Yes. Enter your Order ID and the mobile number you ordered with in Track Order.",
+  },
+  {
+    q: "Is it ready to give as a gift?",
+    a: "Yes — every bottle comes in the signature A&E bag, ready to give as it is.",
+  },
 ];
 
 function faqItems() {
   try {
     const raw = (storeSettings || {}).faq;
     const list = typeof raw === "string" ? JSON.parse(raw || "[]") : raw;
-    if (Array.isArray(list) && list.some((x) => x && x.q)) return list.filter((x) => x && x.q && x.a);
-  } catch { /* fall back */ }
+    if (Array.isArray(list) && list.some((x) => x && x.q))
+      return list.filter((x) => x && x.q && x.a);
+  } catch {
+    /* fall back */
+  }
   return DEFAULT_FAQ;
 }
 
@@ -6487,15 +5770,18 @@ function renderFaq() {
   if (!box) return;
   const items = faqItems();
   const esc = (t) => escapeHTML(String(t)).replace(/\n/g, "<br>");
-  box.innerHTML = items.map((x, i) => `
+  box.innerHTML = items
+    .map(
+      (x, i) => `
     <details class="faq-item"${i === 0 ? " open" : ""}>
       <summary><span>${escapeHTML(x.q)}</span><i aria-hidden="true"></i></summary>
       <div class="faq-a">${esc(x.a)}</div>
-    </details>`).join("");
+    </details>`,
+    )
+    .join("");
 }
 
 renderFaq();
-
 
 // ============================================================
 // CUSTOMER PERFORMANCE RATINGS
@@ -6505,26 +5791,38 @@ renderFaq();
 // ============================================================
 
 var WEAR_LABEL = { 4: "~4 hrs", 6: "~6 hrs", 8: "~8 hrs", 10: "10+ hrs" };
-var PROJ_LABEL = { soft: "Soft trail", moderate: "Moderate trail", strong: "Strong trail" };
+var PROJ_LABEL = {
+  soft: "Soft trail",
+  moderate: "Moderate trail",
+  strong: "Strong trail",
+};
 
 function reviewPerfChips(r) {
   if (!r || !WEAR_LABEL) return "";
   const out = [];
-  if (r.similarity >= 1 && r.similarity <= 10) out.push(`<span class="perf-chip sim">${Number(r.similarity)}/10 close to the original</span>`);
-  if (WEAR_LABEL[r.wearHours]) out.push(`<span class="perf-chip">Lasted ${WEAR_LABEL[r.wearHours]}</span>`);
-  if (PROJ_LABEL[r.projection]) out.push(`<span class="perf-chip">${PROJ_LABEL[r.projection]}</span>`);
+  if (r.similarity >= 1 && r.similarity <= 10)
+    out.push(
+      `<span class="perf-chip sim">${Number(r.similarity)}/10 close to the original</span>`,
+    );
+  if (WEAR_LABEL[r.wearHours])
+    out.push(
+      `<span class="perf-chip">Lasted ${WEAR_LABEL[r.wearHours]}</span>`,
+    );
+  if (PROJ_LABEL[r.projection])
+    out.push(`<span class="perf-chip">${PROJ_LABEL[r.projection]}</span>`);
   return out.join("");
 }
 
 function fdCustomerSays(st) {
-  if (!PROJ_LABEL || !st || !(st.simCount || st.wearCount || st.projCount)) return "";
+  if (!PROJ_LABEL || !st || !(st.simCount || st.wearCount || st.projCount))
+    return "";
   const rows = [];
   if (st.simCount) {
     const avg = st.simSum / st.simCount;
-    const pct = Math.round(st.simClose / st.simCount * 100);
+    const pct = Math.round((st.simClose / st.simCount) * 100);
     rows.push(`<div class="say-row">
       <span class="say-label">Close to the original</span>
-      <span class="say-bar"><i style="width:${(avg / 10 * 100).toFixed(0)}%"></i></span>
+      <span class="say-bar"><i style="width:${((avg / 10) * 100).toFixed(0)}%"></i></span>
       <b>${avg.toFixed(1)}/10</b>
       <small>${pct}% say it smells close · ${st.simCount} rating${st.simCount === 1 ? "" : "s"}</small>
     </div>`);
@@ -6534,48 +5832,61 @@ function fdCustomerSays(st) {
     const label = avg >= 9.5 ? "10+ hrs" : `~${Math.round(avg)} hrs`;
     rows.push(`<div class="say-row">
       <span class="say-label">Lasts</span>
-      <span class="say-bar"><i style="width:${Math.min(100, avg / 10 * 100).toFixed(0)}%"></i></span>
+      <span class="say-bar"><i style="width:${Math.min(100, (avg / 10) * 100).toFixed(0)}%"></i></span>
       <b>${label}</b>
       <small>average from ${st.wearCount} customer${st.wearCount === 1 ? "" : "s"}</small>
     </div>`);
   }
   if (st.projCount) {
     const keys = ["soft", "moderate", "strong"];
-    const top = keys.reduce((a, b) => (st.proj[b] > st.proj[a] ? b : a), "moderate");
+    const top = keys.reduce(
+      (a, b) => (st.proj[b] > st.proj[a] ? b : a),
+      "moderate",
+    );
     rows.push(`<div class="say-row say-proj">
       <span class="say-label">Scent trail</span>
       <span class="say-split">${keys.map((k) => `<span class="${k === top ? "on" : ""}" style="flex:${Math.max(st.proj[k], 0.0001)}" title="${PROJ_LABEL[k]}: ${st.proj[k]}"></span>`).join("")}</span>
       <b>${PROJ_LABEL[top].replace(" trail", "")}</b>
-      <small>${keys.map((k) => `${k[0].toUpperCase() + k.slice(1)} ${Math.round(st.proj[k] / st.projCount * 100)}%`).join(" · ")}</small>
+      <small>${keys.map((k) => `${k[0].toUpperCase() + k.slice(1)} ${Math.round((st.proj[k] / st.projCount) * 100)}%`).join(" · ")}</small>
     </div>`);
   }
   return `<div class="fd-says"><p class="fd-says-title">What customers say</p>${rows.join("")}</div>`;
 }
 
 function resetPerfInputs() {
-  ["reviewSimilarity", "reviewWear", "reviewProjection"].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
-  document.querySelectorAll("#simSelect button, .chip-select button").forEach((b) => {
-    b.classList.remove("on");
-    b.setAttribute("aria-checked", "false");
+  ["reviewSimilarity", "reviewWear", "reviewProjection"].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.value = "";
   });
+  document
+    .querySelectorAll("#simSelect button, .chip-select button")
+    .forEach((b) => {
+      b.classList.remove("on");
+      b.setAttribute("aria-checked", "false");
+    });
 }
 
 (function wirePerfInputs() {
-  document.querySelectorAll("#simSelect button, .chip-select button").forEach((b) => {
-    b.setAttribute("role", "radio");
-    b.setAttribute("aria-checked", "false");
-  });
+  document
+    .querySelectorAll("#simSelect button, .chip-select button")
+    .forEach((b) => {
+      b.setAttribute("role", "radio");
+      b.setAttribute("aria-checked", "false");
+    });
   document.getElementById("simSelect")?.addEventListener("click", (e) => {
     const b = e.target.closest("[data-sim]");
     if (!b) return;
     const input = document.getElementById("reviewSimilarity");
-    const value = input.value === b.dataset.sim ? "" : b.dataset.sim;   // tap again to clear
+    const value = input.value === b.dataset.sim ? "" : b.dataset.sim; // tap again to clear
     input.value = value;
     document.querySelectorAll("#simSelect button").forEach((x) => {
       const on = value !== "" && Number(x.dataset.sim) <= Number(value);
       x.classList.toggle("on", on);
       x.classList.toggle("pick", x.dataset.sim === value);
-      x.setAttribute("aria-checked", x.dataset.sim === value ? "true" : "false");
+      x.setAttribute(
+        "aria-checked",
+        x.dataset.sim === value ? "true" : "false",
+      );
     });
   });
   document.querySelectorAll(".chip-select").forEach((group) => {
