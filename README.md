@@ -185,6 +185,17 @@ After updating, run `supabase/schema.sql` once more. It's safe, and it adds the 
 - The admin remembers the last screen and filters on that device.
 - **Install the admin as an app**: on Android/desktop Chrome use "Install admin app" (sidebar or More menu); on iPhone use Safari → Share → Add to Home Screen. Works on the live https site (Vercel).
 
+## Homepage extras (logo, Shop by Feel, Scent of the Week, welcome offer)
+
+After updating the files, **run `supabase/schema.sql` again** in Supabase → SQL Editor (safe to re-run). It adds the public store numbers, the welcome list and the "first order only" voucher option.
+
+- **Logo** — `assets/images/ae-logo.svg` (gold in dark mode, black in light mode); `favicon.svg` and the admin app icons use it too.
+- **Shop by Feel** — weather (heat / cool evenings / any) and accord tiles. Weather is worked out from each scent's profiles; change any in Admin → Homepage & Payment → *Shop by weather*.
+- **Scent of the Week** — automatic (best seller of the last 7 days) or pick one, with an optional note.
+- **Trust strip** — real bottles sold, rating and customers. Add sales from before the website in *Bottles sold before the website*.
+- **Welcome offer** — create a voucher (e.g. WELCOME10) with **First order only** on, then choose it in *Welcome offer*. People who ask for the code appear in Admin → **Welcome List** (copy or download as CSV).
+- **Collections** — the new *Everyday* and *Hidden Gem* badges get their own homepage rows.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

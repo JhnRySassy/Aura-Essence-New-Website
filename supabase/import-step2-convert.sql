@@ -9,6 +9,41 @@
 -- At the end it shows what was imported and deletes the import tables.
 -- =====================================================================
 
+-- Make sure every import table exists (tabs you didn't upload are simply empty)
+create table if not exists public.import_orders (
+  timestamp text, order_id text, full_name text, contact_number text,
+  scent text, scent_id text, quantity text, delivery_meetup_location text,
+  payment_method text, notes text, price_per_bottle text, estimated_total text,
+  status text, items_json text
+);
+
+create table if not exists public.import_products (
+  id text, name text, category text, description text, image_url text,
+  price text, stock text, badges text, active text, profiles text,
+  longevity text, projection text, strength text, time text, occasion text,
+  long_description text, top_notes text, heart_notes text, base_notes text,
+  application text, sort_order text
+);
+
+create table if not exists public.import_promotions (
+  id text, name text, type text, min_qty text, fixed_total text,
+  percent_off text, active text
+);
+
+create table if not exists public.import_site_settings (
+  key text, value text
+);
+
+create table if not exists public.import_admin_audit (
+  timestamp text, actor text, action text
+);
+
+create table if not exists public.import_reviews (
+  timestamp text, review_id text, customer_name text, scent text,
+  scent_id text, rating text, review text, photo_url text, status text
+);
+
+
 -- Google Sheets exports dates like 10/3/2026 9:34:11 (month/day/year).
 set datestyle = 'ISO, MDY';
 set timezone = 'Asia/Manila';

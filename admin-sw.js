@@ -1,11 +1,13 @@
 /* Aura & Essence admin — service worker (makes the admin installable).
    Only the admin's own files are cached, so the panel opens fast.
    Data (orders, products…) always comes live from Supabase — never cached. */
-const CACHE = "ae-admin-v1";
+const CACHE = "ae-admin-v2";
 const FILES = [
   "admin.html",
   "assets/css/admin.css",
   "assets/css/admin-ui.css",
+  "assets/css/admin-premium.css",
+  "assets/images/favicon.svg",
   "assets/js/admin.js",
   "assets/js/supabase-api.js",
   "assets/js/supabase-config.js",

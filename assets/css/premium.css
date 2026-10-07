@@ -430,3 +430,13 @@ select option:checked { background-color: #2a2418; color: #d4b26a; }
 .price-tag { font-size: 30px; }
 .cart-total strong { font-size: 24px; }
 .fd-price { font-size: 26px; }
+
+/* ---------- Brand mark (logo) — gold on dark, ink on light ---------- */
+.brand { display: inline-flex; align-items: center; letter-spacing: 0; line-height: 0; color: var(--brass-bright, #d4b26a); }
+.brand-logo { display: block; height: 40px; width: auto; color: inherit; transition: opacity .3s; }
+.brand:hover .brand-logo { opacity: .82; }
+footer .mark { display: flex; justify-content: center; line-height: 0; color: var(--brass-bright, #d4b26a); }
+.mark-logo { display: block; height: 64px; width: auto; }
+html[data-theme="light"] .brand,
+html[data-theme="light"] footer .mark { color: #141210; }
+@media (max-width: 760px) { .brand-logo { height: 32px; } }

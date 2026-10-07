@@ -802,7 +802,7 @@ function renderCart() {
           src="${escapeHTML(p.img)}"
           alt="${escapeHTML(p.name)}"
           decoding="async"
-          onerror="this.onerror=null;this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
+          onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
         >`
           : `<div class="img-ph" aria-hidden="true">A&amp;E</div>`}
 
@@ -4187,6 +4187,8 @@ var FEATURED_ROWS = [
   { setting: "showNewArrivals", badge: "NEW", title: "New Arrivals", tag: "Newly blended" },
   { setting: "showFeatured", badge: "FEATURED", title: "Featured", tag: "Chosen by the house" },
   { setting: "showSignature", badge: "SIGNATURE", title: "Signature Collection", tag: "The house signatures" },
+  { setting: "showEveryday", badge: "EVERYDAY", title: "Everyday Essentials", tag: "Easy to wear, any day of the week" },
+  { setting: "showHiddenGems", badge: "HIDDEN GEM", title: "Hidden Gems", tag: "Quietly loved — worth discovering" },
 ];
 
 function peso(value) {
@@ -4486,6 +4488,7 @@ async function loadStoreSettings() {
     if (result?.success) {
       storeSettings = result.settings || {};
       renderFeaturedRows();
+      renderHomeExtras();
     }
   } catch {
     // keep defaults (all rows on)
@@ -4497,6 +4500,7 @@ function renderStoreContent() {
   renderGuide();
   renderDuo();
   renderFeaturedRows();
+  renderHomeExtras();
 }
 
 renderStoreContent();
@@ -5052,7 +5056,7 @@ function cartLinesHTML(withThumbs) {
     const price = Number(p.price || PRODUCT_PRICE);
     const thumb = withThumbs
       ? (p.img
-          ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;this.outerHTML='<span class=&quot;img-ph sm&quot;>A&amp;E</span>'">`
+          ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<span class=&quot;img-ph sm&quot;>A&amp;E</span>'">`
           : `<span class="img-ph sm">A&amp;E</span>`)
       : "";
     return `<div class="sum-line">${thumb}<span>${escapeHTML(p.name)} <small>× ${item.qty}</small></span><b>₱${(price * item.qty).toLocaleString()}</b></div>`;
@@ -5339,7 +5343,7 @@ function fdSimilar(p) {
 
 function fdPhotoHTML(p, cls) {
   return p.img
-    ? `<img src="${escapeHTML(p.img)}" alt="${escapeHTML(p.name)}" class="${cls || ""}" onerror="this.onerror=null;this.outerHTML='<div class=&quot;img-ph ${cls || ""}&quot;>A&amp;E</div>'">`
+    ? `<img src="${escapeHTML(p.img)}" alt="${escapeHTML(p.name)}" class="${cls || ""}" onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph ${cls || ""}&quot;>A&amp;E</div>'">`
     : `<div class="img-ph ${cls || ""}">A&amp;E</div>`;
 }
 
@@ -5701,3 +5705,454 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
     try { localStorage.setItem("aeTheme", next); } catch { /* private mode */ }
   });
 })();
+
+// ============================================================
+// HOMEPAGE EXTRAS
+//   • Trust strip (real numbers from the store)
+//   • Scent of the Week (picked in admin, or this week's best seller)
+//   • Shop by Feel: weather + accord tiles
+//   • Welcome offer (mobile/email → first-order code)
+// (var + function declarations: renderStoreContent() calls
+//  renderHomeExtras() before this part of the file has run.)
+// ============================================================
+
+var homeStats = null;          // from store_stats(); null until loaded
+var homeStatsLoading = false;
+var feelState = null;          // { kind: "weather" | "accord", key }
+var homeExtrasWired = false;
+
+var WEATHERS = [
+  { key: "hot",  label: "For the heat",      line: "Bright, fresh and airy — made for humid days.",
+    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 2.5v2.4M12 19.1v2.4M4.6 4.6l1.7 1.7M17.7 17.7l1.7 1.7M2.5 12h2.4M19.1 12h2.4M4.6 19.4l1.7-1.7M17.7 6.3l1.7-1.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>' },
+  { key: "cold", label: "For cool evenings", line: "Warm and rich — for rainy days, cold offices and nights out.",
+    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><path d="M19.5 14.2A7.6 7.6 0 0 1 9.8 4.5a7.6 7.6 0 1 0 9.7 9.7Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M17 3.5v4M15 5.5h4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>' },
+  { key: "any",  label: "Any weather",       line: "Balanced scents that wear well all year round.",
+    icon: '<svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17Z" fill="currentColor" opacity=".35"/></svg>' },
+];
+
+var ACCORDS = [
+  { key: "fresh",  label: "Fresh & Aquatic",  line: "Sea air, clean skin",       color: "#8fb5a8", words: ["fresh", "aquatic", "marine", "green", "minty", "mint", "clean"] },
+  { key: "citrus", label: "Citrus",           line: "Bright and zesty",          color: "#d6bf5e", words: ["citrus", "bergamot", "lemon"] },
+  { key: "floral", label: "Floral",           line: "Petals and powder",         color: "#d79aa3", words: ["floral", "rose", "powdery", "jasmine"] },
+  { key: "fruity", label: "Fruity",           line: "Juicy and playful",         color: "#e0937a", words: ["fruity"] },
+  { key: "sweet",  label: "Sweet & Gourmand", line: "Vanilla, coffee, caramel",  color: "#e2c48a", words: ["sweet", "vanilla", "coffee", "chestnut", "gourmand", "caramel"] },
+  { key: "woody",  label: "Woody & Amber",    line: "Warm woods and resin",      color: "#a98458", words: ["woody", "amber", "musky", "musk", "smoky", "leather", "oud"] },
+  { key: "spicy",  label: "Spicy & Aromatic", line: "Pepper, spice and herbs",   color: "#c97a4a", words: ["spicy", "warm", "aromatic", "pepper"] },
+];
+
+// Profile words that lean warm-weather or cool-weather
+var WEATHER_HOT = { fresh: 2, citrus: 2, aquatic: 2, marine: 2, minty: 2, green: 2, aromatic: 1, fruity: 1, floral: 0.5 };
+var WEATHER_COLD = { warm: 2, amber: 2, vanilla: 2, coffee: 2, chestnut: 2, smoky: 2, leather: 2, oud: 2,
+                     spicy: 1.5, sweet: 1, musky: 1, powdery: 1, woody: 0.5 };
+
+function homeProfiles(p) {
+  try { return getProductSearchData(p).profiles || []; } catch { return []; }
+}
+
+function weatherMap() {
+  try {
+    const raw = (storeSettings || {}).weatherMap;
+    const map = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+    return map && typeof map === "object" ? map : {};
+  } catch { return {}; }
+}
+
+// "hot" | "cold" | "any" — the admin's choice wins, otherwise worked out from the profiles
+function weatherOf(p) {
+  const forced = weatherMap()[p.id];
+  if (forced === "hot" || forced === "cold" || forced === "any") return forced;
+  let hot = 0, cold = 0;
+  homeProfiles(p).forEach((w) => { hot += WEATHER_HOT[w] || 0; cold += WEATHER_COLD[w] || 0; });
+  fdListOf(fdMeta(p).time || p.time).forEach((t) => {
+    t = t.toLowerCase();
+    if (/day|morning|office|summer/.test(t)) hot += 1;
+    if (/night|evening|date|winter/.test(t)) cold += 1;
+  });
+  const diff = hot - cold;
+  return diff >= 1.5 ? "hot" : diff <= -1.5 ? "cold" : "any";
+}
+
+function accordMatches(p, accord) {
+  const profiles = homeProfiles(p);
+  return profiles.some((w) => accord.words.some((a) => w.includes(a)));
+}
+
+function homeSort(list) {
+  const best = (p) => (fdListOf(fdMeta(p).badges || p.badges).map((b) => b.toUpperCase()).includes("BEST SELLER") ? 1 : 0);
+  return list.slice().sort((a, b) =>
+    (Number(a.stock) === 0) - (Number(b.stock) === 0) ||
+    best(b) - best(a) ||
+    String(a.name).localeCompare(String(b.name)));
+}
+
+function settingOn(key, fallback) {
+  const v = (storeSettings || {})[key];
+  if (v === undefined || v === null || v === "") return fallback;
+  return String(v) !== "false";
+}
+
+function renderHomeExtras() {
+  if (typeof isCatalogReady !== "function" || !isCatalogReady()) return;
+  if (!WEATHER_COLD || !homeExtrasWired) return;   // this part of the file hasn't run yet
+  if (!feelState) feelState = { kind: "weather", key: "hot" };
+  renderShopByFeel();
+  renderScentOfWeek();
+  renderTrustStrip();
+  setupWelcomeOffer();
+  if (homeStats === null && !homeStatsLoading) loadHomeStats();
+}
+
+async function loadHomeStats() {
+  if (typeof isSupabaseConfigured === "function" && !isSupabaseConfigured()) { homeStats = {}; return; }
+  homeStatsLoading = true;
+  try {
+    const result = await apiClient.get({ action: "storeStats" });
+    homeStats = result && result.success ? (result.stats || {}) : {};
+  } catch {
+    homeStats = {};
+  }
+  homeStatsLoading = false;
+  renderScentOfWeek();
+  renderTrustStrip();
+}
+
+/* ---------- Shop by Feel ---------- */
+
+function renderShopByFeel() {
+  const wBox = document.getElementById("feelWeather");
+  const aBox = document.getElementById("feelAccords");
+  const row = document.getElementById("feelRow");
+  if (!wBox || !aBox || !row) return;
+
+  const products = activeProducts();
+  const byWeather = { hot: [], cold: [], any: [] };
+  products.forEach((p) => byWeather[weatherOf(p)].push(p));
+
+  wBox.innerHTML = WEATHERS.map((w) => {
+    const n = byWeather[w.key].length;
+    const on = feelState.kind === "weather" && feelState.key === w.key;
+    return `<button type="button" class="feel-w ${on ? "on" : ""}" role="tab" aria-selected="${on}" data-feel-weather="${w.key}" ${n ? "" : "disabled"}>
+      <span class="feel-w-icon">${w.icon}</span>
+      <span class="feel-w-text"><b>${escapeHTML(w.label)}</b><small>${escapeHTML(w.line)}</small></span>
+      <span class="feel-count">${n}</span>
+    </button>`;
+  }).join("");
+
+  aBox.innerHTML = ACCORDS.map((a) => {
+    const picks = products.filter((p) => accordMatches(p, a));
+    if (!picks.length) return "";
+    const on = feelState.kind === "accord" && feelState.key === a.key;
+    return `<button type="button" class="feel-a ${on ? "on" : ""}" style="--acc:${a.color}" data-feel-accord="${a.key}" aria-pressed="${on}">
+      <span class="feel-a-swatch" aria-hidden="true"></span>
+      <b>${escapeHTML(a.label)}</b>
+      <small>${escapeHTML(a.line)}</small>
+      <span class="feel-a-count">${picks.length} ${picks.length === 1 ? "scent" : "scents"}</span>
+    </button>`;
+  }).join("");
+
+  let list = [];
+  let title = "";
+  if (feelState.kind === "accord") {
+    const a = ACCORDS.find((x) => x.key === feelState.key);
+    list = a ? products.filter((p) => accordMatches(p, a)) : [];
+    title = a ? a.label : "";
+  } else {
+    const w = WEATHERS.find((x) => x.key === feelState.key) || WEATHERS[0];
+    list = byWeather[w.key];
+    title = w.label;
+  }
+
+  const head = document.getElementById("feelResultsTitle");
+  if (head) head.innerHTML = `${escapeHTML(title)}<small>${list.length} ${list.length === 1 ? "scent" : "scents"}</small>`;
+  const clear = document.getElementById("feelClear");
+  if (clear) clear.hidden = feelState.kind !== "accord";
+
+  row.innerHTML = "";
+  if (!list.length) {
+    row.innerHTML = `<p class="feel-empty">Nothing here yet — new blends are on the way.</p>`;
+    return;
+  }
+  homeSort(list).forEach((p) => row.appendChild(buildProductCard(p)));
+}
+
+/* ---------- Scent of the Week ---------- */
+
+function scentOfWeekProduct() {
+  const choice = String((storeSettings || {}).scentOfWeek ?? "auto").trim();
+  if (!choice || choice === "off") return null;
+  const products = activeProducts();
+  const usable = (p) => p && p.active !== false;
+  if (choice !== "auto") {
+    const picked = products.find((p) => p.id === choice);
+    return usable(picked) ? picked : null;
+  }
+  if (homeStats === null) return null;                      // wait for this week's numbers
+  const top = homeStats.weekTop ? products.find((p) => p.id === homeStats.weekTop) : null;
+  if (top && Number(top.stock) !== 0) return top;
+  // No sales data yet: the first in-stock Best Seller
+  return homeSort(products).find((p) => Number(p.stock) !== 0) || null;
+}
+
+function renderScentOfWeek() {
+  const sec = document.getElementById("scentOfWeek");
+  if (!sec) return;
+  const p = scentOfWeekProduct();
+  if (!p) { sec.hidden = true; return; }
+
+  const meta = fdMeta(p);
+  const info = favStockInfo(p);
+  const set = (id, html) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+
+  sec.dataset.id = p.id;
+  set("sotwPhoto", fdPhotoHTML(p, "sotw-img"));
+  set("sotwName", escapeHTML(p.name));
+  set("sotwLine", escapeHTML(p.desc || meta.desc || `${fdCatLabel(p)} · Extrait de Parfum`));
+
+  const note = document.getElementById("sotwNote");
+  const noteText = String((storeSettings || {}).scentOfWeekNote || "").trim();
+  if (note) { note.hidden = !noteText; note.textContent = noteText; }
+
+  const tiers = [["Top", p.topNotes || meta.topNotes], ["Heart", p.heartNotes || meta.heartNotes], ["Base", p.baseNotes || meta.baseNotes]]
+    .map(([k, v]) => [k, fdListOf(v)])
+    .filter(([, v]) => v.length);
+  set("sotwNotes", tiers.map(([k, v]) => `<div><dt>${k}</dt><dd>${v.map(escapeHTML).join(" · ")}</dd></div>`).join(""));
+
+  set("sotwPrice", `₱${Number(p.price || PRODUCT_PRICE).toLocaleString()}`);
+  const add = document.getElementById("sotwAdd");
+  if (add) {
+    add.disabled = !info.ok;
+    add.textContent = info.ok ? "Add to bag" : info.text;
+  }
+  sec.hidden = false;
+}
+
+/* ---------- Trust strip ---------- */
+
+function roundedCount(n) {
+  n = Math.floor(Number(n) || 0);
+  if (n >= 1000) return (Math.floor(n / 100) * 100).toLocaleString() + "+";
+  if (n >= 100) return (Math.floor(n / 10) * 10).toLocaleString() + "+";
+  return n.toLocaleString();
+}
+
+function renderTrustStrip() {
+  const strip = document.getElementById("trustStrip");
+  const row = document.getElementById("trustRow");
+  if (!strip || !row) return;
+  if (!settingOn("showTrust", true) || !homeStats) { strip.hidden = true; return; }
+
+  const sold = Number(homeStats.bottlesSold || 0) + Number((storeSettings || {}).soldOffset || 0);
+  const rating = Number(homeStats.avgRating || 0);
+  const reviews = Number(homeStats.reviewCount || 0);
+  const customers = Number(homeStats.customers || 0);
+
+  const items = [];
+  if (sold > 0) items.push([roundedCount(sold), sold === 1 ? "bottle sold" : "bottles sold"]);
+  if (reviews > 0 && rating > 0) items.push([`${rating.toFixed(1)}<i aria-hidden="true">★</i>`, `from ${reviews.toLocaleString()} ${reviews === 1 ? "review" : "reviews"}`, "#reviews"]);
+  if (customers >= 10) items.push([roundedCount(customers), "happy customers"]);
+  items.push(["25%", "extrait concentration"]);
+
+  if (items.length < 2) { strip.hidden = true; return; }
+  row.innerHTML = items.map(([big, small, href]) =>
+    `<${href ? `a href="${href}"` : "div"} class="trust-item"><b>${big}</b><span>${escapeHTML(small)}</span></${href ? "a" : "div"}>`
+  ).join("");
+  strip.hidden = false;
+}
+
+/* ---------- Welcome offer ---------- */
+
+var WELCOME_KEY = "aeWelcome";   // { seen: timestamp, joined: true, code }
+
+function welcomeStore(update) {
+  let data = {};
+  try { data = JSON.parse(localStorage.getItem(WELCOME_KEY) || "{}") || {}; } catch { data = {}; }
+  if (update) {
+    data = { ...data, ...update };
+    try { localStorage.setItem(WELCOME_KEY, JSON.stringify(data)); } catch { /* private mode */ }
+  }
+  return data;
+}
+
+function welcomeEnabled() {
+  return settingOn("welcomeEnabled", false) && !!String((storeSettings || {}).welcomeCode || "").trim();
+}
+
+var welcomeTimer = null;
+
+function setupWelcomeOffer() {
+  const enabled = welcomeEnabled();
+  const link = document.getElementById("welcomeFootLink");
+  if (link) link.hidden = !enabled;
+  const title = document.getElementById("welcomeTitle");
+  const headline = String((storeSettings || {}).welcomeHeadline || "").trim();
+  if (title) title.textContent = headline || "A gift for your first order";
+  if (!enabled || welcomeTimer) return;
+
+  const saved = welcomeStore();
+  if (saved.joined) return;
+  if (saved.seen && Date.now() - Number(saved.seen) < 14 * 864e5) return;   // shown in the last 2 weeks
+  if (/[?&]nowelcome\b/.test(location.search)) return;
+
+  // Show once the visitor has looked around a little (not on arrival)
+  const show = () => {
+    window.removeEventListener("scroll", onScroll);
+    clearTimeout(welcomeTimer);
+    if (document.querySelector(".fragrance-modal.open, .fav-drawer.open, .confirmation-modal.open")) {
+      welcomeTimer = setTimeout(show, 8000);
+      return;
+    }
+    openWelcome();
+  };
+  const onScroll = () => {
+    if (window.scrollY > document.documentElement.scrollHeight * 0.35) show();
+  };
+  welcomeTimer = setTimeout(show, 25000);
+  window.addEventListener("scroll", onScroll, { passive: true });
+}
+
+function openWelcome() {
+  const modal = document.getElementById("welcomeModal");
+  if (!modal || !welcomeEnabled()) return;
+  const saved = welcomeStore({ seen: Date.now() });
+  if (saved.joined && saved.code) showWelcomeCode(saved.code, saved.label, false);
+  modal.hidden = false;
+  requestAnimationFrame(() => modal.classList.add("open"));
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("welcome-open");
+  setTimeout(() => {
+    const field = saved.joined ? document.getElementById("welcomeShop") : document.getElementById("welcomeContact");
+    field?.focus({ preventScroll: true });
+  }, 60);
+}
+
+function closeWelcome() {
+  const modal = document.getElementById("welcomeModal");
+  if (!modal || modal.hidden) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("welcome-open");
+  setTimeout(() => { modal.hidden = true; }, 260);
+}
+
+function showWelcomeCode(code, label, returning) {
+  const form = document.getElementById("welcomeStepForm");
+  const done = document.getElementById("welcomeStepDone");
+  const text = document.getElementById("welcomeDoneText");
+  const box = document.getElementById("welcomeCodeBox");
+  if (form) form.hidden = true;
+  if (done) done.hidden = false;
+  if (returning) {
+    if (text) text.textContent = "Welcome back — you've ordered with us before, so this gift is reserved for first orders. Thank you for coming back to the House.";
+    if (box) box.hidden = true;
+    return;
+  }
+  if (box) box.hidden = false;
+  const el = document.getElementById("welcomeCode");
+  if (el) el.textContent = code;
+  if (text) text.textContent = `${label ? `Here's ${label} your first order.` : "Here's your welcome code."} We've saved it to your bag — it applies at checkout.`;
+  // Put it in the voucher box so it applies at checkout
+  const input = document.getElementById("voucherInput");
+  if (input && !input.value.trim()) {
+    input.value = code;
+    try { checkVoucherCode(code, true); } catch { /* checkout not ready */ }
+  }
+}
+
+async function submitWelcome(e) {
+  e.preventDefault();
+  const input = document.getElementById("welcomeContact");
+  const err = document.getElementById("welcomeError");
+  const btn = document.getElementById("welcomeSubmit");
+  const value = String(input?.value || "").trim();
+  if (err) err.textContent = "";
+
+  const digits = value.replace(/\D/g, "");
+  const looksEmail = /^[^@\s]+@[^@\s]+\.[a-z]{2,}$/i.test(value);
+  const looksPhone = /^(63|0)?9\d{9}$/.test(digits);
+  if (!looksEmail && !looksPhone) {
+    if (err) err.textContent = "Enter a mobile number (09XX XXX XXXX) or an email address.";
+    input?.focus();
+    return;
+  }
+
+  if (btn) { btn.disabled = true; btn.textContent = "One moment…"; }
+  try {
+    const result = await apiClient.post({ action: "joinWelcome", contact: value });
+    if (result && result.ok) {
+      welcomeStore({ joined: true, code: result.code, label: result.label || "" });
+      showWelcomeCode(result.code, result.label || "", !!result.returning);
+    } else if (err) {
+      err.textContent = (result && (result.message || result.error)) || "Something went wrong. Please try again.";
+    }
+  } catch (ex) {
+    if (err) err.textContent = "Couldn't connect. Please check your internet and try again.";
+  }
+  if (btn) { btn.disabled = false; btn.textContent = "Get my code"; }
+}
+
+/* ---------- events (wired once) ---------- */
+
+(function wireHomeExtras() {
+  if (homeExtrasWired) return;
+  homeExtrasWired = true;
+
+  document.getElementById("feelWeather")?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-feel-weather]");
+    if (!b || b.disabled) return;
+    feelState = { kind: "weather", key: b.dataset.feelWeather };
+    renderShopByFeel();
+  });
+  document.getElementById("feelAccords")?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-feel-accord]");
+    if (!b) return;
+    const key = b.dataset.feelAccord;
+    feelState = feelState && feelState.kind === "accord" && feelState.key === key
+      ? { kind: "weather", key: "hot" }
+      : { kind: "accord", key };
+    renderShopByFeel();
+  });
+  document.getElementById("feelClear")?.addEventListener("click", () => {
+    feelState = { kind: "weather", key: "hot" };
+    renderShopByFeel();
+  });
+  document.getElementById("feelRow")?.addEventListener("click", handleProductClick);
+
+  document.getElementById("sotwAdd")?.addEventListener("click", (e) => {
+    const id = document.getElementById("scentOfWeek")?.dataset.id;
+    if (!id) return;
+    if (addToCart(id, 1)) {
+      const btn = e.currentTarget;
+      btn.textContent = "Added ✓";
+      setTimeout(() => { btn.textContent = "Add to bag"; }, 1600);
+    }
+  });
+  const openSotw = () => {
+    const id = document.getElementById("scentOfWeek")?.dataset.id;
+    if (id) openFragranceDetails(id);
+  };
+  document.getElementById("sotwMore")?.addEventListener("click", openSotw);
+  document.getElementById("sotwPhoto")?.addEventListener("click", openSotw);
+
+  document.getElementById("welcomeForm")?.addEventListener("submit", submitWelcome);
+  document.getElementById("welcomeModal")?.addEventListener("click", (e) => {
+    if (e.target.closest("[data-welcome-close]")) closeWelcome();
+  });
+  document.getElementById("welcomeShop")?.addEventListener("click", () => {
+    closeWelcome();
+    document.getElementById("collection")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  document.getElementById("welcomeCopy")?.addEventListener("click", async (e) => {
+    const code = document.getElementById("welcomeCode")?.textContent || "";
+    try { await navigator.clipboard.writeText(code); e.currentTarget.textContent = "Copied ✓"; }
+    catch { e.currentTarget.textContent = code; }
+  });
+  document.getElementById("welcomeFootLink")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    openWelcome();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeWelcome();
+  });
+})();
+
+renderHomeExtras();

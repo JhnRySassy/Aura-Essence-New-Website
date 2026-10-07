@@ -178,6 +178,8 @@ alter table public.vouchers drop constraint if exists vouchers_code_check;
 alter table public.vouchers add constraint vouchers_code_check check (code ~ '^[A-Z0-9_-]{3,30}$');
 alter table public.vouchers drop constraint if exists vouchers_percent_check;
 alter table public.vouchers add constraint vouchers_percent_check check (type <> 'percent' or value <= 100);
+-- Welcome / first-order codes: only for numbers that haven't ordered before
+alter table public.vouchers add column if not exists first_order_only boolean not null default false;
 
 create table if not exists public.restocks (
   id            bigint generated always as identity primary key,
@@ -508,6 +510,13 @@ begin
       return jsonb_build_object('ok', false, 'message', 'You have already used this voucher.');
     end if;
   end if;
+  if v.first_order_only and char_length(coalesce(p_digits, '')) >= 7 then
+    if exists (select 1 from public.orders
+                where status <> 'Cancelled'
+                  and right(contact_digits, 10) = right(p_digits, 10)) then
+      return jsonb_build_object('ok', false, 'message', format('%s is for first orders only.', v.code));
+    end if;
+  end if;
 
   if v.type = 'percent' then
     v_disc  := round(p_subtotal * v.value / 100, 2);
@@ -515,7 +524,8 @@ begin
       v_disc := least(v_disc, v.max_discount);
     end if;
     v_label := format('%s%% off', public.peso_text(v.value)) ||
-               coalesce(format(' (up to ₱%s)', public.peso_text(v.max_discount)), '');
+               case when v.max_discount is not null
+                    then format(' (up to ₱%s)', public.peso_text(v.max_discount)) else '' end;
   else
     v_disc  := least(v.value, p_subtotal);
     v_label := format('₱%s off', public.peso_text(v.value));
@@ -1346,3 +1356,113 @@ grant execute on function public.admin_delete_restock(bigint) to authenticated;
 update public.site_settings
    set data = data || '{"gcashNumber": "09351936851"}'::jsonb
  where id = 1 and not (data ? 'gcashNumber');
+
+-- =====================================================================
+-- HOMEPAGE: TRUST STRIP, SCENT OF THE WEEK, WELCOME OFFER
+-- =====================================================================
+
+-- ---------- Public store numbers (no customer details) ----------
+-- Bottles sold, average rating, and the best seller of the past 7 days
+-- (falls back to 30 days). Cancelled orders are not counted.
+create or replace function public.store_stats()
+returns jsonb
+language sql stable security definer set search_path = public
+as $$
+  with lines as (
+    select o.created_at, i->>'id' as pid, greatest(0, coalesce((i->>'qty')::int, 0)) as qty
+      from public.orders o, jsonb_array_elements(case when jsonb_typeof(o.items) = 'array' then o.items else '[]'::jsonb end) i
+     where o.status <> 'Cancelled'
+  ),
+  wk as (select pid, sum(qty) q from lines where created_at > now() - interval '7 days' and pid is not null group by pid),
+  mo as (select pid, sum(qty) q from lines where created_at > now() - interval '30 days' and pid is not null group by pid)
+  select jsonb_build_object(
+    'bottlesSold', (select coalesce(sum(quantity), 0) from public.orders where status <> 'Cancelled'),
+    'customers',   (select count(distinct right(contact_digits, 10)) from public.orders where status <> 'Cancelled'),
+    'avgRating',   (select round(avg(rating)::numeric, 1) from public.reviews where approved),
+    'reviewCount', (select count(*) from public.reviews where approved),
+    'weekTop',     coalesce((select pid from wk join public.products p on p.id = wk.pid and p.active order by q desc, pid limit 1),
+                            (select pid from mo join public.products p on p.id = mo.pid and p.active order by q desc, pid limit 1))
+  );
+$$;
+revoke execute on function public.store_stats() from public;
+grant execute on function public.store_stats() to anon, authenticated;
+
+-- ---------- Welcome list (mobile number or email → first-order code) ----------
+create table if not exists public.subscribers (
+  id          bigint generated always as identity primary key,
+  contact     text not null check (char_length(contact) between 5 and 120),
+  contact_key text not null unique,
+  kind        text not null check (kind in ('mobile', 'email')),
+  source      text not null default 'welcome',
+  created_at  timestamptz not null default now()
+);
+create index if not exists subscribers_created_at_idx on public.subscribers (created_at desc);
+
+alter table public.subscribers enable row level security;
+drop policy if exists "subscribers admin read" on public.subscribers;
+create policy "subscribers admin read" on public.subscribers for select to authenticated using (public.is_admin());
+drop policy if exists "subscribers admin delete" on public.subscribers;
+create policy "subscribers admin delete" on public.subscribers for delete to authenticated using (public.is_admin());
+revoke all on public.subscribers from anon;
+grant select, delete on public.subscribers to authenticated;
+
+create or replace function public.join_welcome(p_contact text)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_raw    text := trim(coalesce(p_contact, ''));
+  v_digits text := regexp_replace(v_raw, '\D', '', 'g');
+  v_kind   text;
+  v_key    text;
+  v_show   text;
+  v_set    jsonb;
+  v_code   text;
+  v_vouch  public.vouchers%rowtype;
+  v_label  text;
+  v_back   boolean := false;
+begin
+  if v_raw ~* '^[^@\s]+@[^@\s]+\.[a-z]{2,}$' and char_length(v_raw) <= 120 then
+    v_kind := 'email'; v_key := lower(v_raw); v_show := lower(v_raw);
+  elsif v_digits ~ '^(63|0)?9\d{9}$' then
+    v_kind := 'mobile'; v_key := '0' || right(v_digits, 10); v_show := v_key;
+  else
+    return jsonb_build_object('ok', false, 'message', 'Enter a mobile number (09XX XXX XXXX) or an email address.');
+  end if;
+
+  select data into v_set from public.site_settings where id = 1;
+  v_code := upper(coalesce(v_set->>'welcomeCode', ''));
+  if coalesce(v_set->>'welcomeEnabled', 'false') <> 'true' or v_code = '' then
+    return jsonb_build_object('ok', false, 'message', 'The welcome offer is not available right now.');
+  end if;
+
+  select * into v_vouch from public.vouchers where code = v_code;
+  if not found or not v_vouch.active
+     or (v_vouch.starts_at is not null and now() < v_vouch.starts_at)
+     or (v_vouch.expires_at is not null and now() > v_vouch.expires_at) then
+    return jsonb_build_object('ok', false, 'message', 'The welcome offer is not available right now.');
+  end if;
+
+  insert into public.subscribers (contact, contact_key, kind)
+  values (v_show, v_key, v_kind)
+  on conflict (contact_key) do nothing;
+
+  if v_kind = 'mobile' then
+    v_back := exists (select 1 from public.orders
+                       where status <> 'Cancelled' and right(contact_digits, 10) = right(v_key, 10));
+  end if;
+
+  v_label := case when v_vouch.type = 'percent'
+                  then public.peso_text(v_vouch.value) || '% off'
+                  else '₱' || public.peso_text(v_vouch.value) || ' off' end;
+
+  return jsonb_build_object('ok', true, 'code', v_vouch.code, 'label', v_label,
+                            'minOrder', v_vouch.min_order, 'returning', v_back and v_vouch.first_order_only);
+end $$;
+revoke execute on function public.join_welcome(text) from public;
+grant execute on function public.join_welcome(text) to anon, authenticated;
+
+-- Default homepage settings for the new sections (only if not set yet)
+update public.site_settings
+   set data = '{"showEveryday": true, "showHiddenGems": true, "showTrust": true, "scentOfWeek": "auto", "welcomeEnabled": false}'::jsonb || data
+ where id = 1;

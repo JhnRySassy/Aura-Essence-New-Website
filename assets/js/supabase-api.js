@@ -229,6 +229,7 @@ function voucherFromRow(r) {
     expiresAt: r.expires_at,
     usageLimit: r.usage_limit,
     perCustomer: r.per_customer,
+    firstOrderOnly: !!r.first_order_only,
     note: r.note || "",
     active: r.active,
     createdAt: r.created_at
@@ -287,6 +288,21 @@ function settingsIn(data = {}) {
     showFeatured: toBool(data.showFeatured),
     showNewArrivals: toBool(data.showNewArrivals),
     showSignature: toBool(data.showSignature),
+    showEveryday: toBool(data.showEveryday),
+    showHiddenGems: toBool(data.showHiddenGems),
+    // Homepage extras
+    showTrust: toBool(data.showTrust),
+    soldOffset: Math.max(0, toInt(data.soldOffset, 0)),
+    scentOfWeek: (() => {
+      const v = String(data.scentOfWeek ?? "auto").trim();
+      return v === "" || v === "off" ? "" : v.slice(0, 64);
+    })(),
+    scentOfWeekNote: String(data.scentOfWeekNote ?? "").trim().slice(0, 160),
+    weatherMap: weatherMapIn(data.weatherMap),
+    // Welcome offer (mobile/email → first-order code)
+    welcomeEnabled: toBool(data.welcomeEnabled, false),
+    welcomeCode: String(data.welcomeCode ?? "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 30),
+    welcomeHeadline: String(data.welcomeHeadline ?? "").trim().slice(0, 80),
     // Payment details shown to customers after they order
     gcashNumber: String(data.gcashNumber ?? "").replace(/[^\d+]/g, "").slice(0, 15),
     gcashName: String(data.gcashName ?? "").trim().slice(0, 80),
@@ -294,6 +310,16 @@ function settingsIn(data = {}) {
       ? String(data.messengerUrl).trim().slice(0, 300)
       : ""
   };
+}
+
+// Weather overrides: {"productId": "hot" | "cold" | "any"} stored as a JSON string.
+function weatherMapIn(value) {
+  const map = typeof value === "string" ? parseJSON(value, {}) : (value || {});
+  const out = {};
+  Object.entries(map || {}).forEach(([id, w]) => {
+    if (["hot", "cold", "any"].includes(w) && String(id).length <= 64) out[String(id)] = w;
+  });
+  return JSON.stringify(out);
 }
 
 // Works on plain http too (crypto.randomUUID needs https).
@@ -372,6 +398,17 @@ const actions = {
     }));
   },
 
+  // Public numbers for the trust strip and Scent of the Week (no customer details)
+  async storeStats(db) {
+    const { data, error } = await db.rpc("store_stats");
+    if (error) return { success: false, message: error.message };
+    return ok({ stats: data || {} });
+  },
+
+  async joinWelcome(db, p) {
+    return must(await db.rpc("join_welcome", { p_contact: String(p.contact || "").slice(0, 120) }));
+  },
+
   async checkVoucher(db, p) {
     const items = parseJSON(p.items, [])
       .map(i => ({ id: String(i.id || ""), qty: toInt(i.qty, 0) }))
@@ -436,6 +473,7 @@ const actions = {
       expires_at: manilaDateToISO(p.expiresAt, true),
       usage_limit: optInt(p.usageLimit),
       per_customer: optInt(p.perCustomer),
+      first_order_only: toBool(p.firstOrderOnly, false),
       note: String(p.note || "").trim().slice(0, 300),
       active: toBool(p.active, true)
     };
@@ -451,6 +489,18 @@ const actions = {
       must({ data: null, error });
     }
     return ok({ code });
+  },
+
+  /* ----- Welcome list ----- */
+
+  async adminSubscribers(db) {
+    const rows = must(await db.from("subscribers").select("*").order("created_at", { ascending: false }).limit(5000));
+    return ok({ subscribers: rows.map(r => ({ id: r.id, contact: r.contact, kind: r.kind, source: r.source, createdAt: r.created_at })) });
+  },
+
+  async adminDeleteSubscriber(db, p) {
+    must(await db.from("subscribers").delete().eq("id", toInt(p.id, 0)));
+    return ok();
   },
 
   async adminSetVoucherActive(db, p) {
@@ -683,7 +733,10 @@ const actions = {
       all("restocks", "id")
     ]);
 
-    return ok({ orders, products, promotions, reviews, audit, settings, vouchers, restocks });
+    // Added later — don't fail the backup if the table isn't there yet
+    const subscribers = await all("subscribers", "id").catch(() => []);
+
+    return ok({ orders, products, promotions, reviews, audit, settings, vouchers, restocks, subscribers });
   },
 
   async adminAudit(db) {

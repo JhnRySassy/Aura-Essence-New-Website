@@ -5,6 +5,8 @@ import { PRODUCTS } from "./products.js";
    CONSTANTS
 ========================================================= */
 
+
+
 const CACHE_PREFIX = "aeAdminCache_";
 
 const ORDER_STATUSES = [
@@ -13,38 +15,39 @@ const ORDER_STATUSES = [
   "Preparing",
   "Out for Delivery",
   "Completed",
-  "Cancelled",
+  "Cancelled"
 ];
 
 const ACTIVE_STATUSES = ["New", "Confirmed", "Preparing", "Out for Delivery"];
 
 const NEXT_STATUS = {
-  New: "Confirmed",
-  Confirmed: "Preparing",
-  Preparing: "Out for Delivery",
-  "Out for Delivery": "Completed",
+  "New": "Confirmed",
+  "Confirmed": "Preparing",
+  "Preparing": "Out for Delivery",
+  "Out for Delivery": "Completed"
 };
 
 const NEXT_LABEL = {
-  New: "Confirm",
-  Confirmed: "Start preparing",
-  Preparing: "Out for delivery",
-  "Out for Delivery": "Mark completed",
+  "New": "Confirm",
+  "Confirmed": "Start preparing",
+  "Preparing": "Out for delivery",
+  "Out for Delivery": "Mark completed"
 };
 
 const STATUS_CLASS = {
-  New: "st-new",
-  Confirmed: "st-confirmed",
-  Preparing: "st-preparing",
+  "New": "st-new",
+  "Confirmed": "st-confirmed",
+  "Preparing": "st-preparing",
   "Out for Delivery": "st-out",
-  Completed: "st-completed",
-  Cancelled: "st-cancelled",
+  "Completed": "st-completed",
+  "Cancelled": "st-cancelled"
 };
 
 const DEFAULT_PRODUCT_PRICE = 430;
 const DEFAULT_LOW_STOCK = 5;
 const DEFAULT_PROMO_QTY = 2;
 const DEFAULT_PROMO_FIXED = 840;
+
 
 /* =========================================================
    HELPERS
@@ -83,7 +86,7 @@ function formatCurrency(value) {
 // Stops Excel/Sheets from running a customer-typed "=formula" when the CSV is opened.
 function csvSafe(value) {
   const text = String(value ?? "");
-  if (/^[+-]?[\d\s().-]+$/.test(text)) return text; // phone numbers / amounts are safe
+  if (/^[+-]?[\d\s().-]+$/.test(text)) return text;   // phone numbers / amounts are safe
   return /^[=+\-@\t\r]/.test(text) ? "'" + text : text;
 }
 
@@ -108,11 +111,13 @@ function escapeHTML(value) {
     .replace(/'/g, "&#039;");
 }
 
+
 /* =========================================================
    ADMIN SESSION
 ========================================================= */
 
 class AdminSession {
+
   /*
    * The real session (a secure token) is stored and refreshed by
    * Supabase Auth. No password or admin key is kept in the browser.
@@ -122,37 +127,44 @@ class AdminSession {
     this.data = {};
   }
 
+
   save(email) {
     this.data = { email };
   }
+
 
   clear() {
     this.data = {};
 
     try {
       Object.keys(sessionStorage)
-        .filter((key) => key.startsWith(CACHE_PREFIX))
-        .forEach((key) => sessionStorage.removeItem(key));
+        .filter(key => key.startsWith(CACHE_PREFIX))
+        .forEach(key => sessionStorage.removeItem(key));
     } catch {
       // Ignore storage errors.
     }
   }
 
+
   get() {
     return this.data;
   }
+
 
   valid() {
     return Boolean(this.data.email);
   }
 }
 
+
 /* =========================================================
    ADMIN APP
 ========================================================= */
 
 class AdminApp {
+
   constructor() {
+
     this.api = new ApiClient();
 
     this.session = new AdminSession();
@@ -162,6 +174,7 @@ class AdminApp {
     this.promotions = [];
     this.reviews = [];
     this.settings = {};
+
 
     /* -----------------------------------------------
        PERFORMANCE / REALTIME STATE
@@ -173,7 +186,7 @@ class AdminApp {
 
     this.pollers = {
       orders: null,
-      dashboard: null,
+      dashboard: null
     };
 
     this.polling = false;
@@ -206,7 +219,7 @@ class AdminApp {
       "promotions",
       "homepage",
       "reviews",
-      "audit",
+      "audit"
     ];
 
     /* -----------------------------------------------
@@ -220,11 +233,13 @@ class AdminApp {
     this.bind();
   }
 
+
   /* =====================================================
      DOM CACHE
   ===================================================== */
 
   cacheDOM() {
+
     const ids = [
       "globalStatus",
       "loginStatus",
@@ -331,13 +346,14 @@ class AdminApp {
       "lowStockLabel",
       "lowStock",
 
-      "viewTitle",
+      "viewTitle"
     ];
 
-    ids.forEach((id) => {
+    ids.forEach(id => {
       this.dom[id] = document.getElementById(id);
     });
   }
+
 
   /* =====================================================
      AUTH
@@ -347,146 +363,222 @@ class AdminApp {
     return this.session.get();
   }
 
+
   /* =====================================================
      STATUS
   ===================================================== */
 
   setStatus(message, error = false) {
+
     const el = this.dom.globalStatus;
 
     if (!el) return;
 
     el.textContent = message;
 
-    el.className = "status " + (error ? "error" : "ok");
+    el.className =
+      "status " +
+      (error ? "error" : "ok");
   }
 
+
   loginStatus(message, error = false) {
+
     const el = this.dom.loginStatus;
 
     if (!el) return;
 
     el.textContent = message;
 
-    el.className = "status " + (error ? "error" : "");
+    el.className =
+      "status " +
+      (error ? "error" : "");
   }
+
 
   /* =====================================================
      API REQUEST
   ===================================================== */
 
   async request(method, params = {}) {
+
     const response =
       method === "GET"
         ? await this.api.get(params)
         : await this.api.post(params);
 
     if (!response?.success) {
-      throw new Error(response?.message || "Request failed.");
+
+      throw new Error(
+        response?.message ||
+        "Request failed."
+      );
     }
 
     return response;
   }
+
 
   /* =====================================================
      EVENT BINDING
   ===================================================== */
 
   bind() {
+
     /* -----------------------------------------------
        LOGIN
     ------------------------------------------------ */
 
-    this.dom.credentialsForm?.addEventListener("submit", (e) =>
-      this.credentials(e),
+    this.dom.credentialsForm?.addEventListener(
+      "submit",
+      e => this.credentials(e)
     );
 
-    this.dom.logoutBtn?.addEventListener("click", async () => {
-      this.stopRealtime();
 
-      this.session.clear();
+    
 
-      await this.api.post({
-        action: "adminLogout",
-      });
 
-      location.reload();
-    });
+    
+
+
+    this.dom.logoutBtn?.addEventListener(
+      "click",
+      async () => {
+
+        this.stopRealtime();
+
+        this.session.clear();
+
+        await this.api.post({
+          action: "adminLogout"
+        });
+
+        location.reload();
+      }
+    );
+
 
     /* -----------------------------------------------
        NAVIGATION
     ------------------------------------------------ */
 
-    document.querySelectorAll(".nav-item").forEach((button) => {
-      button.addEventListener("click", () =>
-        this.showView(button.dataset.view),
-      );
-    });
+    document
+      .querySelectorAll(".nav-item")
+      .forEach(button => {
+
+        button.addEventListener(
+          "click",
+          () => this.showView(button.dataset.view)
+        );
+      });
+
 
     /* -----------------------------------------------
        ORDERS
     ------------------------------------------------ */
 
-    this.dom.refreshOrders?.addEventListener("click", () => this.loadOrders());
-
-    this.dom.exportOrders?.addEventListener("click", () => this.exportOrders());
-
-    this.debouncedOrderSearch = debounce(() => this.renderOrders(), 120);
-
-    this.dom.orderSearch?.addEventListener("input", () =>
-      this.debouncedOrderSearch(),
+    this.dom.refreshOrders?.addEventListener(
+      "click",
+      () => this.loadOrders()
     );
+
+
+    this.dom.exportOrders?.addEventListener(
+      "click",
+      () => this.exportOrders()
+    );
+
+
+    this.debouncedOrderSearch =
+      debounce(
+        () => this.renderOrders(),
+        120
+      );
+
+
+    this.dom.orderSearch?.addEventListener(
+      "input",
+      () => this.debouncedOrderSearch()
+    );
+
 
     this.orderTab = "active";
 
-    this.dom.orderTabs?.addEventListener("click", (e) => {
-      const tab = e.target.closest("[data-tab]");
-      if (!tab) return;
-      this.orderTab = tab.dataset.tab;
-      this.renderOrders();
-    });
 
-    this.dom.orderPayFilter?.addEventListener("change", () =>
-      this.renderOrders(),
+    this.dom.orderTabs?.addEventListener(
+      "click",
+      e => {
+        const tab = e.target.closest("[data-tab]");
+        if (!tab) return;
+        this.orderTab = tab.dataset.tab;
+        this.renderOrders();
+      }
     );
 
-    this.dom.ordersRows?.addEventListener("click", (e) => {
-      const next = e.target.closest("[data-next]");
-      if (next) {
-        e.stopPropagation();
-        this.advanceOrder(next.dataset.next);
-        return;
+
+    this.dom.orderPayFilter?.addEventListener(
+      "change",
+      () => this.renderOrders()
+    );
+
+
+    this.dom.ordersRows?.addEventListener(
+      "click",
+      e => {
+        const next = e.target.closest("[data-next]");
+        if (next) {
+          e.stopPropagation();
+          this.advanceOrder(next.dataset.next);
+          return;
+        }
+
+        const row = e.target.closest("[data-order]");
+        if (row) this.openOrder(row.dataset.order);
       }
+    );
 
-      const row = e.target.closest("[data-order]");
-      if (row) this.openOrder(row.dataset.order);
-    });
 
-    this.dom.orderDrawer?.addEventListener("click", (e) => {
-      if (e.target.closest("[data-close-drawer]")) this.closeOrder();
-    });
+    this.dom.orderDrawer?.addEventListener(
+      "click",
+      e => {
+        if (e.target.closest("[data-close-drawer]")) this.closeOrder();
+      }
+    );
 
-    document.addEventListener("keydown", (e) => {
+
+    document.addEventListener("keydown", e => {
       if (e.key === "Escape") this.closeOrder();
     });
+
 
     /* -----------------------------------------------
        PRODUCTS
     ------------------------------------------------ */
 
-    this.dom.refreshProducts?.addEventListener("click", () =>
-      this.loadProducts(),
+    this.dom.refreshProducts?.addEventListener(
+      "click",
+      () => this.loadProducts()
     );
 
-    this.dom.newProduct?.addEventListener("click", () =>
-      this.editProduct(null),
+
+    this.dom.newProduct?.addEventListener(
+      "click",
+      () => this.editProduct(null)
     );
 
-    this.debouncedProductSearch = debounce(() => this.renderProducts(), 120);
 
-    this.dom.productSearch?.addEventListener("input", () =>
-      this.debouncedProductSearch(),
+    this.debouncedProductSearch =
+      debounce(
+        () => this.renderProducts(),
+        120
+      );
+
+
+    this.dom.productSearch?.addEventListener(
+      "input",
+      () => this.debouncedProductSearch()
     );
+
 
     /* Product filters */
     [
@@ -494,116 +586,182 @@ class AdminApp {
       "filterStock",
       "filterBadge",
       "filterActive",
-      "sortProducts",
-    ].forEach((id) => {
-      this.dom[id]?.addEventListener("change", () => this.renderProducts());
-    });
-
-    this.dom.clearFilters?.addEventListener("click", () => {
-      ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach(
-        (id) => {
-          if (this.dom[id]) this.dom[id].value = "";
-        },
+      "sortProducts"
+    ].forEach(id => {
+      this.dom[id]?.addEventListener(
+        "change",
+        () => this.renderProducts()
       );
-
-      if (this.dom.sortProducts) this.dom.sortProducts.value = "order";
-      if (this.dom.productSearch) this.dom.productSearch.value = "";
-
-      this.renderProducts();
     });
 
-    this.dom.closeEditor?.addEventListener("click", () =>
-      this.dom.productEditor?.classList.add("hidden"),
-    );
 
-    this.dom.productForm?.addEventListener("submit", (e) =>
-      this.saveProduct(e),
-    );
+    this.dom.clearFilters?.addEventListener(
+      "click",
+      () => {
+        ["filterCat", "filterStock", "filterBadge", "filterActive"]
+          .forEach(id => {
+            if (this.dom[id]) this.dom[id].value = "";
+          });
 
-    this.dom.deleteProduct?.addEventListener("click", () =>
-      this.deleteProduct(),
-    );
+        if (this.dom.sortProducts) this.dom.sortProducts.value = "order";
+        if (this.dom.productSearch) this.dom.productSearch.value = "";
 
-    this.dom.productsRows?.addEventListener("click", (e) => {
-      const stockButton = e.target.closest("[data-stock]");
-
-      if (stockButton) {
-        this.adjustStock(stockButton.dataset.stock, stockButton.dataset.op);
-        return;
+        this.renderProducts();
       }
+    );
 
-      const editButton = e.target.closest("[data-edit]");
 
-      if (editButton) {
-        const product = this.productMap.get(String(editButton.dataset.edit));
+    this.dom.closeEditor?.addEventListener(
+      "click",
+      () =>
+        this.dom.productEditor?.classList.add(
+          "hidden"
+        )
+    );
 
-        if (product) {
-          this.editProduct(product);
+
+    this.dom.productForm?.addEventListener(
+      "submit",
+      e => this.saveProduct(e)
+    );
+
+
+    this.dom.deleteProduct?.addEventListener(
+      "click",
+      () => this.deleteProduct()
+    );
+
+
+    this.dom.productsRows?.addEventListener(
+      "click",
+      e => {
+
+        const stockButton =
+          e.target.closest("[data-stock]");
+
+        if (stockButton) {
+          this.adjustStock(
+            stockButton.dataset.stock,
+            stockButton.dataset.op
+          );
+          return;
         }
 
-        return;
-      }
 
-      const deleteButton = e.target.closest("[data-delete]");
+        const editButton =
+          e.target.closest("[data-edit]");
 
-      if (deleteButton) {
-        this.deleteProduct(deleteButton.dataset.delete);
+        if (editButton) {
+
+          const product =
+            this.productMap.get(
+              String(editButton.dataset.edit)
+            );
+
+          if (product) {
+            this.editProduct(product);
+          }
+
+          return;
+        }
+
+
+        const deleteButton =
+          e.target.closest("[data-delete]");
+
+        if (deleteButton) {
+
+          this.deleteProduct(
+            deleteButton.dataset.delete
+          );
+        }
       }
-    });
+    );
+
 
     /* -----------------------------------------------
        PROMOTIONS
     ------------------------------------------------ */
 
-    this.dom.newPromo?.addEventListener("click", () =>
-      this.editPromotion(null),
+    this.dom.newPromo?.addEventListener(
+      "click",
+      () => this.editPromotion(null)
     );
 
-    this.dom.closePromo?.addEventListener("click", () =>
-      this.dom.promoEditor?.classList.add("hidden"),
+
+    this.dom.closePromo?.addEventListener(
+      "click",
+      () =>
+        this.dom.promoEditor?.classList.add(
+          "hidden"
+        )
     );
 
-    this.dom.promoForm?.addEventListener("submit", (e) =>
-      this.savePromotion(e),
+
+    this.dom.promoForm?.addEventListener(
+      "submit",
+      e => this.savePromotion(e)
     );
+
 
     /* Promotion event delegation */
 
-    document.getElementById("promosList")?.addEventListener("click", (e) => {
-      const editButton = e.target.closest("[data-pedit]");
+    document
+      .getElementById("promosList")
+      ?.addEventListener(
+        "click",
+        e => {
 
-      if (editButton) {
-        const promotion = this.promotionMap.get(
-          String(editButton.dataset.pedit),
-        );
+          const editButton =
+            e.target.closest("[data-pedit]");
 
-        if (promotion) {
-          this.editPromotion(promotion);
+          if (editButton) {
+
+            const promotion =
+              this.promotionMap.get(
+                String(editButton.dataset.pedit)
+              );
+
+            if (promotion) {
+              this.editPromotion(promotion);
+            }
+
+            return;
+          }
+
+
+          const deleteButton =
+            e.target.closest("[data-pdel]");
+
+          if (deleteButton) {
+
+            this.deletePromotion(
+              deleteButton.dataset.pdel
+            );
+          }
         }
+      );
 
-        return;
-      }
-
-      const deleteButton = e.target.closest("[data-pdel]");
-
-      if (deleteButton) {
-        this.deletePromotion(deleteButton.dataset.pdel);
-      }
-    });
 
     /* -----------------------------------------------
        SETTINGS
     ------------------------------------------------ */
 
-    this.dom.settingsForm?.addEventListener("submit", (e) =>
-      this.saveSettings(e),
+    this.dom.settingsForm?.addEventListener(
+      "submit",
+      e => this.saveSettings(e)
     );
+
 
     /* -----------------------------------------------
        AUDIT
     ------------------------------------------------ */
 
-    this.dom.refreshAudit?.addEventListener("click", () => this.loadAudit());
+    this.dom.refreshAudit?.addEventListener(
+      "click",
+      () => this.loadAudit()
+    );
+
 
     /* -----------------------------------------------
        SESSION
@@ -613,208 +771,329 @@ class AdminApp {
        PRODUCT PHOTO UPLOAD
     ------------------------------------------------ */
 
-    this.dom.pImgFile?.addEventListener("change", () =>
-      this.uploadProductImage(),
+    this.dom.pImgFile?.addEventListener(
+      "change",
+      () => this.uploadProductImage()
     );
 
     this.dom.pImg?.addEventListener(
       "input",
-      debounce(() => this.showImagePreview(this.dom.pImg.value), 300),
+      debounce(() => this.showImagePreview(this.dom.pImg.value), 300)
     );
+
 
     /* -----------------------------------------------
        BACKUP
     ------------------------------------------------ */
 
-    this.dom.backupBtn?.addEventListener("click", () => this.downloadBackup());
+    this.dom.backupBtn?.addEventListener(
+      "click",
+      () => this.downloadBackup()
+    );
+
 
     /* -----------------------------------------------
        DASHBOARD DATE RANGE
     ------------------------------------------------ */
 
-    this.dom.rangePreset?.addEventListener("change", () => {
-      this.fillRangeInputs();
-      this.renderDashboard(this.lastDashboard || {});
+    this.dom.rangePreset?.addEventListener(
+      "change",
+      () => {
+        this.fillRangeInputs();
+        this.renderDashboard(this.lastDashboard || {});
+      }
+    );
+
+
+    ["rangeFrom", "rangeTo"].forEach(id => {
+      this.dom[id]?.addEventListener(
+        "change",
+        () => {
+          if (this.dom.rangePreset) this.dom.rangePreset.value = "custom";
+          this.renderDashboard(this.lastDashboard || {});
+        }
+      );
     });
 
-    ["rangeFrom", "rangeTo"].forEach((id) => {
-      this.dom[id]?.addEventListener("change", () => {
-        if (this.dom.rangePreset) this.dom.rangePreset.value = "custom";
-        this.renderDashboard(this.lastDashboard || {});
-      });
-    });
 
     /* -----------------------------------------------
        REVIEWS
     ------------------------------------------------ */
 
-    this.dom.refreshReviews?.addEventListener("click", () =>
-      this.loadReviews(),
+    this.dom.refreshReviews?.addEventListener(
+      "click",
+      () => this.loadReviews()
     );
 
-    this.dom.reviewsRows?.addEventListener("click", (e) => {
-      const button = e.target.closest("[data-review]");
 
-      if (!button) return;
+    this.dom.reviewsRows?.addEventListener(
+      "click",
+      e => {
 
-      const id = button.dataset.review;
-      const op = button.dataset.op;
+        const button =
+          e.target.closest("[data-review]");
 
-      if (op === "delete") {
-        this.deleteReview(id);
-      } else {
-        this.setReviewApproved(id, op === "approve");
+        if (!button) return;
+
+        const id = button.dataset.review;
+        const op = button.dataset.op;
+
+        if (op === "delete") {
+          this.deleteReview(id);
+        } else {
+          this.setReviewApproved(id, op === "approve");
+        }
       }
-    });
+    );
+
 
     this.restoreSession();
   }
+
 
   /* =====================================================
      RESTORE SESSION (already signed in?)
   ===================================================== */
 
   async restoreSession() {
+
     if (!isSupabaseConfigured()) {
+
       this.loginStatus(
         "Supabase is not connected yet. Paste your Project URL and anon key in assets/js/supabase-config.js.",
-        true,
+        true
       );
 
       return;
     }
 
-    const response = await this.api.get({
-      action: "adminSession",
-    });
+
+    const response =
+      await this.api.get({
+        action: "adminSession"
+      });
+
 
     if (response?.success) {
+
       this.session.save(response.email);
 
       this.openApp();
     }
   }
 
+
   /* =====================================================
      LOGIN
   ===================================================== */
 
   async credentials(e) {
+
     e.preventDefault();
 
-    const identifier = this.dom.loginIdentifier?.value.trim();
+    const identifier =
+      this.dom.loginIdentifier?.value.trim();
 
-    const password = this.dom.loginPassword?.value || "";
+    const password =
+      this.dom.loginPassword?.value || "";
+
 
     if (!identifier || !password) {
       return;
     }
 
-    this.loginStatus("Signing in…");
+
+    this.loginStatus(
+      "Signing in…"
+    );
+
 
     try {
-      const response = await this.api.post({
-        action: "adminLogin",
-        identifier,
-        password,
-      });
+
+      const response =
+        await this.api.post({
+          action: "adminLogin",
+          identifier,
+          password
+        });
+
 
       if (!response?.success) {
-        throw new Error(response?.message || "Invalid credentials.");
+
+        throw new Error(
+          response?.message ||
+          "Invalid credentials."
+        );
       }
+
 
       if (this.dom.loginPassword) {
         this.dom.loginPassword.value = "";
       }
+
 
       this.session.save(identifier);
 
       this.loginStatus("");
 
       this.openApp();
+
     } catch (error) {
-      this.loginStatus(error.message, true);
+
+      this.loginStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      SESSION CACHE
   ===================================================== */
 
   cacheRead(key) {
+
     try {
+
       return safeJSONParse(
-        sessionStorage.getItem(this.cachePrefix + key),
-        null,
+        sessionStorage.getItem(
+          this.cachePrefix + key
+        ),
+        null
       );
+
     } catch {
       return null;
     }
   }
 
+
   cacheWrite(key, value) {
+
     try {
-      sessionStorage.setItem(this.cachePrefix + key, JSON.stringify(value));
+
+      sessionStorage.setItem(
+        this.cachePrefix + key,
+        JSON.stringify(value)
+      );
+
     } catch {
       // Ignore storage quota errors.
     }
   }
+
 
   /* =====================================================
      REALTIME POLLING
   ===================================================== */
 
   startRealtime() {
+
     if (this.polling) {
       return;
     }
+
 
     if (!this.session.valid()) {
       return;
     }
 
+
     this.polling = true;
 
+
     const pollVisible = () => {
-      if (!this.polling || document.hidden || !this.session.valid()) {
+
+      if (
+        !this.polling ||
+        document.hidden ||
+        !this.session.valid()
+      ) {
         return;
       }
 
-      this.loadOrders(true).catch(() => {});
 
-      this.loadDashboard(true).catch(() => {});
+      this.loadOrders(true)
+        .catch(() => {});
+
+
+      this.loadDashboard(true)
+        .catch(() => {});
     };
 
-    this.pollers.orders = setInterval(() => {
-      if (!document.hidden && this.session.valid()) {
-        this.loadOrders(true).catch(() => {});
-      }
-    }, 60000);
 
-    this.pollers.dashboard = setInterval(() => {
-      if (!document.hidden && this.session.valid()) {
-        this.loadDashboard(true).catch(() => {});
-      }
-    }, 120000);
+    this.pollers.orders =
+      setInterval(
+        () => {
 
-    this._visibilityHandler = () => {
-      if (!document.hidden && this.session.valid()) {
-        pollVisible();
-      }
-    };
+          if (
+            !document.hidden &&
+            this.session.valid()
+          ) {
 
-    document.addEventListener("visibilitychange", this._visibilityHandler);
+            this.loadOrders(true)
+              .catch(() => {});
+          }
+
+        },
+        60000
+      );
+
+
+    this.pollers.dashboard =
+      setInterval(
+        () => {
+
+          if (
+            !document.hidden &&
+            this.session.valid()
+          ) {
+
+            this.loadDashboard(true)
+              .catch(() => {});
+          }
+
+        },
+        120000
+      );
+
+
+    this._visibilityHandler =
+      () => {
+
+        if (
+          !document.hidden &&
+          this.session.valid()
+        ) {
+
+          pollVisible();
+        }
+      };
+
+
+    document.addEventListener(
+      "visibilitychange",
+      this._visibilityHandler
+    );
+
 
     /*
      * Instant updates: Supabase Realtime tells us
      * whenever an order is created or changed.
      */
-    const onOrderChange = debounce(() => {
-      this.loadOrders(true).catch(() => {});
-      this.loadDashboard(true).catch(() => {});
-    }, 400);
+    const onOrderChange =
+      debounce(
+        () => {
+          this.loadOrders(true).catch(() => {});
+          this.loadDashboard(true).catch(() => {});
+        },
+        400
+      );
 
-    this.unsubscribeOrders = this.api.onOrdersChange(onOrderChange);
+    this.unsubscribeOrders =
+      this.api.onOrdersChange(onOrderChange);
+
 
     /*
      * Initial realtime refresh.
@@ -822,50 +1101,77 @@ class AdminApp {
     pollVisible();
   }
 
+
   stopRealtime() {
+
     this.polling = false;
 
     if (this.pollers.orders) {
-      clearInterval(this.pollers.orders);
+
+      clearInterval(
+        this.pollers.orders
+      );
     }
 
+
     if (this.pollers.dashboard) {
-      clearInterval(this.pollers.dashboard);
+
+      clearInterval(
+        this.pollers.dashboard
+      );
     }
+
 
     this.pollers.orders = null;
     this.pollers.dashboard = null;
 
+
     if (this.unsubscribeOrders) {
+
       this.unsubscribeOrders();
 
       this.unsubscribeOrders = null;
     }
 
+
     if (this._visibilityHandler) {
-      document.removeEventListener("visibilitychange", this._visibilityHandler);
+
+      document.removeEventListener(
+        "visibilitychange",
+        this._visibilityHandler
+      );
 
       this._visibilityHandler = null;
     }
 
+
     this._pollingOrders = false;
     this._pollingDashboard = false;
   }
+
 
   /* =====================================================
      CACHE HYDRATION
   ===================================================== */
 
   hydrateCachedAdmin() {
-    const dashboard = this.cacheRead("dashboard");
+
+    const dashboard =
+      this.cacheRead("dashboard");
 
     if (dashboard) {
-      this.renderDashboard(dashboard);
+
+      this.renderDashboard(
+        dashboard
+      );
     }
 
-    const products = this.cacheRead("products");
+
+    const products =
+      this.cacheRead("products");
 
     if (Array.isArray(products)) {
+
       this.products = products;
 
       this.rebuildProductIndex();
@@ -873,9 +1179,12 @@ class AdminApp {
       this.renderProducts();
     }
 
-    const promotions = this.cacheRead("promotions");
+
+    const promotions =
+      this.cacheRead("promotions");
 
     if (Array.isArray(promotions)) {
+
       this.promotions = promotions;
 
       this.rebuildPromotionIndex();
@@ -883,79 +1192,119 @@ class AdminApp {
       this.renderPromotions();
     }
 
-    const settings = this.cacheRead("settings");
 
-    if (settings && typeof settings === "object") {
+    const settings =
+      this.cacheRead("settings");
+
+    if (
+      settings &&
+      typeof settings === "object"
+    ) {
+
       this.settings = settings;
 
       this.applySettingsToForm();
     }
   }
 
+
   /* =====================================================
      SETTINGS FORM
   ===================================================== */
 
   applySettingsToForm() {
-    const lowStock = this.dom.setLowStock;
+
+    const lowStock =
+      this.dom.setLowStock;
 
     if (lowStock) {
-      lowStock.value = this.settings.lowStockThreshold || DEFAULT_LOW_STOCK;
+
+      lowStock.value =
+        this.settings.lowStockThreshold ||
+        DEFAULT_LOW_STOCK;
     }
 
-    const best = this.dom.setBest;
+
+    const best =
+      this.dom.setBest;
 
     if (best) {
-      best.checked = this.settings.showBestSellers !== "false";
+
+      best.checked =
+        this.settings.showBestSellers !==
+        "false";
     }
 
-    const featured = this.dom.setFeatured;
+
+    const featured =
+      this.dom.setFeatured;
 
     if (featured) {
-      featured.checked = this.settings.showFeatured !== "false";
+
+      featured.checked =
+        this.settings.showFeatured !==
+        "false";
     }
 
-    const newArrivals = this.dom.setNew;
+
+    const newArrivals =
+      this.dom.setNew;
 
     if (newArrivals) {
-      newArrivals.checked = this.settings.showNewArrivals !== "false";
+
+      newArrivals.checked =
+        this.settings.showNewArrivals !==
+        "false";
     }
+
 
     if (this.dom.setAlertAt) {
-      this.dom.setAlertAt.value = this.settings.lowStockAlertAt ?? 1;
+      this.dom.setAlertAt.value =
+        this.settings.lowStockAlertAt ?? 1;
     }
 
-    [
-      ["setGcashNumber", "gcashNumber"],
-      ["setGcashName", "gcashName"],
-      ["setMessenger", "messengerUrl"],
-    ].forEach(([id, key]) => {
-      const el = document.getElementById(id);
-      if (el) el.value = this.settings[key] ?? "";
-    });
+    [["setGcashNumber", "gcashNumber"], ["setGcashName", "gcashName"], ["setMessenger", "messengerUrl"]]
+      .forEach(([id, key]) => {
+        const el = document.getElementById(id);
+        if (el) el.value = this.settings[key] ?? "";
+      });
 
-    const signature = this.dom.setSignature;
+
+    const signature =
+      this.dom.setSignature;
 
     if (signature) {
-      signature.checked = this.settings.showSignature !== "false";
+
+      signature.checked =
+        this.settings.showSignature !==
+        "false";
     }
   }
+
 
   /* =====================================================
      OPEN ADMIN APP
   ===================================================== */
 
   async openApp() {
-    this.dom.loginView?.classList.add("hidden");
 
-    this.dom.appView?.classList.remove("hidden");
+    this.dom.loginView?.classList.add(
+      "hidden"
+    );
+
+    this.dom.appView?.classList.remove(
+      "hidden"
+    );
+
 
     /*
      * Paint cached data first.
      */
     this.hydrateCachedAdmin();
 
+
     try {
+
       /*
        * Fetch everything concurrently.
        */
@@ -964,14 +1313,24 @@ class AdminApp {
         this.loadProducts(),
         this.loadOrders(),
         this.loadPromotions(),
-        this.loadSettings(),
+        this.loadSettings()
       ]);
 
-      this.setStatus("Admin connected");
+
+      this.setStatus(
+        "Admin connected"
+      );
+
 
       this.startRealtime();
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
+
 
       /*
        * Still allow realtime to start.
@@ -980,11 +1339,13 @@ class AdminApp {
     }
   }
 
+
   /* =====================================================
      AUTH PARAMETERS
   ===================================================== */
 
   params(extra = {}) {
+
     /*
      * Authentication is handled by the Supabase
      * session token, so no credentials are sent.
@@ -992,37 +1353,64 @@ class AdminApp {
     return { ...extra };
   }
 
+
   /* =====================================================
      VIEW NAVIGATION
   ===================================================== */
 
   showView(view) {
-    this.views.forEach((currentView) => {
-      const element = document.getElementById(currentView + "View");
 
-      if (!element) {
-        return;
+    this.views.forEach(
+      currentView => {
+
+        const element =
+          document.getElementById(
+            currentView + "View"
+          );
+
+        if (!element) {
+          return;
+        }
+
+
+        element.classList.toggle(
+          "hidden",
+          currentView !== view
+        );
       }
+    );
 
-      element.classList.toggle("hidden", currentView !== view);
-    });
 
-    document.querySelectorAll(".nav-item").forEach((button) => {
-      button.classList.toggle("active", button.dataset.view === view);
-    });
+    document
+      .querySelectorAll(".nav-item")
+      .forEach(button => {
+
+        button.classList.toggle(
+          "active",
+          button.dataset.view === view
+        );
+      });
+
 
     if (this.dom.viewTitle) {
+
       this.dom.viewTitle.textContent =
-        view.charAt(0).toUpperCase() + view.slice(1);
+        view.charAt(0).toUpperCase() +
+        view.slice(1);
     }
 
+
     if (view === "audit") {
+
       this.loadAudit();
     }
 
+
     if (view === "reviews") {
+
       this.loadReviews();
     }
+
 
     if (view === "orders") {
       this.unseenOrders = 0;
@@ -1030,37 +1418,58 @@ class AdminApp {
     }
   }
 
+
   /* =====================================================
      DASHBOARD
   ===================================================== */
 
   async loadDashboard(silent = false) {
+
     /*
      * Prevent overlapping realtime dashboard calls.
      */
-    if (silent && this._pollingDashboard) {
+    if (
+      silent &&
+      this._pollingDashboard
+    ) {
       return;
     }
 
+
     this._pollingDashboard = true;
 
+
     try {
-      const response = await this.request(
-        "GET",
-        this.params({
-          action: "adminDashboard",
-        }),
+
+      const response =
+        await this.request(
+          "GET",
+          this.params({
+            action:
+              "adminDashboard"
+          })
+        );
+
+
+      this.cacheWrite(
+        "dashboard",
+        response
       );
 
-      this.cacheWrite("dashboard", response);
 
-      this.renderDashboard(response);
+      this.renderDashboard(
+        response
+      );
+
     } finally {
+
       this._pollingDashboard = false;
     }
   }
 
+
   renderDashboard(response) {
+
     /*
      * Keep the full (all-time) data from the database, then
      * recalculate orders/revenue/top products for the chosen dates.
@@ -1072,7 +1481,7 @@ class AdminApp {
     if (range) {
       response = {
         ...response,
-        ...this.computeDashboard(range),
+        ...this.computeDashboard(range)
       };
     }
 
@@ -1080,31 +1489,54 @@ class AdminApp {
 
     this.renderRevenueChart(range);
 
-    const stats = response?.stats || {};
+    const stats =
+      response?.stats || {};
+
 
     /* -----------------------------------------------
        STAT CARDS
     ------------------------------------------------ */
 
-    const cards = this.dom.statsCards;
+    const cards =
+      this.dom.statsCards;
+
 
     if (cards) {
+
       const statsHTML = [
-        ["Orders", stats.orders || 0],
+        [
+          "Orders",
+          stats.orders || 0
+        ],
 
-        ["Revenue", formatCurrency(stats.revenue || 0)],
+        [
+          "Revenue",
+          formatCurrency(
+            stats.revenue || 0
+          )
+        ],
 
-        ["Completed", stats.completed || 0],
+        [
+          "Completed",
+          stats.completed || 0
+        ],
 
-        ["Pending", stats.pending || 0],
+        [
+          "Pending",
+          stats.pending || 0
+        ],
 
-        ["Customers", stats.customers || 0],
+        [
+          "Customers",
+          stats.customers || 0
+        ],
 
         [
           "To collect",
           formatCurrency(stats.toCollect || 0),
-          `${stats.unpaidOrders || 0} unpaid order${Number(stats.unpaidOrders) === 1 ? "" : "s"}`,
-        ],
+          `${stats.unpaidOrders || 0} unpaid order${Number(stats.unpaidOrders) === 1 ? "" : "s"}`
+        ]
+
       ]
         .map(
           ([label, value, sub]) =>
@@ -1114,30 +1546,41 @@ class AdminApp {
               <strong>${escapeHTML(value)}</strong>
               ${sub ? `<small class="sub">${escapeHTML(sub)}</small>` : ""}
             </div>
-            `,
+            `
         )
         .join("");
 
+
       cards.innerHTML = statsHTML;
     }
+
 
     /* -----------------------------------------------
        TOP PRODUCTS
     ------------------------------------------------ */
 
-    const topProducts = this.dom.topProducts;
+    const topProducts =
+      this.dom.topProducts;
+
 
     if (topProducts) {
-      const list = Array.isArray(response?.topProducts)
-        ? response.topProducts
-        : [];
 
-      topProducts.innerHTML = `
+      const list =
+        Array.isArray(
+          response?.topProducts
+        )
+          ? response.topProducts
+          : [];
+
+
+      topProducts.innerHTML =
+        `
         <div class="mini-list">
-          ${list
-            .map(
-              (product, index) =>
-                `
+          ${
+            list
+              .map(
+                (product, index) =>
+                  `
                   <div class="mini">
                     <span>
                       ${index + 1}.
@@ -1148,36 +1591,58 @@ class AdminApp {
                       ${escapeHTML(product.units)}
                     </b>
                   </div>
-                  `,
-            )
-            .join("")}
+                  `
+              )
+              .join("")
+          }
         </div>
         `;
     }
+
 
     /* -----------------------------------------------
        LOW STOCK THRESHOLD
     ------------------------------------------------ */
 
     if (this.dom.lowStockLabel) {
+
       this.dom.lowStockLabel.textContent =
         "Threshold " +
-        (Number(response?.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK);
+        (
+          Number(
+            response?.settings
+              ?.lowStockThreshold
+          ) || DEFAULT_LOW_STOCK
+        );
     }
+
 
     /* -----------------------------------------------
        LOW STOCK PRODUCTS
     ------------------------------------------------ */
 
-    const lowStock = this.dom.lowStock;
+    const lowStock =
+      this.dom.lowStock;
+
 
     if (lowStock) {
-      const list = Array.isArray(response?.lowStock) ? response.lowStock : [];
 
-      lowStock.innerHTML = list.length
-        ? list
+      const list =
+        Array.isArray(
+          response?.lowStock
+        )
+          ? response.lowStock
+          : [];
+
+
+      lowStock.innerHTML =
+        list.length
+
+          ?
+
+          list
             .map(
-              (product) =>
+              product =>
                 `
                 <div class="mini">
                   <span>
@@ -1189,41 +1654,63 @@ class AdminApp {
                     left
                   </b>
                 </div>
-                `,
+                `
             )
             .join("")
-        : `
+
+          :
+
+          `
           <p class="muted">
             No low-stock products.
           </p>
           `;
 
+
       if (list.length) {
-        lowStock.innerHTML = `<div class="mini-list">${lowStock.innerHTML}</div>`;
+        lowStock.innerHTML =
+          `<div class="mini-list">${lowStock.innerHTML}</div>`;
       }
     }
   }
+
 
   /* =====================================================
      ORDERS
   ===================================================== */
 
   async loadOrders(silent = false) {
-    if (silent && this._pollingOrders) {
+
+    if (
+      silent &&
+      this._pollingOrders
+    ) {
       return;
     }
 
+
     this._pollingOrders = true;
 
-    try {
-      const response = await this.request(
-        "GET",
-        this.params({
-          action: "adminOrders",
-        }),
-      );
 
-      this.orders = Array.isArray(response?.orders) ? response.orders : [];
+    try {
+
+      const response =
+        await this.request(
+          "GET",
+          this.params({
+            action:
+              "adminOrders"
+          })
+        );
+
+
+      this.orders =
+        Array.isArray(
+          response?.orders
+        )
+          ? response.orders
+          : [];
+
 
       this.rebuildOrderIndex();
 
@@ -1231,62 +1718,83 @@ class AdminApp {
 
       this.checkNewOrders();
 
-      if (
-        this.openOrderId &&
-        !this.dom.orderDrawer?.classList.contains("hidden")
-      ) {
+      if (this.openOrderId && !this.dom.orderDrawer?.classList.contains("hidden")) {
         // keep the open details panel in sync, unless you're typing in it
-        if (!this.dom.drawerBody?.contains(document.activeElement))
-          this.openOrder(this.openOrderId);
+        if (!this.dom.drawerBody?.contains(document.activeElement)) this.openOrder(this.openOrderId);
       }
+
 
       if (this.dashboardRange()) {
         this.renderDashboard(this.lastDashboard || {});
       } else {
         this.renderRevenueChart(null);
       }
+
     } finally {
+
       this._pollingOrders = false;
     }
   }
 
-  rebuildOrderIndex() {
-    this.orderSearchIndex = this.orders.map((order) => ({
-      order,
 
-      search: [order.orderId, order.fullname, order.contact, order.scent]
-        .map(normalize)
-        .join(" "),
-    }));
+  rebuildOrderIndex() {
+
+    this.orderSearchIndex =
+      this.orders.map(order => ({
+
+        order,
+
+        search:
+          [
+            order.orderId,
+            order.fullname,
+            order.contact,
+            order.scent
+          ]
+            .map(normalize)
+            .join(" ")
+
+      }));
   }
 
+
   renderOrders() {
-    const table = this.dom.ordersRows;
+
+    const table =
+      this.dom.ordersRows;
 
     if (!table) {
       return;
     }
 
-    const search = normalize(this.dom.orderSearch?.value);
+    const search =
+      normalize(
+        this.dom.orderSearch?.value
+      );
 
     const pay = this.dom.orderPayFilter?.value || "";
 
     this.dom.orderPayFilter?.classList.toggle("on", Boolean(pay));
 
-    const searched = this.orderSearchIndex
-      .filter((item) => !search || item.search.includes(search))
-      .map((item) => item.order)
-      .filter((order) => !pay || (order.paymentStatus || "Unpaid") === pay);
+    const searched =
+      this.orderSearchIndex
+        .filter(item =>
+          !search ||
+          item.search.includes(search)
+        )
+        .map(item => item.order)
+        .filter(order => !pay || (order.paymentStatus || "Unpaid") === pay);
+
 
     /* ---------- tabs with counts ---------- */
 
     const tabs = [
-      ["active", "Needs action", (o) => ACTIVE_STATUSES.includes(o.status)],
-      ...ORDER_STATUSES.map((st) => [st, st, (o) => o.status === st]),
-      ["all", "All", () => true],
+      ["active", "Needs action", o => ACTIVE_STATUSES.includes(o.status)],
+      ...ORDER_STATUSES.map(st => [st, st, o => o.status === st]),
+      ["all", "All", () => true]
     ];
 
-    const current = tabs.find((t) => t[0] === this.orderTab) || tabs[0];
+    const current = tabs.find(t => t[0] === this.orderTab) || tabs[0];
 
     if (this.dom.orderTabs) {
       this.dom.orderTabs.innerHTML = tabs
@@ -1302,18 +1810,16 @@ class AdminApp {
     const rows = searched.filter(current[2]);
 
     if (!rows.length) {
-      table.innerHTML = `<tr><td colspan="7" class="muted">${current[0] === "active" ? "All caught up — nothing is waiting on you." : "No orders here."}</td></tr>`;
+      table.innerHTML =
+        `<tr><td colspan="7" class="muted">${current[0] === "active" ? "All caught up — nothing is waiting on you." : "No orders here."}</td></tr>`;
       return;
     }
 
     table.innerHTML = rows
-      .map((order) => {
+      .map(order => {
         const next = NEXT_STATUS[order.status];
         const paid = order.amountPaid;
-        const diff =
-          paid != null &&
-          order.paymentStatus === "Paid" &&
-          paid < Number(order.total);
+        const diff = paid != null && order.paymentStatus === "Paid" && paid < Number(order.total);
 
         return `
           <tr data-order="${escapeHTML(order.orderId)}">
@@ -1328,12 +1834,7 @@ class AdminApp {
             <td data-label="Items">
               ${
                 Array.isArray(order.items) && order.items.length
-                  ? order.items
-                      .map(
-                        (item) =>
-                          `${escapeHTML(item.name)} × ${escapeHTML(item.qty)}`,
-                      )
-                      .join("<br>")
+                  ? order.items.map(item => `${escapeHTML(item.name)} × ${escapeHTML(item.qty)}`).join("<br>")
                   : escapeHTML(order.scent || "")
               }
             </td>
@@ -1362,32 +1863,45 @@ class AdminApp {
       .join("");
   }
 
+
   /* =====================================================
      UPDATE ORDER
   ===================================================== */
 
-  async updateOrder(orderId, status) {
+  async updateOrder(
+    orderId,
+    status
+  ) {
+
     try {
+
       const response = await this.request(
         "POST",
         this.params({
-          action: "adminUpdateOrderStatus",
+
+          action:
+            "adminUpdateOrderStatus",
 
           orderId,
 
-          status,
-        }),
+          status
+        })
       );
+
 
       /*
        * Update local state immediately.
        */
       this.replaceOrder(orderId, response.order, { status });
 
+
       this.rebuildOrderIndex();
       this.renderOrders();
 
-      this.setStatus(`Order ${orderId}: ${status}`);
+
+      this.setStatus(
+        `Order ${orderId}: ${status}`
+      );
 
       if (this.openOrderId === orderId) this.openOrder(orderId);
 
@@ -1395,16 +1909,23 @@ class AdminApp {
       if (status === "Cancelled") this.loadProducts().catch(() => {});
 
       await this.loadDashboard();
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      EXPORT ORDERS
   ===================================================== */
 
   exportOrders() {
+
     const headers = [
       "Order ID",
       "Customer",
@@ -1419,64 +1940,93 @@ class AdminApp {
       "Status",
       "Date",
       "Delivery / Meetup",
-      "Notes",
+      "Notes"
     ];
 
+
     const lines = [
+
       headers,
 
-      ...this.orders.map((order) => [
-        order.orderId,
+      ...this.orders.map(
+        order => [
 
-        order.fullname,
+          order.orderId,
 
-        order.contact,
+          order.fullname,
 
-        (order.items || [])
-          .map((item) => `${item.name} x ${item.qty}`)
-          .join(" | "),
+          order.contact,
 
-        order.total,
+          (order.items || [])
+            .map(
+              item =>
+                `${item.name} x ${item.qty}`
+            )
+            .join(" | "),
 
-        order.amountPaid ?? "",
+          order.total,
 
-        order.paymentStatus || "Unpaid",
+          order.amountPaid ?? "",
 
-        order.payment || "",
+          order.paymentStatus || "Unpaid",
 
-        order.paymentRef || "",
+          order.payment || "",
 
-        order.paymentNote || "",
+          order.paymentRef || "",
 
-        order.status,
+          order.paymentNote || "",
 
-        order.timestamp,
+          order.status,
 
-        order.address || "",
+          order.timestamp,
 
-        order.notes || "",
-      ]),
+          order.address || "",
+
+          order.notes || ""
+        ]
+      )
+
     ]
 
-      .map((row) =>
-        row
-          .map((value) => '"' + csvSafe(value).replace(/"/g, '""') + '"')
-          .join(","),
+      .map(
+        row =>
+          row
+            .map(
+              value =>
+              '"' +
+              csvSafe(value).replace(
+                  /"/g,
+                  '""'
+                ) +
+                '"'
+            )
+            .join(",")
       )
 
       .join("\n");
 
-    const url = URL.createObjectURL(
-      new Blob([lines], {
-        type: "text/csv;charset=utf-8",
-      }),
-    );
 
-    const link = document.createElement("a");
+    const url =
+      URL.createObjectURL(
+        new Blob(
+          [lines],
+          {
+            type:
+              "text/csv;charset=utf-8"
+          }
+        )
+      );
+
+
+    const link =
+      document.createElement("a");
+
 
     link.href = url;
 
-    link.download = "aura-essence-orders.csv";
+    link.download =
+      "aura-essence-orders.csv";
+
 
     document.body.appendChild(link);
 
@@ -1484,30 +2034,50 @@ class AdminApp {
 
     link.remove();
 
+
     /*
      * Delay revoke slightly so browsers
      * have time to start the download.
      */
-    setTimeout(() => URL.revokeObjectURL(url), 100);
+    setTimeout(
+      () => URL.revokeObjectURL(url),
+      100
+    );
   }
+
 
   /* =====================================================
      PRODUCTS
   ===================================================== */
 
   async loadProducts() {
-    const response = await this.request(
-      "GET",
-      this.params({
-        action: "adminProducts",
-      }),
-    );
 
-    this.products = Array.isArray(response?.products) ? response.products : [];
+    const response =
+      await this.request(
+        "GET",
+        this.params({
+          action:
+            "adminProducts"
+        })
+      );
+
+
+    this.products =
+      Array.isArray(
+        response?.products
+      )
+        ? response.products
+        : [];
+
 
     this.rebuildProductIndex();
 
-    this.cacheWrite("products", this.products);
+
+    this.cacheWrite(
+      "products",
+      this.products
+    );
+
 
     /*
      * If the products table is empty,
@@ -1515,121 +2085,206 @@ class AdminApp {
      * products from products.js.
      */
 
-    if (!this.products.length && PRODUCTS.length) {
+    if (
+      !this.products.length &&
+      PRODUCTS.length
+    ) {
+
       await this.syncCatalog();
 
       return;
     }
 
+
     this.renderProducts();
   }
 
+
   rebuildProductIndex() {
+
     this.productMap.clear();
 
     this.productSearchIndex = [];
 
-    this.products.forEach((product) => {
-      const id = String(product.id);
 
-      this.productMap.set(id, product);
+    this.products.forEach(
+      product => {
 
-      this.productSearchIndex.push({
-        product,
+        const id =
+          String(product.id);
 
-        search: [product.name, product.id].map(normalize).join(" "),
-      });
-    });
+
+        this.productMap.set(
+          id,
+          product
+        );
+
+
+        this.productSearchIndex.push({
+
+          product,
+
+          search:
+            [
+              product.name,
+              product.id
+            ]
+              .map(normalize)
+              .join(" ")
+        });
+      }
+    );
   }
+
 
   /* =====================================================
      SYNC CATALOG
   ===================================================== */
 
   async syncCatalog() {
-    const products = PRODUCTS.map((product) => ({
-      id: product.id,
 
-      name: product.name,
+    const products =
+      PRODUCTS.map(
+        product => ({
 
-      cat: product.cat,
+          id:
+            product.id,
 
-      desc: product.desc,
+          name:
+            product.name,
 
-      img: product.img || "",
+          cat:
+            product.cat,
 
-      price: product.price || DEFAULT_PRODUCT_PRICE,
+          desc:
+            product.desc,
 
-      stock: product.stock == null ? 10 : product.stock,
+          img:
+            product.img || "",
 
-      badges: product.badges || [],
+          price:
+            product.price ||
+            DEFAULT_PRODUCT_PRICE,
 
-      active: product.active !== false,
+          stock:
+            product.stock == null
+              ? 10
+              : product.stock,
 
-      profiles: product.profiles || [],
+          badges:
+            product.badges || [],
 
-      longevity: product.longevity,
+          active:
+            product.active !== false,
 
-      projection: product.projection,
+          profiles:
+            product.profiles || [],
 
-      strength: product.strength,
+          longevity:
+            product.longevity,
 
-      time: product.time || [],
+          projection:
+            product.projection,
 
-      occasion: product.occasion,
+          strength:
+            product.strength,
 
-      descLong: product.descLong,
+          time:
+            product.time || [],
 
-      topNotes: product.topNotes || [],
+          occasion:
+            product.occasion,
 
-      heartNotes: product.heartNotes || [],
+          descLong:
+            product.descLong,
 
-      baseNotes: product.baseNotes || [],
+          topNotes:
+            product.topNotes || [],
 
-      application: product.application,
+          heartNotes:
+            product.heartNotes || [],
 
-      sortOrder: product.sortOrder || 0,
-    }));
+          baseNotes:
+            product.baseNotes || [],
+
+          application:
+            product.application,
+
+          sortOrder:
+            product.sortOrder || 0
+        })
+      );
+
 
     await this.request(
       "POST",
       this.params({
-        action: "adminSeedProducts",
 
-        products: JSON.stringify(products),
-      }),
+        action:
+          "adminSeedProducts",
+
+        products:
+          JSON.stringify(products)
+      })
     );
 
-    const response = await this.request(
-      "GET",
-      this.params({
-        action: "adminProducts",
-      }),
-    );
 
-    this.products = Array.isArray(response?.products) ? response.products : [];
+    const response =
+      await this.request(
+        "GET",
+        this.params({
+          action:
+            "adminProducts"
+        })
+      );
+
+
+    this.products =
+      Array.isArray(
+        response?.products
+      )
+        ? response.products
+        : [];
+
 
     this.rebuildProductIndex();
 
-    this.cacheWrite("products", this.products);
+
+    this.cacheWrite(
+      "products",
+      this.products
+    );
+
 
     this.renderProducts();
 
-    this.setStatus("Product catalog synced");
+
+    this.setStatus(
+      "Product catalog synced"
+    );
   }
+
 
   /* =====================================================
      RENDER PRODUCTS
   ===================================================== */
 
   renderProducts() {
-    const table = this.dom.productsRows;
+
+    const table =
+      this.dom.productsRows;
+
 
     if (!table) {
       return;
     }
 
-    const search = normalize(this.dom.productSearch?.value);
+
+    const search =
+      normalize(
+        this.dom.productSearch?.value
+      );
+
 
     const cat = this.dom.filterCat?.value || "";
     const stockFilter = this.dom.filterStock?.value || "";
@@ -1638,60 +2293,63 @@ class AdminApp {
     const sortBy = this.dom.sortProducts?.value || "order";
 
     const lowLimit =
-      Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+      Number(this.settings?.lowStockThreshold) ||
+      DEFAULT_LOW_STOCK;
 
-    const stockOf = (product) =>
+    const stockOf = product =>
       product.stock == null ? Infinity : Number(product.stock);
 
     // Highlight filters that are switched on
-    ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach((id) =>
-      this.dom[id]?.classList.toggle("on", Boolean(this.dom[id].value)),
-    );
+    ["filterCat", "filterStock", "filterBadge", "filterActive"]
+      .forEach(id =>
+        this.dom[id]?.classList.toggle("on", Boolean(this.dom[id].value))
+      );
 
     const sorters = {
-      order: (a, b) =>
-        Number(a.sortOrder || 0) - Number(b.sortOrder || 0) ||
-        String(a.name).localeCompare(String(b.name)),
+      order: (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) ||
+                       String(a.name).localeCompare(String(b.name)),
       name: (a, b) => String(a.name).localeCompare(String(b.name)),
       stockAsc: (a, b) => stockOf(a) - stockOf(b),
       stockDesc: (a, b) => stockOf(b) - stockOf(a),
       priceAsc: (a, b) => Number(a.price || 0) - Number(b.price || 0),
-      priceDesc: (a, b) => Number(b.price || 0) - Number(a.price || 0),
+      priceDesc: (a, b) => Number(b.price || 0) - Number(a.price || 0)
     };
 
-    const products = this.productSearchIndex
+    const products =
+      this.productSearchIndex
 
-      .filter((item) => !search || item.search.includes(search))
+        .filter(item =>
+          !search ||
+          item.search.includes(search)
+        )
 
-      .map((item) => item.product)
+        .map(item => item.product)
 
-      .filter((product) => {
-        if (cat && product.cat !== cat) return false;
+        .filter(product => {
 
-        const stock = stockOf(product);
+          if (cat && product.cat !== cat) return false;
 
-        if (stockFilter === "in" && !(stock > 0)) return false;
-        if (stockFilter === "low" && !(stock > 0 && stock <= lowLimit))
-          return false;
-        if (stockFilter === "out" && stock !== 0) return false;
-        if (stockFilter === "unlimited" && product.stock != null) return false;
+          const stock = stockOf(product);
 
-        const badges = (product.badges || []).map((b) =>
-          String(b).toUpperCase(),
-        );
+          if (stockFilter === "in" && !(stock > 0)) return false;
+          if (stockFilter === "low" && !(stock > 0 && stock <= lowLimit)) return false;
+          if (stockFilter === "out" && stock !== 0) return false;
+          if (stockFilter === "unlimited" && product.stock != null) return false;
 
-        if (badge === "__none" && badges.length) return false;
-        if (badge && badge !== "__none" && !badges.includes(badge))
-          return false;
+          const badges = (product.badges || []).map(b => String(b).toUpperCase());
 
-        if (visibility === "active" && product.active === false) return false;
-        if (visibility === "hidden" && product.active !== false) return false;
+          if (badge === "__none" && badges.length) return false;
+          if (badge && badge !== "__none" && !badges.includes(badge)) return false;
 
-        return true;
-      })
+          if (visibility === "active" && product.active === false) return false;
+          if (visibility === "hidden" && product.active !== false) return false;
 
-      .slice()
-      .sort(sorters[sortBy] || sorters.order);
+          return true;
+        })
+
+        .slice()
+        .sort(sorters[sortBy] || sorters.order);
+
 
     if (this.dom.productCount) {
       this.dom.productCount.textContent =
@@ -1700,15 +2358,19 @@ class AdminApp {
           : `Showing ${products.length} of ${this.products.length}`;
     }
 
+
     if (!products.length) {
-      table.innerHTML = `<tr><td colspan="7" class="muted">No products match these filters.</td></tr>`;
+      table.innerHTML =
+        `<tr><td colspan="7" class="muted">No products match these filters.</td></tr>`;
       return;
     }
 
-    table.innerHTML = products
-      .map(
-        (product) =>
-          `
+
+    table.innerHTML =
+      products
+        .map(
+          product =>
+            `
             <tr>
 
               <td>
@@ -1740,27 +2402,40 @@ class AdminApp {
 
               <td>
                 ${
-                  Array.isArray(product.badges) && product.badges.length
-                    ? product.badges
-                        .map(
-                          (badge) =>
-                            `
+                  Array.isArray(product.badges) &&
+                  product.badges.length
+
+                    ?
+
+                    product.badges
+                      .map(
+                        badge =>
+                          `
                           <span class="badge">
                             ${escapeHTML(badge)}
                           </span>
-                          `,
-                        )
-                        .join("")
-                    : "—"
+                          `
+                      )
+                      .join("")
+
+                    :
+
+                    "—"
                 }
               </td>
 
               <td>
-                ${product.active !== false ? "Yes" : "No"}
+                ${
+                  product.active !== false
+                    ? "Yes"
+                    : "No"
+                }
               </td>
 
               <td>
-                ${product.sortOrder || 0}
+                ${
+                  product.sortOrder || 0
+                }
               </td>
 
               <td class="row-actions">
@@ -1782,49 +2457,91 @@ class AdminApp {
               </td>
 
             </tr>
-            `,
-      )
-      .join("");
+            `
+        )
+        .join("");
   }
+
 
   /* =====================================================
      EDIT PRODUCT
   ===================================================== */
 
   editProduct(product) {
-    this.dom.productEditor?.classList.remove("hidden");
+
+    this.dom.productEditor?.classList.remove(
+      "hidden"
+    );
+
 
     if (this.dom.editorTitle) {
-      this.dom.editorTitle.textContent = product
-        ? "Edit Product"
-        : "Add Product";
+
+      this.dom.editorTitle.textContent =
+        product
+          ? "Edit Product"
+          : "Add Product";
     }
 
-    const set = (id, value) => {
-      const element = document.getElementById(id);
 
-      if (element) {
-        element.value = value ?? "";
-      }
-    };
+    const set =
+      (id, value) => {
 
-    set("pOriginalId", product?.id || "");
+        const element =
+          document.getElementById(id);
 
-    set("pId", product?.id || "");
+        if (element) {
 
-    set("pName", product?.name || "");
+          element.value =
+            value ?? "";
+        }
+      };
 
-    set("pCat", product?.cat || "men");
 
-    set("pPrice", product?.price || DEFAULT_PRODUCT_PRICE);
+    set(
+      "pOriginalId",
+      product?.id || ""
+    );
 
-    set("pStock", product?.stock ?? 10);
+    set(
+      "pId",
+      product?.id || ""
+    );
 
-    set("pCost", product?.cost ?? "");
+    set(
+      "pName",
+      product?.name || ""
+    );
 
-    set("pSort", product?.sortOrder || 0);
+    set(
+      "pCat",
+      product?.cat || "men"
+    );
 
-    set("pImg", product?.img || "");
+    set(
+      "pPrice",
+      product?.price ||
+      DEFAULT_PRODUCT_PRICE
+    );
+
+    set(
+      "pStock",
+      product?.stock ?? 10
+    );
+
+    set(
+      "pCost",
+      product?.cost ?? ""
+    );
+
+    set(
+      "pSort",
+      product?.sortOrder || 0
+    );
+
+    set(
+      "pImg",
+      product?.img || ""
+    );
 
     this.showImagePreview(product?.img || "");
 
@@ -1835,213 +2552,409 @@ class AdminApp {
 
     if (this.dom.pImgFile) this.dom.pImgFile.value = "";
 
-    set("pDesc", product?.desc || "");
+    set(
+      "pDesc",
+      product?.desc || ""
+    );
 
-    set("pDescLong", product?.descLong || "");
+    set(
+      "pDescLong",
+      product?.descLong || ""
+    );
 
-    set("pTop", (product?.topNotes || []).join(", "));
+    set(
+      "pTop",
+      (product?.topNotes || [])
+        .join(", ")
+    );
 
-    set("pHeart", (product?.heartNotes || []).join(", "));
+    set(
+      "pHeart",
+      (product?.heartNotes || [])
+        .join(", ")
+    );
 
-    set("pBase", (product?.baseNotes || []).join(", "));
+    set(
+      "pBase",
+      (product?.baseNotes || [])
+        .join(", ")
+    );
 
-    set("pApplication", product?.application || "");
+    set(
+      "pApplication",
+      product?.application || ""
+    );
 
-    set("pProfiles", (product?.profiles || []).join(", "));
+    set(
+      "pProfiles",
+      (product?.profiles || [])
+        .join(", ")
+    );
 
-    set("pLongevity", product?.longevity || 7);
+    set(
+      "pLongevity",
+      product?.longevity || 7
+    );
 
-    set("pProjection", product?.projection || 7);
+    set(
+      "pProjection",
+      product?.projection || 7
+    );
 
-    const normalizedStrength =
-      {
-        light: "subtle",
 
-        subtle: "subtle",
+    const normalizedStrength = {
 
-        moderate: "moderate",
+      light:
+        "subtle",
 
-        strong: "bold",
+      subtle:
+        "subtle",
 
-        bold: "bold",
-      }[normalize(product?.strength || "moderate")] || "moderate";
+      moderate:
+        "moderate",
 
-    set("pStrength", normalizedStrength);
+      strong:
+        "bold",
 
-    set("pTime", (product?.time || []).join(", "));
+      bold:
+        "bold"
 
-    set("pOccasion", product?.occasion || "");
+    }[
+      normalize(
+        product?.strength ||
+        "moderate"
+      )
+    ] || "moderate";
 
-    const active = document.getElementById("pActive");
+
+    set(
+      "pStrength",
+      normalizedStrength
+    );
+
+
+    set(
+      "pTime",
+      (product?.time || [])
+        .join(", ")
+    );
+
+    set(
+      "pOccasion",
+      product?.occasion || ""
+    );
+
+
+    const active =
+      document.getElementById(
+        "pActive"
+      );
+
 
     if (active) {
-      active.checked = product?.active !== false;
+
+      active.checked =
+        product?.active !== false;
     }
 
-    document.querySelectorAll(".badge").forEach((badge) => {
-      /*
-       * Preserve the existing behavior.
-       */
-      badge.checked = (product?.badges || []).includes(badge.value);
-    });
+
+    document
+      .querySelectorAll(".badge")
+      .forEach(
+        badge => {
+
+          /*
+           * Preserve the existing behavior.
+           */
+          badge.checked =
+            (
+              product?.badges || []
+            ).includes(
+              badge.value
+            );
+        }
+      );
   }
+
 
   /* =====================================================
      SAVE PRODUCT
   ===================================================== */
 
   async saveProduct(e) {
+
     e.preventDefault();
 
-    const value = (id) => {
-      const element = document.getElementById(id);
 
-      return element ? element.value.trim() : "";
-    };
+    const value =
+      id => {
 
-    const payload = this.params({
-      action: "adminSaveProduct",
+        const element =
+          document.getElementById(id);
 
-      originalId: value("pOriginalId"),
+        return element
+          ? element.value.trim()
+          : "";
+      };
 
-      id: value("pId"),
 
-      name: value("pName"),
+    const payload =
+      this.params({
 
-      cat: value("pCat"),
+        action:
+            "adminSaveProduct",
 
-      price: value("pPrice"),
+          originalId:
+            value("pOriginalId"),
 
-      stock: value("pStock"),
+        id:
+          value("pId"),
 
-      cost: value("pCost"),
+        name:
+          value("pName"),
 
-      sortOrder: value("pSort"),
+        cat:
+          value("pCat"),
 
-      img: value("pImg"),
+        price:
+          value("pPrice"),
 
-      desc: value("pDesc"),
+        stock:
+          value("pStock"),
 
-      descLong: value("pDescLong"),
+        cost:
+          value("pCost"),
 
-      topNotes: value("pTop"),
+        sortOrder:
+          value("pSort"),
 
-      heartNotes: value("pHeart"),
+        img:
+          value("pImg"),
 
-      baseNotes: value("pBase"),
+        desc:
+          value("pDesc"),
 
-      application: value("pApplication"),
+        descLong:
+          value("pDescLong"),
 
-      profiles: value("pProfiles"),
+        topNotes:
+          value("pTop"),
 
-      longevity: value("pLongevity"),
+        heartNotes:
+          value("pHeart"),
 
-      projection: value("pProjection"),
+        baseNotes:
+          value("pBase"),
 
-      strength: value("pStrength"),
+        application:
+          value("pApplication"),
 
-      time: value("pTime"),
+        profiles:
+          value("pProfiles"),
 
-      occasion: value("pOccasion"),
+        longevity:
+          value("pLongevity"),
 
-      active: this.dom.pActive?.checked || false,
+        projection:
+          value("pProjection"),
 
-      badges: [...document.querySelectorAll(".badge:checked")]
-        .map((element) => element.value)
-        .join(","),
-    });
+        strength:
+          value("pStrength"),
+
+        time:
+          value("pTime"),
+
+        occasion:
+          value("pOccasion"),
+
+        active:
+          this.dom.pActive?.checked ||
+          false,
+
+        badges:
+          [
+            ...document.querySelectorAll(
+              ".badge:checked"
+            )
+          ]
+            .map(
+              element =>
+                element.value
+            )
+            .join(",")
+      });
+
 
     try {
-      await this.request("POST", payload);
 
-      this.setStatus("Product saved");
+      await this.request(
+        "POST",
+        payload
+      );
 
-      this.dom.productEditor?.classList.add("hidden");
+
+      this.setStatus(
+        "Product saved"
+      );
+
+
+      this.dom.productEditor?.classList.add(
+        "hidden"
+      );
+
 
       /*
        * Refresh both products and dashboard.
        */
-      await Promise.all([this.loadProducts(), this.loadDashboard()]);
+      await Promise.all([
+        this.loadProducts(),
+        this.loadDashboard()
+      ]);
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      DELETE PRODUCT
   ===================================================== */
 
-  async deleteProduct(id = this.dom.pOriginalId?.value) {
+  async deleteProduct(
+    id =
+      this.dom.pOriginalId?.value
+  ) {
+
     if (!id) {
       return;
     }
 
-    if (!confirm("Delete this product?")) {
+
+    if (
+      !confirm(
+        "Delete this product?"
+      )
+    ) {
       return;
     }
 
+
     try {
+
       await this.request(
         "POST",
         this.params({
-          action: "adminDeleteProduct",
 
-          id,
-        }),
+          action:
+            "adminDeleteProduct",
+
+          id
+        })
       );
 
-      this.setStatus("Product deleted");
 
-      this.dom.productEditor?.classList.add("hidden");
+      this.setStatus(
+        "Product deleted"
+      );
 
-      await Promise.all([this.loadProducts(), this.loadDashboard()]);
+
+      this.dom.productEditor?.classList.add(
+        "hidden"
+      );
+
+
+      await Promise.all([
+        this.loadProducts(),
+        this.loadDashboard()
+      ]);
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      PROMOTIONS
   ===================================================== */
 
   async loadPromotions() {
-    const response = await this.request(
-      "GET",
-      this.params({
-        action: "adminPromotions",
-      }),
-    );
 
-    this.promotions = Array.isArray(response?.promotions)
-      ? response.promotions
-      : [];
+    const response =
+      await this.request(
+        "GET",
+        this.params({
+          action:
+            "adminPromotions"
+        })
+      );
+
+
+    this.promotions =
+      Array.isArray(
+        response?.promotions
+      )
+        ? response.promotions
+        : [];
+
 
     this.rebuildPromotionIndex();
 
-    this.cacheWrite("promotions", this.promotions);
+
+    this.cacheWrite(
+      "promotions",
+      this.promotions
+    );
+
 
     this.renderPromotions();
   }
 
+
   rebuildPromotionIndex() {
+
     this.promotionMap.clear();
 
-    this.promotions.forEach((promotion) => {
-      this.promotionMap.set(String(promotion.id), promotion);
-    });
+
+    this.promotions.forEach(
+      promotion => {
+
+        this.promotionMap.set(
+          String(promotion.id),
+          promotion
+        );
+      }
+    );
   }
 
+
   renderPromotions() {
-    const container = document.getElementById("promosList");
+
+    const container =
+      document.getElementById(
+        "promosList"
+      );
+
 
     if (!container) {
       return;
     }
 
-    container.innerHTML = this.promotions
-      .map(
-        (promotion) =>
-          `
+
+    container.innerHTML =
+      this.promotions
+        .map(
+          promotion =>
+            `
             <div class="list-row">
 
               <div>
@@ -2054,9 +2967,21 @@ class AdminApp {
                   ${escapeHTML(promotion.type)}
                   • min ${escapeHTML(promotion.minQty)}
                   • ${
-                    promotion.type === "fixed_total"
-                      ? formatCurrency(promotion.fixedTotal)
-                      : escapeHTML(promotion.percentOff) + "% off"
+                    promotion.type ===
+                    "fixed_total"
+
+                      ?
+
+                      formatCurrency(
+                        promotion.fixedTotal
+                      )
+
+                      :
+
+                      escapeHTML(
+                        promotion.percentOff
+                      ) +
+                      "% off"
                   }
                 </small>
 
@@ -2065,7 +2990,11 @@ class AdminApp {
               <div class="row-actions">
 
                 <span class="badge">
-                  ${promotion.active ? "ACTIVE" : "OFF"}
+                  ${
+                    promotion.active
+                      ? "ACTIVE"
+                      : "OFF"
+                  }
                 </span>
 
                 <button
@@ -2085,219 +3014,384 @@ class AdminApp {
               </div>
 
             </div>
-            `,
-      )
-      .join("");
+            `
+        )
+        .join("");
   }
+
 
   /* =====================================================
      EDIT PROMOTION
   ===================================================== */
 
-  editPromotion(promotion) {
-    this.dom.promoEditor?.classList.remove("hidden");
+  editPromotion(
+    promotion
+  ) {
 
-    const set = (id, value) => {
-      const element = document.getElementById(id);
+    this.dom.promoEditor?.classList.remove(
+      "hidden"
+    );
 
-      if (element) {
-        element.value = value ?? "";
-      }
-    };
 
-    set("promoId", promotion?.id || "");
+    const set =
+      (id, value) => {
 
-    set("promoName", promotion?.name || "");
+        const element =
+          document.getElementById(id);
 
-    set("promoType", promotion?.type || "fixed_total");
+        if (element) {
 
-    set("promoQty", promotion?.minQty || DEFAULT_PROMO_QTY);
+          element.value =
+            value ?? "";
+        }
+      };
 
-    set("promoFixed", promotion?.fixedTotal || DEFAULT_PROMO_FIXED);
 
-    set("promoPercent", promotion?.percentOff || 0);
+    set(
+      "promoId",
+      promotion?.id || ""
+    );
 
-    const active = document.getElementById("promoActive");
+    set(
+      "promoName",
+      promotion?.name || ""
+    );
+
+    set(
+      "promoType",
+      promotion?.type ||
+      "fixed_total"
+    );
+
+    set(
+      "promoQty",
+      promotion?.minQty ||
+      DEFAULT_PROMO_QTY
+    );
+
+    set(
+      "promoFixed",
+      promotion?.fixedTotal ||
+      DEFAULT_PROMO_FIXED
+    );
+
+    set(
+      "promoPercent",
+      promotion?.percentOff ||
+      0
+    );
+
+
+    const active =
+      document.getElementById(
+        "promoActive"
+      );
+
 
     if (active) {
-      active.checked = promotion?.active !== false;
+
+      active.checked =
+        promotion?.active !== false;
     }
   }
+
 
   /* =====================================================
      SAVE PROMOTION
   ===================================================== */
 
   async savePromotion(e) {
+
     e.preventDefault();
 
-    const value = (id) => {
-      const element = document.getElementById(id);
 
-      return element ? element.value.trim() : "";
-    };
+    const value =
+      id => {
+
+        const element =
+          document.getElementById(id);
+
+        return element
+          ? element.value.trim()
+          : "";
+      };
+
 
     try {
+
       await this.request(
         "POST",
         this.params({
-          action: "adminSavePromotion",
 
-          id: value("promoId"),
+          action:
+            "adminSavePromotion",
 
-          name: value("promoName"),
+          id:
+            value("promoId"),
 
-          type: value("promoType"),
+          name:
+            value("promoName"),
 
-          minQty: value("promoQty"),
+          type:
+            value("promoType"),
 
-          fixedTotal: value("promoFixed"),
+          minQty:
+            value("promoQty"),
 
-          percentOff: value("promoPercent"),
+          fixedTotal:
+            value("promoFixed"),
 
-          active: document.getElementById("promoActive")?.checked || false,
-        }),
+          percentOff:
+            value("promoPercent"),
+
+          active:
+            document.getElementById(
+              "promoActive"
+            )?.checked ||
+            false
+        })
       );
 
-      this.dom.promoEditor?.classList.add("hidden");
+
+      this.dom.promoEditor?.classList.add(
+        "hidden"
+      );
+
 
       await this.loadPromotions();
 
-      this.setStatus("Promotion saved");
+
+      this.setStatus(
+        "Promotion saved"
+      );
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      DELETE PROMOTION
   ===================================================== */
 
   async deletePromotion(id) {
-    if (!confirm("Delete this promotion?")) {
+
+    if (
+      !confirm(
+        "Delete this promotion?"
+      )
+    ) {
       return;
     }
 
+
     try {
+
       await this.request(
         "POST",
         this.params({
-          action: "adminDeletePromotion",
 
-          id,
-        }),
+          action:
+            "adminDeletePromotion",
+
+          id
+        })
       );
+
 
       await this.loadPromotions();
 
-      this.setStatus("Promotion deleted");
+
+      this.setStatus(
+        "Promotion deleted"
+      );
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      SETTINGS
   ===================================================== */
 
   async loadSettings() {
-    const response = await this.request(
-      "GET",
-      this.params({
-        action: "adminSettings",
-      }),
+
+    const response =
+      await this.request(
+        "GET",
+        this.params({
+          action:
+            "adminSettings"
+        })
+      );
+
+
+    this.settings =
+      response?.settings || {};
+
+
+    this.cacheWrite(
+      "settings",
+      this.settings
     );
 
-    this.settings = response?.settings || {};
-
-    this.cacheWrite("settings", this.settings);
 
     this.applySettingsToForm();
   }
 
+
   async saveSettings(e) {
+
     e.preventDefault();
 
+
     const settings = {
-      lowStockThreshold: this.dom.setLowStock?.value || DEFAULT_LOW_STOCK,
 
-      showBestSellers: this.dom.setBest?.checked || false,
+      lowStockThreshold:
+        this.dom.setLowStock?.value ||
+        DEFAULT_LOW_STOCK,
 
-      showFeatured: this.dom.setFeatured?.checked || false,
+      showBestSellers:
+        this.dom.setBest?.checked ||
+        false,
 
-      showNewArrivals: this.dom.setNew?.checked || false,
+      showFeatured:
+        this.dom.setFeatured?.checked ||
+        false,
 
-      showSignature: this.dom.setSignature?.checked || false,
+      showNewArrivals:
+        this.dom.setNew?.checked ||
+        false,
 
-      lowStockAlertAt: this.dom.setAlertAt?.value ?? 1,
+      showSignature:
+        this.dom.setSignature?.checked ||
+        false,
+
+      lowStockAlertAt:
+        this.dom.setAlertAt?.value ?? 1,
 
       gcashNumber:
         document.getElementById("setGcashNumber")?.value.trim() || "",
 
-      gcashName: document.getElementById("setGcashName")?.value.trim() || "",
+      gcashName:
+        document.getElementById("setGcashName")?.value.trim() || "",
 
-      messengerUrl: document.getElementById("setMessenger")?.value.trim() || "",
+      messengerUrl:
+        document.getElementById("setMessenger")?.value.trim() || "",
+
+      // Homepage extras (Scent of the Week, trust strip, welcome offer, weather)
+      ...(typeof this.extraSettings === "function" ? this.extraSettings() : {})
     };
 
+
     try {
+
       await this.request(
         "POST",
         this.params({
-          action: "adminSaveSettings",
 
-          settings: JSON.stringify(settings),
-        }),
+          action:
+            "adminSaveSettings",
+
+          settings:
+            JSON.stringify(settings)
+        })
       );
+
 
       /*
        * Update local state immediately.
        */
       this.settings = {
         ...this.settings,
-        ...settings,
+        ...settings
       };
 
-      this.cacheWrite("settings", this.settings);
 
-      this.setStatus("Settings saved");
+      this.cacheWrite(
+        "settings",
+        this.settings
+      );
+
+
+      this.setStatus(
+        "Settings saved"
+      );
+
 
       await this.loadDashboard();
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
+
 
   /* =====================================================
      AUDIT
   ===================================================== */
 
   async loadAudit() {
-    try {
-      const response = await this.request(
-        "GET",
-        this.params({
-          action: "adminAudit",
-        }),
-      );
 
-      const table = this.dom.auditRows;
+    try {
+
+      const response =
+        await this.request(
+          "GET",
+          this.params({
+            action:
+              "adminAudit"
+          })
+        );
+
+
+      const table =
+        this.dom.auditRows;
+
 
       if (!table) {
         return;
       }
 
-      const logs = Array.isArray(response?.logs) ? response.logs : [];
 
-      table.innerHTML = logs
-        .map(
-          (log) =>
-            `
+      const logs =
+        Array.isArray(
+          response?.logs
+        )
+          ? response.logs
+          : [];
+
+
+      table.innerHTML =
+        logs
+          .map(
+            log =>
+              `
               <tr>
 
                 <td>
                   ${
                     log.timestamp
-                      ? escapeHTML(new Date(log.timestamp).toLocaleString())
+                      ? escapeHTML(
+                          new Date(
+                            log.timestamp
+                          ).toLocaleString()
+                        )
                       : ""
                   }
                 </td>
@@ -2311,21 +3405,27 @@ class AdminApp {
                 </td>
 
               </tr>
-              `,
-        )
-        .join("");
+              `
+          )
+          .join("");
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   }
 }
+
 
 /* =========================================================
    DASHBOARD DATE RANGE
 ========================================================= */
 
 function toDateInput(d) {
-  const pad = (n) => String(n).padStart(2, "0");
+  const pad = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
@@ -2338,48 +3438,35 @@ function endOfDay(d) {
 }
 
 Object.assign(AdminApp.prototype, {
+
   presetRange(preset) {
     const now = new Date();
     const today = startOfDay(now);
-    const addDays = (d, n) =>
-      new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+    const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
     switch (preset) {
-      case "today":
-        return { from: today, to: endOfDay(today) };
-      case "yesterday": {
-        const y = addDays(today, -1);
-        return { from: y, to: endOfDay(y) };
-      }
-      case "7d":
-        return { from: addDays(today, -6), to: endOfDay(today) };
-      case "30d":
-        return { from: addDays(today, -29), to: endOfDay(today) };
-      case "thisMonth":
-        return {
-          from: new Date(now.getFullYear(), now.getMonth(), 1),
-          to: endOfDay(today),
-        };
-      case "lastMonth":
-        return {
-          from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
-          to: endOfDay(new Date(now.getFullYear(), now.getMonth(), 0)),
-        };
-      case "thisYear":
-        return { from: new Date(now.getFullYear(), 0, 1), to: endOfDay(today) };
-      default:
-        return null;
+      case "today":     return { from: today, to: endOfDay(today) };
+      case "yesterday": { const y = addDays(today, -1); return { from: y, to: endOfDay(y) }; }
+      case "7d":        return { from: addDays(today, -6), to: endOfDay(today) };
+      case "30d":       return { from: addDays(today, -29), to: endOfDay(today) };
+      case "thisMonth": return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: endOfDay(today) };
+      case "lastMonth": return {
+        from: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        to: endOfDay(new Date(now.getFullYear(), now.getMonth(), 0))
+      };
+      case "thisYear":  return { from: new Date(now.getFullYear(), 0, 1), to: endOfDay(today) };
+      default:          return null;
     }
   },
+
 
   fillRangeInputs() {
     const range = this.presetRange(this.dom.rangePreset?.value);
 
-    if (this.dom.rangeFrom)
-      this.dom.rangeFrom.value = range ? toDateInput(range.from) : "";
-    if (this.dom.rangeTo)
-      this.dom.rangeTo.value = range ? toDateInput(range.to) : "";
+    if (this.dom.rangeFrom) this.dom.rangeFrom.value = range ? toDateInput(range.from) : "";
+    if (this.dom.rangeTo) this.dom.rangeTo.value = range ? toDateInput(range.to) : "";
   },
+
 
   // Returns { from, to } or null for "All time"
   dashboardRange() {
@@ -2388,10 +3475,8 @@ Object.assign(AdminApp.prototype, {
     if (preset === "all") return null;
     if (preset !== "custom") return this.presetRange(preset);
 
-    const parse = (v) => {
-      const [y, m, d] = String(v || "")
-        .split("-")
-        .map(Number);
+    const parse = v => {
+      const [y, m, d] = String(v || "").split("-").map(Number);
       return y ? new Date(y, m - 1, d) : null;
     };
 
@@ -2406,93 +3491,72 @@ Object.assign(AdminApp.prototype, {
     return { from: startOfDay(from), to: endOfDay(to) };
   },
 
+
   computeDashboard({ from, to }) {
-    const orders = this.orders.filter((order) => {
+    const orders = this.orders.filter(order => {
       const t = new Date(order.timestamp);
       return !isNaN(t) && t >= from && t <= to;
     });
 
-    const counted = orders.filter((order) => order.status !== "Cancelled");
+    const counted = orders.filter(order => order.status !== "Cancelled");
 
-    const received = (order) => Number(order.amountPaid ?? order.total ?? 0);
+    const received = order => Number(order.amountPaid ?? order.total ?? 0);
     const revenue = counted.reduce((sum, order) => sum + received(order), 0);
-    const unpaid = counted.filter((order) =>
-      ["Unpaid", "Partial"].includes(order.paymentStatus || "Unpaid"),
-    );
-    const toCollect = unpaid.reduce(
-      (sum, order) =>
-        sum +
-        Math.max(0, Number(order.total || 0) - Number(order.amountPaid || 0)),
-      0,
-    );
+    const unpaid = counted.filter(order => ["Unpaid", "Partial"].includes(order.paymentStatus || "Unpaid"));
+    const toCollect = unpaid.reduce((sum, order) =>
+      sum + Math.max(0, Number(order.total || 0) - Number(order.amountPaid || 0)), 0);
 
     const customers = new Set(
-      orders.map(
-        (order) =>
-          String(order.contact || "")
-            .replace(/\D/g, "")
-            .slice(-10) || normalize(order.fullname),
-      ),
+      orders.map(order =>
+        String(order.contact || "").replace(/\D/g, "").slice(-10) ||
+        normalize(order.fullname)
+      )
     );
 
     const sales = {};
-    counted.forEach((order) =>
-      (order.items || []).forEach((item) => {
+    counted.forEach(order =>
+      (order.items || []).forEach(item => {
         const key = String(item.id ?? item.name);
         sales[key] = (sales[key] || 0) + Number(item.qty || 0);
-      }),
+      })
     );
 
     const topProducts = this.products
-      .map((product) => ({
-        id: product.id,
-        name: product.name,
-        units: sales[String(product.id)] || 0,
-      }))
-      .sort(
-        (a, b) =>
-          b.units - a.units || String(a.name).localeCompare(String(b.name)),
-      )
+      .map(product => ({ id: product.id, name: product.name, units: sales[String(product.id)] || 0 }))
+      .sort((a, b) => b.units - a.units || String(a.name).localeCompare(String(b.name)))
       .slice(0, 10);
 
     return {
       stats: {
         orders: orders.length,
         revenue,
-        completed: orders.filter((o) => o.status === "Completed").length,
-        pending: orders.filter(
-          (o) => o.status !== "Completed" && o.status !== "Cancelled",
-        ).length,
+        completed: orders.filter(o => o.status === "Completed").length,
+        pending: orders.filter(o => o.status !== "Completed" && o.status !== "Cancelled").length,
         customers: customers.size,
         toCollect,
         unpaidOrders: unpaid.length,
-        averageOrderValue: counted.length ? revenue / counted.length : 0,
+        averageOrderValue: counted.length ? revenue / counted.length : 0
       },
-      topProducts,
+      topProducts
     };
   },
+
 
   renderRangeLabel(range, stats = {}) {
     this.dom.rangePreset?.classList.toggle("on", Boolean(range));
 
     if (!this.dom.rangeLabel) return;
 
-    const fmt = (d) =>
-      d.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+    const fmt = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
     const avg = Number(stats.averageOrderValue || 0);
-    const avgText = avg
-      ? ` · avg ${formatCurrency(Math.round(avg))}/order`
-      : "";
+    const avgText = avg ? ` · avg ${formatCurrency(Math.round(avg))}/order` : "";
 
     this.dom.rangeLabel.textContent = range
       ? `${fmt(range.from)} – ${fmt(range.to)}${avgText}`
       : `All time${avgText}`;
-  },
+  }
 });
+
 
 /* =========================================================
    PRODUCT PHOTOS · QUICK STOCK · CHART · BACKUP
@@ -2516,12 +3580,9 @@ function resizeImage(file, maxSide = 1200) {
 
       const type = file.type === "image/png" ? "image/png" : "image/jpeg";
       canvas.toBlob(
-        (blob) =>
-          blob
-            ? resolve(new File([blob], file.name, { type }))
-            : reject(new Error("Could not process the photo.")),
+        blob => blob ? resolve(new File([blob], file.name, { type })) : reject(new Error("Could not process the photo.")),
         type,
-        0.85,
+        0.85
       );
     };
 
@@ -2537,11 +3598,12 @@ function resizeImage(file, maxSide = 1200) {
 const DAY_MS = 86400000;
 
 function dayKey(d) {
-  const pad = (n) => String(n).padStart(2, "0");
+  const pad = n => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 Object.assign(AdminApp.prototype, {
+
   showImagePreview(src) {
     const img = this.dom.pImgPreview;
     const empty = this.dom.pImgEmpty;
@@ -2557,19 +3619,15 @@ Object.assign(AdminApp.prototype, {
     }
 
     // Relative paths (assets/images/...) live on the customer site.
-    img.src = /^(https?:|data:|blob:)/.test(value)
-      ? value
-      : new URL(value, location.href).href;
+    img.src = /^(https?:|data:|blob:)/.test(value) ? value : new URL(value, location.href).href;
     img.hidden = false;
     if (empty) empty.hidden = true;
     img.onerror = () => {
       img.hidden = true;
-      if (empty) {
-        empty.hidden = false;
-        empty.textContent = "Can't load";
-      }
+      if (empty) { empty.hidden = false; empty.textContent = "Can't load"; }
     };
   },
+
 
   async uploadProductImage() {
     const file = this.dom.pImgFile?.files?.[0];
@@ -2577,8 +3635,7 @@ Object.assign(AdminApp.prototype, {
     if (!file) return;
 
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-      if (status)
-        status.textContent = "Please choose a JPG, PNG or WebP photo.";
+      if (status) status.textContent = "Please choose a JPG, PNG or WebP photo.";
       return;
     }
 
@@ -2587,27 +3644,26 @@ Object.assign(AdminApp.prototype, {
       const ready = await resizeImage(file);
 
       if (ready.size > 5 * 1024 * 1024) {
-        throw new Error(
-          "Photo is still bigger than 5 MB after resizing. Try another one.",
-        );
+        throw new Error("Photo is still bigger than 5 MB after resizing. Try another one.");
       }
 
       const response = await this.request("POST", {
         action: "adminUploadProductImage",
         file: ready,
-        productId: this.dom.pId?.value || this.dom.pName?.value || "product",
+        productId: this.dom.pId?.value || this.dom.pName?.value || "product"
       });
 
       if (this.dom.pImg) this.dom.pImg.value = response.url;
       this.showImagePreview(response.url);
-      if (status)
-        status.textContent = "Uploaded ✓  Click Save Product to keep it.";
+      if (status) status.textContent = "Uploaded ✓  Click Save Product to keep it.";
+
     } catch (error) {
       if (status) status.textContent = error.message;
     } finally {
       if (this.dom.pImgFile) this.dom.pImgFile.value = "";
     }
   },
+
 
   async adjustStock(id, op) {
     const product = this.productMap.get(String(id));
@@ -2622,7 +3678,7 @@ Object.assign(AdminApp.prototype, {
         op === "set"
           ? `How many bottles of ${product.name} do you have now?`
           : `How many bottles of ${product.name} are you adding?`,
-        op === "set" ? "10" : "5",
+        op === "set" ? "10" : "5"
       );
       if (asked === null) return;
 
@@ -2645,10 +3701,12 @@ Object.assign(AdminApp.prototype, {
       this.setStatus(`${product.name}: ${response.stock} in stock`);
 
       this.loadDashboard(true).catch(() => {});
+
     } catch (error) {
       this.setStatus(error.message, true);
     }
   },
+
 
   // Daily revenue (cancelled orders excluded) for the chosen range.
   renderRevenueChart(range) {
@@ -2659,12 +3717,9 @@ Object.assign(AdminApp.prototype, {
     if (tip) tip.hidden = true;
 
     const orders = (this.orders || [])
-      .filter((o) => o.status !== "Cancelled")
-      .map((o) => ({
-        t: new Date(o.timestamp),
-        total: Number(o.amountPaid ?? o.total ?? 0),
-      }))
-      .filter((o) => !isNaN(o.t));
+      .filter(o => o.status !== "Cancelled")
+      .map(o => ({ t: new Date(o.timestamp), total: Number(o.amountPaid ?? o.total ?? 0) }))
+      .filter(o => !isNaN(o.t));
 
     let from, to;
     if (range) {
@@ -2676,7 +3731,7 @@ Object.assign(AdminApp.prototype, {
         if (this.dom.chartLabel) this.dom.chartLabel.textContent = "";
         return;
       }
-      from = startOfDay(new Date(Math.min(...orders.map((o) => o.t))));
+      from = startOfDay(new Date(Math.min(...orders.map(o => o.t))));
       to = startOfDay(new Date());
     }
 
@@ -2684,13 +3739,10 @@ Object.assign(AdminApp.prototype, {
     const days = Math.round((to - from) / DAY_MS) + 1;
     const unit = days > 400 ? "month" : days > 92 ? "week" : "day";
 
-    const bucketStart = (d) => {
+    const bucketStart = d => {
       const x = startOfDay(d);
       if (unit === "month") return new Date(x.getFullYear(), x.getMonth(), 1);
-      if (unit === "week") {
-        x.setDate(x.getDate() - ((x.getDay() + 6) % 7));
-        return x;
-      } // Monday
+      if (unit === "week") { x.setDate(x.getDate() - ((x.getDay() + 6) % 7)); return x; } // Monday
       return x;
     };
 
@@ -2700,34 +3752,21 @@ Object.assign(AdminApp.prototype, {
       const key = dayKey(d);
       index.set(key, buckets.length);
       buckets.push({ start: new Date(d), total: 0, count: 0 });
-      d =
-        unit === "month"
-          ? new Date(d.getFullYear(), d.getMonth() + 1, 1)
-          : new Date(
-              d.getFullYear(),
-              d.getMonth(),
-              d.getDate() + (unit === "week" ? 7 : 1),
-            );
+      d = unit === "month" ? new Date(d.getFullYear(), d.getMonth() + 1, 1)
+        : new Date(d.getFullYear(), d.getMonth(), d.getDate() + (unit === "week" ? 7 : 1));
     }
 
-    orders.forEach((o) => {
+    orders.forEach(o => {
       if (o.t < from || o.t > endOfDay(to)) return;
       const i = index.get(dayKey(bucketStart(o.t)));
-      if (i !== undefined) {
-        buckets[i].total += o.total;
-        buckets[i].count += 1;
-      }
+      if (i !== undefined) { buckets[i].total += o.total; buckets[i].count += 1; }
     });
 
     if (this.dom.chartLabel) {
-      this.dom.chartLabel.textContent = {
-        day: "Per day",
-        week: "Per week",
-        month: "Per month",
-      }[unit];
+      this.dom.chartLabel.textContent = { day: "Per day", week: "Per week", month: "Per month" }[unit];
     }
 
-    const max = Math.max(0, ...buckets.map((b) => b.total));
+    const max = Math.max(0, ...buckets.map(b => b.total));
     if (!max) {
       box.innerHTML = `<p class="chart-empty">No sales in this period.</p>`;
       return;
@@ -2737,31 +3776,20 @@ Object.assign(AdminApp.prototype, {
     const step = (() => {
       const raw = max / 4;
       const pow = Math.pow(10, Math.floor(Math.log10(raw)));
-      return [1, 2, 2.5, 5, 10].map((m) => m * pow).find((s) => s >= raw);
+      return [1, 2, 2.5, 5, 10].map(m => m * pow).find(s => s >= raw);
     })();
     const top = Math.ceil(max / step) * step;
 
-    const W = Math.max(box.clientWidth || 800, 320),
-      H = 240;
+    const W = Math.max(box.clientWidth || 800, 320), H = 240;
     const pad = { l: 56, r: 8, t: 10, b: 26 };
-    const iw = W - pad.l - pad.r,
-      ih = H - pad.t - pad.b;
+    const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b;
     const slot = iw / buckets.length;
     const gap = Math.min(2, slot * 0.2);
-    const bw = Math.max(1, Math.min(slot - gap, 48)); // never a giant bar
-    const y = (v) => pad.t + ih - (v / top) * ih;
+    const bw = Math.max(1, Math.min(slot - gap, 48));   // never a giant bar
+    const y = v => pad.t + ih - (v / top) * ih;
 
-    const short = (d) =>
-      d.toLocaleDateString(
-        undefined,
-        unit === "month"
-          ? { month: "short", year: "2-digit" }
-          : { month: "short", day: "numeric" },
-      );
-    const labelEvery = Math.max(
-      1,
-      Math.ceil(buckets.length / Math.floor(iw / 64)),
-    );
+    const short = d => d.toLocaleDateString(undefined, unit === "month" ? { month: "short", year: "2-digit" } : { month: "short", day: "numeric" });
+    const labelEvery = Math.max(1, Math.ceil(buckets.length / Math.floor(iw / 64)));
 
     let svg = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Revenue ${this.dom.chartLabel?.textContent?.toLowerCase() || ""}">`;
 
@@ -2795,41 +3823,24 @@ Object.assign(AdminApp.prototype, {
 
     const hide = () => {
       if (tip) tip.hidden = true;
-      bars.forEach((b) => b.classList.remove("dim"));
+      bars.forEach(b => b.classList.remove("dim"));
     };
 
-    box.querySelectorAll(".hit").forEach((hit) => {
+    box.querySelectorAll(".hit").forEach(hit => {
       hit.addEventListener("mouseenter", () => {
         const b = buckets[Number(hit.dataset.i)];
-        bars.forEach((el) =>
-          el.classList.toggle("dim", el.dataset.i !== hit.dataset.i),
-        );
+        bars.forEach(el => el.classList.toggle("dim", el.dataset.i !== hit.dataset.i));
         if (!tip) return;
 
-        const when =
-          unit === "week"
-            ? `Week of ${b.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-            : b.start.toLocaleDateString(
-                undefined,
-                unit === "month"
-                  ? { month: "long", year: "numeric" }
-                  : {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    },
-              );
+        const when = unit === "week"
+          ? `Week of ${b.start.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+          : b.start.toLocaleDateString(undefined, unit === "month" ? { month: "long", year: "numeric" } : { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
         tip.innerHTML = `${escapeHTML(when)}<b>${formatCurrency(b.total)}</b>${b.count} order${b.count === 1 ? "" : "s"}`;
         tip.hidden = false;
 
-        const hr = hit.getBoundingClientRect(),
-          pr = panel.getBoundingClientRect();
-        const left = Math.min(
-          Math.max(hr.left - pr.left + hr.width / 2 - tip.offsetWidth / 2, 8),
-          pr.width - tip.offsetWidth - 8,
-        );
+        const hr = hit.getBoundingClientRect(), pr = panel.getBoundingClientRect();
+        const left = Math.min(Math.max(hr.left - pr.left + hr.width / 2 - tip.offsetWidth / 2, 8), pr.width - tip.offsetWidth - 8);
         tip.style.left = `${left}px`;
         tip.style.top = `${hr.top - pr.top + 4}px`;
       });
@@ -2838,165 +3849,113 @@ Object.assign(AdminApp.prototype, {
     svgEl.addEventListener("mouseleave", hide);
   },
 
+
   async downloadBackup() {
     const button = this.dom.backupBtn;
     const label = button?.textContent;
 
     try {
-      if (button) {
-        button.disabled = true;
-        button.textContent = "Preparing backup…";
-      }
+      if (button) { button.disabled = true; button.textContent = "Preparing backup…"; }
 
       const [data, XLSX] = await Promise.all([
         this.request("GET", { action: "adminBackup" }),
-        import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm"),
+        import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm")
       ]);
 
-      const list = (v) => (Array.isArray(v) ? v.join(", ") : (v ?? ""));
-      const when = (v) => (v ? new Date(v).toLocaleString() : "");
+      const list = v => Array.isArray(v) ? v.join(", ") : (v ?? "");
+      const when = v => v ? new Date(v).toLocaleString() : "";
 
       const sheets = {
-        Orders: data.orders.map((o) => ({
+        Orders: data.orders.map(o => ({
           "Order ID": o.order_id,
-          Date: when(o.created_at),
-          Status: o.status,
+          "Date": when(o.created_at),
+          "Status": o.status,
           "Full Name": o.fullname,
-          Contact: o.contact,
-          Items: (o.items || []).map((i) => `${i.name} × ${i.qty}`).join(" | "),
-          Bottles: o.quantity,
-          Subtotal: Number(o.subtotal),
-          Discount: Number(o.discount),
-          Total: Number(o.total),
+          "Contact": o.contact,
+          "Items": (o.items || []).map(i => `${i.name} × ${i.qty}`).join(" | "),
+          "Bottles": o.quantity,
+          "Subtotal": Number(o.subtotal),
+          "Discount": Number(o.discount),
+          "Total": Number(o.total),
           "Amount Paid": o.amount_paid == null ? "" : Number(o.amount_paid),
           "Payment Status": o.payment_status || "Unpaid",
           "Payment Ref": o.payment_ref || "",
           "Payment Note": o.payment_note || "",
-          Promo: o.promotion_name || "",
-          Voucher: o.voucher_code || "",
+          "Promo": o.promotion_name || "",
+          "Voucher": o.voucher_code || "",
           "Delivery / Meetup": o.address,
-          Payment: o.payment,
-          Notes: o.notes,
-          "Items JSON": JSON.stringify(o.items || []),
+          "Payment": o.payment,
+          "Notes": o.notes,
+          "Items JSON": JSON.stringify(o.items || [])
         })),
-        Products: data.products.map((p) => ({
-          ID: p.id,
-          Name: p.name,
-          Category: p.cat,
-          Price: Number(p.price),
-          Cost: p.cost == null ? "" : Number(p.cost),
-          Stock: p.stock ?? "unlimited",
-          Active: p.active ? "TRUE" : "FALSE",
-          Badges: list(p.badges),
-          "Sort Order": p.sort_order,
-          "Image URL": p.img,
-          Description: p.descr,
-          "Long Description": p.desc_long,
-          "Top Notes": list(p.top_notes),
-          "Heart Notes": list(p.heart_notes),
-          "Base Notes": list(p.base_notes),
-          Profiles: list(p.profiles),
-          Longevity: p.longevity,
-          Projection: p.projection,
-          Strength: p.strength,
-          Time: list(p.time),
-          Occasion: p.occasion,
-          Application: p.application,
+        Products: data.products.map(p => ({
+          "ID": p.id, "Name": p.name, "Category": p.cat, "Price": Number(p.price),
+          "Cost": p.cost == null ? "" : Number(p.cost),
+          "Stock": p.stock ?? "unlimited", "Active": p.active ? "TRUE" : "FALSE",
+          "Badges": list(p.badges), "Sort Order": p.sort_order, "Image URL": p.img,
+          "Description": p.descr, "Long Description": p.desc_long,
+          "Top Notes": list(p.top_notes), "Heart Notes": list(p.heart_notes), "Base Notes": list(p.base_notes),
+          "Profiles": list(p.profiles), "Longevity": p.longevity, "Projection": p.projection,
+          "Strength": p.strength, "Time": list(p.time), "Occasion": p.occasion, "Application": p.application
         })),
-        Promotions: data.promotions.map((p) => ({
-          ID: p.id,
-          Name: p.name,
-          Type: p.type,
-          "Min Qty": p.min_qty,
-          "Fixed Total": Number(p.fixed_total),
-          "Percent Off": Number(p.percent_off),
-          Active: p.active ? "TRUE" : "FALSE",
+        Promotions: data.promotions.map(p => ({
+          "ID": p.id, "Name": p.name, "Type": p.type, "Min Qty": p.min_qty,
+          "Fixed Total": Number(p.fixed_total), "Percent Off": Number(p.percent_off), "Active": p.active ? "TRUE" : "FALSE"
         })),
-        Reviews: data.reviews.map((r) => ({
-          Date: when(r.created_at),
-          "Review ID": r.id,
-          "Customer Name": r.name,
-          Scent: r.scent,
-          Rating: r.rating,
-          Review: r.review,
-          "Photo URL": r.photo_url || "",
-          Status: r.approved ? "Approved" : "Pending",
+        Reviews: data.reviews.map(r => ({
+          "Date": when(r.created_at), "Review ID": r.id, "Customer Name": r.name, "Scent": r.scent,
+          "Rating": r.rating, "Review": r.review, "Photo URL": r.photo_url || "",
+          "Status": r.approved ? "Approved" : "Pending"
         })),
-        "Audit Log": data.audit.map((a) => ({
-          Date: when(a.created_at),
-          Actor: a.actor,
-          Action: a.action,
-        })),
-        Vouchers: (data.vouchers || []).map((v) => ({
-          Code: v.code,
-          Type: v.type,
-          Value: Number(v.value),
+        "Audit Log": data.audit.map(a => ({ "Date": when(a.created_at), "Actor": a.actor, "Action": a.action })),
+        Vouchers: (data.vouchers || []).map(v => ({
+          "Code": v.code, "Type": v.type, "Value": Number(v.value),
           "Max Discount": v.max_discount == null ? "" : Number(v.max_discount),
-          "Min Order": Number(v.min_order),
-          Starts: when(v.starts_at),
-          Expires: when(v.expires_at),
-          "Usage Limit": v.usage_limit ?? "",
-          "Per Customer": v.per_customer ?? "",
-          Active: v.active ? "TRUE" : "FALSE",
-          Note: v.note,
+          "Min Order": Number(v.min_order), "Starts": when(v.starts_at), "Expires": when(v.expires_at),
+          "Usage Limit": v.usage_limit ?? "", "Per Customer": v.per_customer ?? "",
+          "First Order Only": v.first_order_only ? "TRUE" : "FALSE",
+          "Active": v.active ? "TRUE" : "FALSE", "Note": v.note
         })),
-        Restocks: (data.restocks || []).map((r) => ({
-          "Date Received": r.received_at,
-          Product: r.product_name,
-          "Product ID": r.product_id || "",
-          Qty: r.qty,
-          "Unit Cost": r.unit_cost == null ? "" : Number(r.unit_cost),
+        "Welcome List": (data.subscribers || []).map(x => ({
+          "Date": when(x.created_at), "Contact": x.contact, "Type": x.kind, "Source": x.source
+        })),
+        Restocks: (data.restocks || []).map(r => ({
+          "Date Received": r.received_at, "Product": r.product_name, "Product ID": r.product_id || "",
+          "Qty": r.qty, "Unit Cost": r.unit_cost == null ? "" : Number(r.unit_cost),
           "Total Cost": r.unit_cost == null ? "" : Number(r.unit_cost) * r.qty,
-          Supplier: r.supplier,
-          Note: r.note,
-          "Recorded By": r.created_by,
+          "Supplier": r.supplier, "Note": r.note, "Recorded By": r.created_by
         })),
-        Settings: Object.entries(data.settings[0]?.data || {}).map(
-          ([Key, Value]) => ({ Key, Value: String(Value) }),
-        ),
+        Settings: Object.entries(data.settings[0]?.data || {}).map(([Key, Value]) => ({ Key, Value: String(Value) }))
       };
 
       const book = XLSX.utils.book_new();
       Object.entries(sheets).forEach(([name, rows]) => {
-        const sheet = rows.length
-          ? XLSX.utils.json_to_sheet(rows)
-          : XLSX.utils.aoa_to_sheet([["(empty)"]]);
+        const sheet = rows.length ? XLSX.utils.json_to_sheet(rows) : XLSX.utils.aoa_to_sheet([["(empty)"]]);
         XLSX.utils.book_append_sheet(book, sheet, name);
       });
 
       XLSX.writeFile(book, `aura-essence-backup-${dayKey(new Date())}.xlsx`);
-      this.setStatus(
-        `Backup downloaded: ${data.orders.length} orders, ${data.products.length} products, ${data.reviews.length} reviews`,
-      );
+      this.setStatus(`Backup downloaded: ${data.orders.length} orders, ${data.products.length} products, ${data.reviews.length} reviews`);
+
     } catch (error) {
       this.setStatus("Backup failed: " + error.message, true);
     } finally {
-      if (button) {
-        button.disabled = false;
-        button.textContent = label;
-      }
+      if (button) { button.disabled = false; button.textContent = label; }
     }
-  },
+  }
 });
+
 
 /* =========================================================
    ORDER DETAILS · PAYMENTS · NEW-ORDER ALERT
 ========================================================= */
 
 function peso(value) {
-  return (
-    "₱" +
-    Number(value || 0).toLocaleString(undefined, {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    })
-  );
+  return "₱" + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
 
 function last10(contact) {
-  return String(contact || "")
-    .replace(/\D/g, "")
-    .slice(-10);
+  return String(contact || "").replace(/\D/g, "").slice(-10);
 }
 
 // Short two-tone chime, no audio file needed. Browsers may block it
@@ -3010,14 +3969,8 @@ function playChime() {
       osc.frequency.value = freq;
       osc.type = "sine";
       gain.gain.setValueAtTime(0.0001, ctx.currentTime + i * 0.18);
-      gain.gain.exponentialRampToValueAtTime(
-        0.25,
-        ctx.currentTime + i * 0.18 + 0.02,
-      );
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ctx.currentTime + i * 0.18 + 0.35,
-      );
+      gain.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + i * 0.18 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.18 + 0.35);
       osc.connect(gain).connect(ctx.destination);
       osc.start(ctx.currentTime + i * 0.18);
       osc.stop(ctx.currentTime + i * 0.18 + 0.4);
@@ -3029,19 +3982,20 @@ function playChime() {
 }
 
 Object.assign(AdminApp.prototype, {
+
   findOrder(orderId) {
-    return this.orders.find((o) => String(o.orderId) === String(orderId));
+    return this.orders.find(o => String(o.orderId) === String(orderId));
   },
 
+
   replaceOrder(orderId, fresh, fallback = {}) {
-    const i = this.orders.findIndex(
-      (o) => String(o.orderId) === String(orderId),
-    );
+    const i = this.orders.findIndex(o => String(o.orderId) === String(orderId));
     if (i < 0) return;
     this.orders[i] = fresh ? fresh : { ...this.orders[i], ...fallback };
     this.rebuildOrderIndex();
     this.renderOrders();
   },
+
 
   advanceOrder(orderId) {
     const order = this.findOrder(orderId);
@@ -3049,13 +4003,14 @@ Object.assign(AdminApp.prototype, {
     if (next) this.updateOrder(orderId, next);
   },
 
+
   cancelOrder(orderId) {
     const order = this.findOrder(orderId);
     if (!order) return;
-    if (!confirm(`Cancel order ${orderId}?\n\nThe bottles go back into stock.`))
-      return;
+    if (!confirm(`Cancel order ${orderId}?\n\nThe bottles go back into stock.`)) return;
     this.updateOrder(orderId, "Cancelled");
   },
+
 
   setOrderStatus(orderId, status) {
     const order = this.findOrder(orderId);
@@ -3063,28 +4018,22 @@ Object.assign(AdminApp.prototype, {
 
     if (status === "Cancelled") return this.cancelOrder(orderId);
 
-    if (
-      order.status === "Cancelled" &&
-      !confirm(
-        `Re-open this cancelled order as "${status}"?\n\nIts bottles will be taken out of stock again.`,
-      )
-    ) {
+    if (order.status === "Cancelled" &&
+        !confirm(`Re-open this cancelled order as "${status}"?\n\nIts bottles will be taken out of stock again.`)) {
       return;
     }
 
     this.updateOrder(orderId, status);
   },
 
+
   closeOrder() {
-    if (
-      !this.dom.orderDrawer ||
-      this.dom.orderDrawer.classList.contains("hidden")
-    )
-      return;
+    if (!this.dom.orderDrawer || this.dom.orderDrawer.classList.contains("hidden")) return;
     this.dom.orderDrawer.classList.add("hidden");
     this.dom.orderDrawer.setAttribute("aria-hidden", "true");
     this.openOrderId = null;
   },
+
 
   openOrder(orderId) {
     const order = this.findOrder(orderId);
@@ -3095,30 +4044,20 @@ Object.assign(AdminApp.prototype, {
 
     const items = Array.isArray(order.items) ? order.items : [];
     const total = Number(order.total || 0);
-    const subtotal =
-      Number(order.subtotal || 0) ||
-      items.reduce(
-        (sum, i) => sum + Number(i.price || 0) * Number(i.qty || 0),
-        0,
-      ) ||
-      total;
+    const subtotal = Number(order.subtotal || 0) || items.reduce((sum, i) => sum + Number(i.price || 0) * Number(i.qty || 0), 0) || total;
     const promoDiscount = Number(order.discount || 0);
 
     const sameCustomer = this.orders
-      .filter(
-        (o) => last10(o.contact) && last10(o.contact) === last10(order.contact),
-      )
+      .filter(o => last10(o.contact) && last10(o.contact) === last10(order.contact))
       .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    const nth = sameCustomer.findIndex((o) => o.orderId === order.orderId) + 1;
-    const buyerText =
-      sameCustomer.length <= 1
-        ? "First order from this customer"
-        : `Order ${nth} of ${sameCustomer.length} from this customer · repeat buyer`;
+    const nth = sameCustomer.findIndex(o => o.orderId === order.orderId) + 1;
+    const buyerText = sameCustomer.length <= 1
+      ? "First order from this customer"
+      : `Order ${nth} of ${sameCustomer.length} from this customer · repeat buyer`;
 
-    const history =
-      order.history && order.history.length
-        ? order.history
-        : [{ status: "New", at: order.timestamp, by: "customer" }];
+    const history = (order.history && order.history.length)
+      ? order.history
+      : [{ status: "New", at: order.timestamp, by: "customer" }];
 
     const next = NEXT_STATUS[order.status];
 
@@ -3138,9 +4077,7 @@ Object.assign(AdminApp.prototype, {
           ${order.status !== "Cancelled" ? `<button class="btn danger" type="button" data-d-cancel>Cancel order</button>` : ""}
           <select data-d-status aria-label="Change status">
             <option value="">Change status…</option>
-            ${ORDER_STATUSES.filter((st) => st !== order.status)
-              .map((st) => `<option>${escapeHTML(st)}</option>`)
-              .join("")}
+            ${ORDER_STATUSES.filter(st => st !== order.status).map(st => `<option>${escapeHTML(st)}</option>`).join("")}
           </select>
         </div>
       </div>
@@ -3161,18 +4098,11 @@ Object.assign(AdminApp.prototype, {
         <h4>Items</h4>
         <table class="items">
           <tbody>
-            ${
-              items
-                .map(
-                  (i) => `
+            ${items.map(i => `
               <tr>
                 <td>${escapeHTML(i.name || i.id)} × ${escapeHTML(i.qty)}</td>
                 <td>${i.price != null ? peso(Number(i.price) * Number(i.qty || 0)) : ""}</td>
-              </tr>`,
-                )
-                .join("") ||
-              `<tr><td>${escapeHTML(order.scent || "—")}</td><td></td></tr>`
-            }
+              </tr>`).join("") || `<tr><td>${escapeHTML(order.scent || "—")}</td><td></td></tr>`}
           </tbody>
           <tfoot>
             <tr><td>Subtotal</td><td>${peso(subtotal)}</td></tr>
@@ -3187,12 +4117,8 @@ Object.assign(AdminApp.prototype, {
         <form class="pay-form" data-d-pay>
           <label>Status
             <select name="paymentStatus">
-              ${["Unpaid", "Partial", "Paid", "Refunded"]
-                .map(
-                  (st) =>
-                    `<option ${st === (order.paymentStatus || "Unpaid") ? "selected" : ""}>${st}</option>`,
-                )
-                .join("")}
+              ${["Unpaid", "Partial", "Paid", "Refunded"].map(st =>
+                `<option ${st === (order.paymentStatus || "Unpaid") ? "selected" : ""}>${st}</option>`).join("")}
             </select>
           </label>
           <label>Amount received (₱)
@@ -3216,14 +4142,10 @@ Object.assign(AdminApp.prototype, {
       <div class="drawer-sec">
         <h4>Timeline</h4>
         <ul class="timeline">
-          ${history
-            .map(
-              (h) => `
+          ${history.map(h => `
             <li><div>${escapeHTML(h.status)}
               <small>${h.at ? escapeHTML(new Date(h.at).toLocaleString()) : ""}${h.by ? " · " + escapeHTML(h.by) : ""}</small>
-            </div></li>`,
-            )
-            .join("")}
+            </div></li>`).join("")}
           ${order.paidAt ? `<li><div>Payment received<small>${escapeHTML(new Date(order.paidAt).toLocaleString())}</small></div></li>` : ""}
         </ul>
       </div>
@@ -3249,8 +4171,7 @@ Object.assign(AdminApp.prototype, {
         summary.classList.add("warn");
         summary.textContent = `Balance to collect: ${peso(Math.max(0, total - amount))} (received ${peso(amount)})`;
       } else if (st === "Refunded") {
-        summary.textContent =
-          "Refunded — this order no longer counts as money received once you set the amount to 0.";
+        summary.textContent = "Refunded — this order no longer counts as money received once you set the amount to 0.";
       } else {
         summary.textContent = `To collect: ${peso(total)}`;
       }
@@ -3259,17 +4180,17 @@ Object.assign(AdminApp.prototype, {
     form.addEventListener("input", updateSummary);
     updateSummary();
 
-    form.addEventListener("submit", (e) => {
+    form.addEventListener("submit", e => {
       e.preventDefault();
       const st = form.paymentStatus.value;
       let amount = form.amountPaid.value.trim();
-      if (st === "Paid" && amount === "") amount = String(total); // blank = paid in full
+      if (st === "Paid" && amount === "") amount = String(total);   // blank = paid in full
       if (st === "Refunded" && amount === "") amount = "0";
       this.savePayment(order.orderId, {
         paymentStatus: st,
         amountPaid: amount,
         paymentRef: form.paymentRef.value,
-        paymentNote: form.paymentNote.value,
+        paymentNote: form.paymentNote.value
       });
     });
 
@@ -3278,17 +4199,13 @@ Object.assign(AdminApp.prototype, {
         paymentStatus: "Paid",
         amountPaid: String(total),
         paymentRef: form.paymentRef.value,
-        paymentNote: form.paymentNote.value,
+        paymentNote: form.paymentNote.value
       });
     });
 
-    body
-      .querySelector("[data-d-next]")
-      ?.addEventListener("click", () => this.advanceOrder(order.orderId));
-    body
-      .querySelector("[data-d-cancel]")
-      ?.addEventListener("click", () => this.cancelOrder(order.orderId));
-    body.querySelector("[data-d-status]")?.addEventListener("change", (e) => {
+    body.querySelector("[data-d-next]")?.addEventListener("click", () => this.advanceOrder(order.orderId));
+    body.querySelector("[data-d-cancel]")?.addEventListener("click", () => this.cancelOrder(order.orderId));
+    body.querySelector("[data-d-status]")?.addEventListener("change", e => {
       const value = e.target.value;
       e.target.value = "";
       this.setOrderStatus(order.orderId, value);
@@ -3298,13 +4215,10 @@ Object.assign(AdminApp.prototype, {
     this.dom.orderDrawer.setAttribute("aria-hidden", "false");
   },
 
+
   async savePayment(orderId, payment) {
     try {
-      const response = await this.request("POST", {
-        action: "adminSavePayment",
-        orderId,
-        ...payment,
-      });
+      const response = await this.request("POST", { action: "adminSavePayment", orderId, ...payment });
       this.replaceOrder(orderId, response.order);
       this.setStatus(`Payment saved for ${orderId}`);
       if (this.openOrderId === orderId) this.openOrder(orderId);
@@ -3314,42 +4228,40 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   // Called after every orders refresh: chime + badge for orders we haven't seen.
   checkNewOrders() {
-    const ids = new Set(this.orders.map((o) => o.orderId));
+    const ids = new Set(this.orders.map(o => o.orderId));
 
     if (!this.knownOrderIds) {
-      this.knownOrderIds = ids; // first load: nothing is "new"
+      this.knownOrderIds = ids;      // first load: nothing is "new"
       this.updateOrderBadge();
       return;
     }
 
-    const fresh = this.orders.filter((o) => !this.knownOrderIds.has(o.orderId));
+    const fresh = this.orders.filter(o => !this.knownOrderIds.has(o.orderId));
     this.knownOrderIds = ids;
 
     if (fresh.length) {
-      const viewingOrders = !document
-        .getElementById("ordersView")
-        ?.classList.contains("hidden");
+      const viewingOrders = !document.getElementById("ordersView")?.classList.contains("hidden");
       if (!viewingOrders || document.hidden) {
         this.unseenOrders = (this.unseenOrders || 0) + fresh.length;
       }
       playChime();
-      this.setStatus(
-        fresh.length === 1
-          ? `New order from ${fresh[0].fullname} (${peso(fresh[0].total)})`
-          : `${fresh.length} new orders`,
-      );
+      this.setStatus(fresh.length === 1
+        ? `New order from ${fresh[0].fullname} (${peso(fresh[0].total)})`
+        : `${fresh.length} new orders`);
     }
 
     this.updateOrderBadge();
   },
 
+
   updateOrderBadge() {
     const navButton = document.querySelector('.nav-item[data-view="orders"]');
     if (!navButton) return;
 
-    const newCount = this.orders.filter((o) => o.status === "New").length;
+    const newCount = this.orders.filter(o => o.status === "New").length;
     let badge = navButton.querySelector(".nav-badge");
 
     if (newCount > 0) {
@@ -3365,48 +4277,65 @@ Object.assign(AdminApp.prototype, {
     }
 
     const base = this.baseTitle || (this.baseTitle = document.title);
-    document.title = this.unseenOrders
-      ? `(${this.unseenOrders}) ${base}`
-      : base;
-  },
+    document.title = this.unseenOrders ? `(${this.unseenOrders}) ${base}` : base;
+  }
 });
+
 
 /* =========================================================
    REVIEWS (moderation)
 ========================================================= */
 
 Object.assign(AdminApp.prototype, {
-  async loadReviews() {
-    try {
-      const response = await this.request(
-        "GET",
-        this.params({
-          action: "adminReviews",
-        }),
-      );
 
-      this.reviews = Array.isArray(response?.reviews) ? response.reviews : [];
+  async loadReviews() {
+
+    try {
+
+      const response =
+        await this.request(
+          "GET",
+          this.params({
+            action: "adminReviews"
+          })
+        );
+
+      this.reviews =
+        Array.isArray(response?.reviews)
+          ? response.reviews
+          : [];
 
       this.renderReviews();
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   },
 
+
   renderReviews() {
-    const table = this.dom.reviewsRows;
+
+    const table =
+      this.dom.reviewsRows;
 
     if (!table) return;
 
     if (!this.reviews.length) {
-      table.innerHTML = `<tr><td colspan="6" class="muted">No reviews yet.</td></tr>`;
+
+      table.innerHTML =
+        `<tr><td colspan="6" class="muted">No reviews yet.</td></tr>`;
 
       return;
     }
 
-    table.innerHTML = this.reviews
-      .map(
-        (review) => `
+    table.innerHTML =
+      this.reviews
+        .map(
+          review => `
             <tr>
               <td>
                 ${
@@ -3434,52 +4363,71 @@ Object.assign(AdminApp.prototype, {
                 <button class="btn danger" data-review="${escapeHTML(review.id)}" data-op="delete">Delete</button>
               </td>
             </tr>
-          `,
-      )
-      .join("");
+          `
+        )
+        .join("");
   },
 
+
   async setReviewApproved(id, approved) {
+
     try {
+
       await this.request(
         "POST",
         this.params({
           action: "adminSetReviewApproved",
           id,
-          approved,
-        }),
+          approved
+        })
       );
 
-      this.setStatus(approved ? "Review approved" : "Review hidden");
+      this.setStatus(
+        approved ? "Review approved" : "Review hidden"
+      );
 
       await this.loadReviews();
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
   },
 
+
   async deleteReview(id) {
+
     if (!confirm("Delete this review and its photo?")) {
       return;
     }
 
     try {
+
       await this.request(
         "POST",
         this.params({
           action: "adminDeleteReview",
-          id,
-        }),
+          id
+        })
       );
 
       this.setStatus("Review deleted");
 
       await this.loadReviews();
+
     } catch (error) {
-      this.setStatus(error.message, true);
+
+      this.setStatus(
+        error.message,
+        true
+      );
     }
-  },
+  }
 });
+
 
 /* =========================================================
    ADMIN UI v2
@@ -3502,28 +4450,16 @@ function timeAgo(value) {
   if (s < 60) return "just now";
   if (s < 3600) return `${Math.floor(s / 60)} min ago`;
   if (s < 86400) return `${Math.floor(s / 3600)} hr ago`;
-  if (s < 86400 * 7)
-    return `${Math.floor(s / 86400)} day${s < 172800 ? "" : "s"} ago`;
-  return new Date(t).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  });
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)} day${s < 172800 ? "" : "s"} ago`;
+  return new Date(t).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function readSeen() {
-  try {
-    return new Set(JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || "[]"));
-  } catch {
-    return new Set();
-  }
+  try { return new Set(JSON.parse(localStorage.getItem(NOTIF_SEEN_KEY) || "[]")); } catch { return new Set(); }
 }
 
 function writeSeen(set) {
-  try {
-    localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify([...set].slice(-400)));
-  } catch {
-    /* ignore */
-  }
+  try { localStorage.setItem(NOTIF_SEEN_KEY, JSON.stringify([...set].slice(-400))); } catch { /* ignore */ }
 }
 
 function pctChange(now, before) {
@@ -3549,10 +4485,11 @@ const _orig = {
   loadSettings: AdminApp.prototype.loadSettings,
   editPromotion: AdminApp.prototype.editPromotion,
   editProduct: AdminApp.prototype.editProduct,
-  updateOrderBadge: AdminApp.prototype.updateOrderBadge,
+  updateOrderBadge: AdminApp.prototype.updateOrderBadge
 };
 
 Object.assign(AdminApp.prototype, {
+
   /* ---------------------------------------------------
      Setup
   --------------------------------------------------- */
@@ -3560,33 +4497,13 @@ Object.assign(AdminApp.prototype, {
   cacheDOM() {
     _orig.cacheDOM.call(this);
     [
-      "notifBtn",
-      "notifCount",
-      "notifPanel",
-      "notifList",
-      "notifReadAll",
-      "toastStack",
-      "dialog",
-      "dialogTitle",
-      "dialogMessage",
-      "dialogInput",
-      "dialogOk",
-      "dialogCancel",
-      "moreBtn",
-      "moreSheet",
-      "mOrdersBadge",
-      "mMoreBadge",
-      "mReviewsBadge",
-      "promoTitle",
-      "promoPreview",
-      "reviewTabs",
-      "auditList",
-      "auditFilter",
-      "auditSearch",
-    ].forEach((id) => {
-      this.dom[id] = document.getElementById(id);
-    });
+      "notifBtn", "notifCount", "notifPanel", "notifList", "notifReadAll",
+      "toastStack", "dialog", "dialogTitle", "dialogMessage", "dialogInput", "dialogOk", "dialogCancel",
+      "moreBtn", "moreSheet", "mOrdersBadge", "mMoreBadge", "mReviewsBadge",
+      "promoTitle", "promoPreview", "reviewTabs", "auditList", "auditFilter", "auditSearch"
+    ].forEach(id => { this.dom[id] = document.getElementById(id); });
   },
+
 
   bind() {
     this.notifs = new Map();
@@ -3596,7 +4513,7 @@ Object.assign(AdminApp.prototype, {
     _orig.bind.call(this);
 
     /* Notifications bell */
-    this.dom.notifBtn?.addEventListener("click", (e) => {
+    this.dom.notifBtn?.addEventListener("click", e => {
       e.stopPropagation();
       this.toggleNotifPanel();
     });
@@ -3605,7 +4522,7 @@ Object.assign(AdminApp.prototype, {
       writeSeen(this.notifSeen);
       this.renderNotifications();
     });
-    this.dom.notifList?.addEventListener("click", (e) => {
+    this.dom.notifList?.addEventListener("click", e => {
       const item = e.target.closest("[data-notif]");
       if (!item) return;
       const n = this.notifs.get(item.dataset.notif);
@@ -3614,127 +4531,79 @@ Object.assign(AdminApp.prototype, {
       this.toggleNotifPanel(false);
       if (n) this.runNotifAction(n);
     });
-    document.addEventListener("click", (e) => {
-      if (
-        !this.dom.notifPanel?.classList.contains("hidden") &&
-        !e.target.closest(".notif-wrap")
-      ) {
+    document.addEventListener("click", e => {
+      if (!this.dom.notifPanel?.classList.contains("hidden") && !e.target.closest(".notif-wrap")) {
         this.toggleNotifPanel(false);
       }
     });
 
     /* Dialog */
-    this.dom.dialogCancel?.addEventListener("click", () =>
-      this.closeDialog(null),
-    );
-    this.dom.dialog
-      ?.querySelector(".modal-backdrop")
-      ?.addEventListener("click", () => this.closeDialog(null));
+    this.dom.dialogCancel?.addEventListener("click", () => this.closeDialog(null));
+    this.dom.dialog?.querySelector(".modal-backdrop")?.addEventListener("click", () => this.closeDialog(null));
     this.dom.dialogOk?.addEventListener("click", () => this.closeDialog(true));
-    this.dom.dialogInput?.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") this.closeDialog(true);
-    });
+    this.dom.dialogInput?.addEventListener("keydown", e => { if (e.key === "Enter") this.closeDialog(true); });
 
     /* Escape closes whatever is on top */
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener("keydown", e => {
       if (e.key !== "Escape") return;
-      if (!this.dom.dialog?.classList.contains("hidden"))
-        return this.closeDialog(null);
+      if (!this.dom.dialog?.classList.contains("hidden")) return this.closeDialog(null);
       this.toggleNotifPanel(false);
       this.closeEditors();
       this.dom.moreSheet?.classList.add("hidden");
     });
 
     /* Side editors: backdrop closes */
-    document
-      .querySelectorAll("[data-close-editor]")
-      .forEach((el) => el.addEventListener("click", () => this.closeEditors()));
+    document.querySelectorAll("[data-close-editor]").forEach(el =>
+      el.addEventListener("click", () => this.closeEditors()));
 
     /* Busy buttons: remember the button that started an action */
-    document.addEventListener(
-      "click",
-      (e) => {
-        const btn = e.target.closest("button, .btn");
-        if (
-          !btn ||
-          btn.closest(
-            ".modal, .side-nav, .mobile-nav, .tabs, .more-panel, .notif-wrap",
-          )
-        )
-          return;
-        this._busyCandidate = { btn, at: Date.now() };
-      },
-      true,
-    );
-    document.addEventListener(
-      "submit",
-      (e) => {
-        if (e.submitter)
-          this._busyCandidate = { btn: e.submitter, at: Date.now() };
-      },
-      true,
-    );
+    document.addEventListener("click", e => {
+      const btn = e.target.closest("button, .btn");
+      if (!btn || btn.closest(".modal, .side-nav, .mobile-nav, .tabs, .more-panel, .notif-wrap")) return;
+      this._busyCandidate = { btn, at: Date.now() };
+    }, true);
+    document.addEventListener("submit", e => {
+      if (e.submitter) this._busyCandidate = { btn: e.submitter, at: Date.now() };
+    }, true);
 
     /* Mobile navigation */
-    document
-      .querySelectorAll(".m-nav[data-view], .more-panel [data-view]")
-      .forEach((btn) =>
-        btn.addEventListener("click", () => this.showView(btn.dataset.view)),
-      );
+    document.querySelectorAll(".m-nav[data-view], .more-panel [data-view]").forEach(btn =>
+      btn.addEventListener("click", () => this.showView(btn.dataset.view)));
     this.dom.moreBtn?.addEventListener("click", () => {
       const open = this.dom.moreSheet.classList.toggle("hidden") === false;
       this.dom.moreBtn.setAttribute("aria-expanded", String(open));
     });
-    this.dom.moreSheet
-      ?.querySelector("[data-close-more]")
-      ?.addEventListener("click", () =>
-        this.dom.moreSheet.classList.add("hidden"),
-      );
-    this.dom.moreSheet?.addEventListener("click", (e) => {
+    this.dom.moreSheet?.querySelector("[data-close-more]")?.addEventListener("click", () =>
+      this.dom.moreSheet.classList.add("hidden"));
+    this.dom.moreSheet?.addEventListener("click", e => {
       const action = e.target.closest("[data-more-action]")?.dataset.moreAction;
-      if (action === "backup") {
-        this.dom.moreSheet.classList.add("hidden");
-        this.downloadBackup();
-      }
+      if (action === "backup") { this.dom.moreSheet.classList.add("hidden"); this.downloadBackup(); }
       if (action === "logout") this.dom.logoutBtn?.click();
     });
 
     /* Products: visible switch */
-    this.dom.productsRows?.addEventListener("change", (e) => {
+    this.dom.productsRows?.addEventListener("change", e => {
       const toggle = e.target.closest("[data-toggle-active]");
-      if (toggle)
-        this.setProductActive(
-          toggle.dataset.toggleActive,
-          toggle.checked,
-          toggle,
-        );
+      if (toggle) this.setProductActive(toggle.dataset.toggleActive, toggle.checked, toggle);
     });
 
     /* Promotions: on/off switch + live preview */
-    document.getElementById("promosList")?.addEventListener("change", (e) => {
+    document.getElementById("promosList")?.addEventListener("change", e => {
       const toggle = e.target.closest("[data-promo-toggle]");
-      if (toggle)
-        this.setPromotionActive(
-          toggle.dataset.promoToggle,
-          toggle.checked,
-          toggle,
-        );
+      if (toggle) this.setPromotionActive(toggle.dataset.promoToggle, toggle.checked, toggle);
     });
-    ["promoType", "promoQty", "promoFixed", "promoPercent"].forEach((id) =>
-      document
-        .getElementById(id)
-        ?.addEventListener("input", () => this.updatePromoPreview()),
-    );
+    ["promoType", "promoQty", "promoFixed", "promoPercent"].forEach(id =>
+      document.getElementById(id)?.addEventListener("input", () => this.updatePromoPreview()));
 
     /* Low stock rows open the product */
-    document.getElementById("lowStock")?.addEventListener("click", (e) => {
+    document.getElementById("lowStock")?.addEventListener("click", e => {
       const row = e.target.closest("[data-product]");
       const product = row && this.productMap.get(row.dataset.product);
       if (product) this.editProduct(product);
     });
 
     /* Reviews tabs */
-    this.dom.reviewTabs?.addEventListener("click", (e) => {
+    this.dom.reviewTabs?.addEventListener("click", e => {
       const tab = e.target.closest("[data-rtab]");
       if (!tab) return;
       this._reviewTabAuto = false;
@@ -3744,36 +4613,21 @@ Object.assign(AdminApp.prototype, {
 
     /* Audit filters */
     this.dom.auditFilter?.addEventListener("change", () => this.renderAudit());
-    this.dom.auditSearch?.addEventListener(
-      "input",
-      debounce(() => this.renderAudit(), 150),
-    );
+    this.dom.auditSearch?.addEventListener("input", debounce(() => this.renderAudit(), 150));
 
     /* Body class while a side panel is open (moves pop-ups out of the way) */
-    const drawers = [
-      "orderDrawer",
-      "productEditor",
-      "promoEditor",
-      "voucherEditor",
-    ]
-      .map((id) => document.getElementById(id))
-      .filter(Boolean);
+    const drawers = ["orderDrawer", "productEditor", "promoEditor", "voucherEditor"].map(id => document.getElementById(id)).filter(Boolean);
     const syncDrawerClass = () =>
-      document.body.classList.toggle(
-        "has-drawer",
-        drawers.some((d) => !d.classList.contains("hidden")),
-      );
+      document.body.classList.toggle("has-drawer", drawers.some(d => !d.classList.contains("hidden")));
     const observer = new MutationObserver(syncDrawerClass);
-    drawers.forEach((d) =>
-      observer.observe(d, { attributes: true, attributeFilter: ["class"] }),
-    );
+    drawers.forEach(d => observer.observe(d, { attributes: true, attributeFilter: ["class"] }));
 
     /* Refresh "x min ago" in the bell now and then */
     setInterval(() => {
-      if (!this.dom.notifPanel?.classList.contains("hidden"))
-        this.renderNotifications();
+      if (!this.dom.notifPanel?.classList.contains("hidden")) this.renderNotifications();
     }, 60000);
   },
+
 
   /* ---------------------------------------------------
      Toasts (replace the small status text)
@@ -3796,37 +4650,24 @@ Object.assign(AdminApp.prototype, {
       setTimeout(() => item.remove(), 200);
     };
 
-    item.querySelector("button").addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      remove();
-    });
-    if (options.onClick)
-      item.addEventListener("click", () => {
-        options.onClick();
-        remove();
-      });
+    item.querySelector("button").addEventListener("click", ev => { ev.stopPropagation(); remove(); });
+    if (options.onClick) item.addEventListener("click", () => { options.onClick(); remove(); });
 
     stack.prepend(item);
     while (stack.children.length > 4) stack.lastElementChild.remove();
     setTimeout(remove, options.timeout || (type === "error" ? 7000 : 3500));
   },
 
+
   setStatus(message, error = false) {
     const dot = this.dom.globalStatus;
 
     if (/^Admin connected$/i.test(String(message))) {
-      if (dot) {
-        dot.className = "conn ok";
-        dot.title = "Connected to the database";
-      }
+      if (dot) { dot.className = "conn ok"; dot.title = "Connected to the database"; }
       return;
     }
 
-    if (
-      error &&
-      dot &&
-      /reach the database|Failed to fetch/i.test(String(message))
-    ) {
+    if (error && dot && /reach the database|Failed to fetch/i.test(String(message))) {
       dot.className = "conn error";
       dot.title = "Can't reach the database";
     }
@@ -3834,18 +4675,12 @@ Object.assign(AdminApp.prototype, {
     this.toast(message, error ? "error" : "ok");
   },
 
+
   /* ---------------------------------------------------
      Styled confirm / prompt dialog
   --------------------------------------------------- */
 
-  ask({
-    title,
-    message = "",
-    okText = "OK",
-    cancelText = "Cancel",
-    danger = false,
-    input = null,
-  }) {
+  ask({ title, message = "", okText = "OK", cancelText = "Cancel", danger = false, input = null }) {
     const d = this.dom;
     if (!d.dialog) return Promise.resolve(input ? null : false);
 
@@ -3864,11 +4699,11 @@ Object.assign(AdminApp.prototype, {
     d.dialog.classList.remove("hidden");
     setTimeout(() => (input ? d.dialogInput : d.dialogOk).focus(), 30);
 
-    return new Promise((resolve) => {
-      this._dialogResolve = (value) =>
-        resolve(input ? (value ? d.dialogInput.value : null) : Boolean(value));
+    return new Promise(resolve => {
+      this._dialogResolve = value => resolve(input ? (value ? d.dialogInput.value : null) : Boolean(value));
     });
   },
+
 
   closeDialog(value) {
     this.dom.dialog?.classList.add("hidden");
@@ -3876,6 +4711,7 @@ Object.assign(AdminApp.prototype, {
     this._dialogResolve = null;
     resolve?.(value);
   },
+
 
   /* ---------------------------------------------------
      Busy state on the button that started a save
@@ -3885,13 +4721,9 @@ Object.assign(AdminApp.prototype, {
     const candidate = this._busyCandidate;
     this._busyCandidate = null;
 
-    const btn =
-      method === "POST" &&
-      candidate &&
-      Date.now() - candidate.at < 4000 &&
-      document.contains(candidate.btn)
-        ? candidate.btn
-        : null;
+    const btn = method === "POST" && candidate && Date.now() - candidate.at < 4000 && document.contains(candidate.btn)
+      ? candidate.btn
+      : null;
 
     if (btn) {
       btn.classList.add("is-busy");
@@ -3910,6 +4742,7 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   /* ---------------------------------------------------
      Navigation
   --------------------------------------------------- */
@@ -3917,30 +4750,28 @@ Object.assign(AdminApp.prototype, {
   showView(view) {
     _orig.showView.call(this, view);
 
-    document
-      .querySelectorAll(".m-nav[data-view]")
-      .forEach((btn) =>
-        btn.classList.toggle("active", btn.dataset.view === view),
-      );
+    document.querySelectorAll(".m-nav[data-view]").forEach(btn =>
+      btn.classList.toggle("active", btn.dataset.view === view));
     this.dom.moreBtn?.classList.toggle("active", MORE_VIEWS.includes(view));
     this.dom.moreSheet?.classList.add("hidden");
     this.dom.moreBtn?.setAttribute("aria-expanded", "false");
     this.toggleNotifPanel(false);
 
     const titles = { audit: "Audit Log", homepage: "Homepage & Alerts" };
-    if (this.dom.viewTitle && titles[view])
-      this.dom.viewTitle.textContent = titles[view];
+    if (this.dom.viewTitle && titles[view]) this.dom.viewTitle.textContent = titles[view];
 
     window.scrollTo({ top: 0 });
   },
 
+
   closeEditors() {
-    ["productEditor", "promoEditor"].forEach((id) => {
+    ["productEditor", "promoEditor"].forEach(id => {
       const el = this.dom[id] || document.getElementById(id);
       el?.classList.add("hidden");
       el?.setAttribute("aria-hidden", "true");
     });
   },
+
 
   async openApp() {
     this.initialLoadDone = false;
@@ -3950,6 +4781,7 @@ Object.assign(AdminApp.prototype, {
     this.initialLoadDone = true;
     this.refreshNotifications({ summary: true });
   },
+
 
   /* ---------------------------------------------------
      Data loads → refresh notifications + dashboard
@@ -3962,11 +4794,13 @@ Object.assign(AdminApp.prototype, {
     this.refreshNotifications();
   },
 
+
   async loadProducts() {
     await _orig.loadProducts.call(this);
     this.refreshNotifications();
     if (this.lastDashboard) this.renderDashboard(this.lastDashboard);
   },
+
 
   async loadReviews() {
     await _orig.loadReviews.call(this);
@@ -3974,42 +4808,42 @@ Object.assign(AdminApp.prototype, {
     this.refreshNotifications();
   },
 
+
   async loadSettings() {
     await _orig.loadSettings.call(this);
     this.refreshNotifications();
   },
 
+
   updateOrderBadge() {
     _orig.updateOrderBadge.call(this);
-    const count = this.orders.filter((o) => o.status === "New").length;
+    const count = this.orders.filter(o => o.status === "New").length;
     if (this.dom.mOrdersBadge) {
       this.dom.mOrdersBadge.textContent = count;
       this.dom.mOrdersBadge.hidden = count === 0;
     }
   },
 
+
   updateReviewBadges() {
-    const pending = (this.reviews || []).filter((r) => !r.approved).length;
+    const pending = (this.reviews || []).filter(r => !r.approved).length;
 
     const nav = document.querySelector('.nav-item[data-view="reviews"]');
     let badge = nav?.querySelector(".nav-badge");
     if (nav && pending) {
-      if (!badge) {
-        badge = document.createElement("span");
-        badge.className = "nav-badge";
-        nav.appendChild(badge);
-      }
+      if (!badge) { badge = document.createElement("span"); badge.className = "nav-badge"; nav.appendChild(badge); }
       badge.textContent = pending;
     } else {
       badge?.remove();
     }
 
-    [this.dom.mReviewsBadge, this.dom.mMoreBadge].forEach((el) => {
+    [this.dom.mReviewsBadge, this.dom.mMoreBadge].forEach(el => {
       if (!el) return;
       el.textContent = pending;
       el.hidden = pending === 0;
     });
   },
+
 
   /* ---------------------------------------------------
      Notifications bell
@@ -4021,109 +4855,71 @@ Object.assign(AdminApp.prototype, {
     const list = [];
     const alertAt = Number(this.settings?.lowStockAlertAt ?? 1);
 
-    (this.orders || []).forEach((o) => {
+    (this.orders || []).forEach(o => {
       if (o.status === "New") {
         list.push({
-          id: `order-new:${o.orderId}`,
-          type: "order",
-          time: o.timestamp,
+          id: `order-new:${o.orderId}`, type: "order", time: o.timestamp,
           title: "New order",
-          body: `${o.fullname} · ${peso(o.total)} · ${(o.items || []).map((i) => `${i.name} × ${i.qty}`).join(", ")}`,
-          action: { orderId: o.orderId },
+          body: `${o.fullname} · ${peso(o.total)} · ${(o.items || []).map(i => `${i.name} × ${i.qty}`).join(", ")}`,
+          action: { orderId: o.orderId }
         });
       }
-      if (
-        o.status === "Completed" &&
-        ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid")
-      ) {
-        const owed = Math.max(
-          0,
-          Number(o.total || 0) - Number(o.amountPaid || 0),
-        );
+      if (o.status === "Completed" && ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid")) {
+        const owed = Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0));
         list.push({
-          id: `order-unpaid:${o.orderId}:${o.paymentStatus}`,
-          type: "payment",
-          time: o.timestamp,
+          id: `order-unpaid:${o.orderId}:${o.paymentStatus}`, type: "payment", time: o.timestamp,
           title: "Completed but not fully paid",
           body: `${o.fullname} · ${peso(owed)} to collect · ${o.orderId}`,
-          action: { orderId: o.orderId },
+          action: { orderId: o.orderId }
         });
       }
     });
 
-    (this.products || []).forEach((p) => {
+    (this.products || []).forEach(p => {
       if (p.active === false || p.stock == null) return;
       const stock = Number(p.stock);
       if (stock > alertAt) return;
       list.push({
-        id: `stock:${p.id}:${stock}`,
-        type: "stock",
-        time: null,
+        id: `stock:${p.id}:${stock}`, type: "stock", time: null,
         title: stock === 0 ? "Sold out" : "Low stock",
-        body:
-          stock === 0
-            ? `${p.name} is sold out on the website.`
-            : `${p.name} — only ${stock} left.`,
-        action: { view: "products", stock: stock === 0 ? "out" : "low" },
+        body: stock === 0 ? `${p.name} is sold out on the website.` : `${p.name} — only ${stock} left.`,
+        action: { view: "products", stock: stock === 0 ? "out" : "low" }
       });
     });
 
-    const pending = (this.reviews || []).filter((r) => !r.approved);
+    const pending = (this.reviews || []).filter(r => !r.approved);
     if (pending.length) {
-      const newest = pending
-        .slice()
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+      const newest = pending.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
       list.push({
-        id: `reviews:${pending.length}:${newest?.id}`,
-        type: "review",
-        time: newest?.timestamp,
+        id: `reviews:${pending.length}:${newest?.id}`, type: "review", time: newest?.timestamp,
         title: `${pending.length} review${pending.length === 1 ? "" : "s"} waiting for approval`,
-        body: newest
-          ? `Latest: ${newest.name} on ${newest.scent || "a scent"} (${"★".repeat(Number(newest.rating) || 0)})`
-          : "",
-        action: { view: "reviews", tab: "pending" },
+        body: newest ? `Latest: ${newest.name} on ${newest.scent || "a scent"} (${"★".repeat(Number(newest.rating) || 0)})` : "",
+        action: { view: "reviews", tab: "pending" }
       });
     }
 
-    list.sort(
-      (a, b) =>
-        (b.time ? new Date(b.time) : Infinity) -
-        (a.time ? new Date(a.time) : Infinity),
-    );
+    list.sort((a, b) => (b.time ? new Date(b.time) : Infinity) - (a.time ? new Date(a.time) : Infinity));
 
     // Pop up anything new that appeared after the first full load
-    const fresh =
-      this.initialLoadDone && !options.summary
-        ? list.filter(
-            (n) => !this.notifs.has(n.id) && !this.notifSeen.has(n.id),
-          )
-        : [];
+    const fresh = this.initialLoadDone && !options.summary
+      ? list.filter(n => !this.notifs.has(n.id) && !this.notifSeen.has(n.id))
+      : [];
 
-    this.notifs = new Map(list.slice(0, 50).map((n) => [n.id, n]));
+    this.notifs = new Map(list.slice(0, 50).map(n => [n.id, n]));
     this.renderNotifications();
 
     if (options.summary) {
-      const unread = [...this.notifs.keys()].filter(
-        (id) => !this.notifSeen.has(id),
-      ).length;
+      const unread = [...this.notifs.keys()].filter(id => !this.notifSeen.has(id)).length;
       if (unread) {
-        this.toast(
-          `You have ${unread} new notification${unread === 1 ? "" : "s"}.`,
-          "info",
-          {
-            onClick: () => this.toggleNotifPanel(true),
-          },
-        );
+        this.toast(`You have ${unread} new notification${unread === 1 ? "" : "s"}.`, "info", {
+          onClick: () => this.toggleNotifPanel(true)
+        });
       }
       return;
     }
 
-    fresh.slice(0, 3).forEach((n) => {
-      this.toast(n.body, "info", {
-        title: n.title,
-        onClick: () => this.runNotifAction(n),
-        timeout: 6000,
-      });
+    fresh.slice(0, 3).forEach(n => {
+      this.toast(n.body, "info", { title: n.title, onClick: () => this.runNotifAction(n), timeout: 6000 });
     });
     if (fresh.length) {
       this.dom.notifBtn?.classList.remove("ring");
@@ -4132,26 +4928,22 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   renderNotifications() {
     const listEl = this.dom.notifList;
     if (!listEl) return;
 
     const items = [...this.notifs.values()];
-    const unread = items.filter((n) => !this.notifSeen.has(n.id)).length;
+    const unread = items.filter(n => !this.notifSeen.has(n.id)).length;
 
     if (this.dom.notifCount) {
       this.dom.notifCount.textContent = unread > 9 ? "9+" : unread;
       this.dom.notifCount.hidden = unread === 0;
     }
-    this.dom.notifBtn?.setAttribute(
-      "aria-label",
-      `Notifications${unread ? `, ${unread} unread` : ""}`,
-    );
+    this.dom.notifBtn?.setAttribute("aria-label", `Notifications${unread ? `, ${unread} unread` : ""}`);
 
     listEl.innerHTML = items.length
-      ? items
-          .map(
-            (n) => `
+      ? items.map(n => `
           <button type="button" class="notif-item ${this.notifSeen.has(n.id) ? "" : "unread"}" data-notif="${escapeHTML(n.id)}">
             <span class="notif-icon ${n.type}">${NOTIF_ICON[n.type] || "•"}</span>
             <span>
@@ -4159,11 +4951,10 @@ Object.assign(AdminApp.prototype, {
               <div class="notif-body">${escapeHTML(n.body)}</div>
               ${n.time ? `<div class="notif-time">${escapeHTML(timeAgo(n.time))}</div>` : ""}
             </span>
-          </button>`,
-          )
-          .join("")
+          </button>`).join("")
       : `<div class="notif-empty">You're all caught up ✓</div>`;
   },
+
 
   toggleNotifPanel(force) {
     const panel = this.dom.notifPanel;
@@ -4185,6 +4976,7 @@ Object.assign(AdminApp.prototype, {
       this.renderNotifications();
     }
   },
+
 
   runNotifAction(n) {
     const a = n.action || {};
@@ -4210,9 +5002,10 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   /* New orders: chime + badge (+ the bell via refreshNotifications) */
   checkNewOrders() {
-    const ids = new Set(this.orders.map((o) => o.orderId));
+    const ids = new Set(this.orders.map(o => o.orderId));
 
     if (!this.knownOrderIds) {
       this.knownOrderIds = ids;
@@ -4220,20 +5013,18 @@ Object.assign(AdminApp.prototype, {
       return;
     }
 
-    const fresh = this.orders.filter((o) => !this.knownOrderIds.has(o.orderId));
+    const fresh = this.orders.filter(o => !this.knownOrderIds.has(o.orderId));
     this.knownOrderIds = ids;
 
     if (fresh.length) {
-      const viewingOrders = !document
-        .getElementById("ordersView")
-        ?.classList.contains("hidden");
-      if (!viewingOrders || document.hidden)
-        this.unseenOrders = (this.unseenOrders || 0) + fresh.length;
+      const viewingOrders = !document.getElementById("ordersView")?.classList.contains("hidden");
+      if (!viewingOrders || document.hidden) this.unseenOrders = (this.unseenOrders || 0) + fresh.length;
       playChime();
     }
 
     this.updateOrderBadge();
   },
+
 
   /* ---------------------------------------------------
      Dashboard
@@ -4243,82 +5034,58 @@ Object.assign(AdminApp.prototype, {
     const from = range?.from || new Date(0);
     const to = range?.to || new Date(8640000000000000);
 
-    const orders = (this.orders || []).filter((o) => {
+    const orders = (this.orders || []).filter(o => {
       const t = new Date(o.timestamp);
       return !isNaN(t) && t >= from && t <= to;
     });
 
-    const counted = orders.filter((o) => o.status !== "Cancelled");
-    const expectedOf = (o) =>
-      o.paymentStatus === "Paid" && o.amountPaid != null
-        ? Number(o.amountPaid)
-        : Number(o.total || 0);
+    const counted = orders.filter(o => o.status !== "Cancelled");
+    const expectedOf = o => (o.paymentStatus === "Paid" && o.amountPaid != null) ? Number(o.amountPaid) : Number(o.total || 0);
     const expected = counted.reduce((sum, o) => sum + expectedOf(o), 0);
-    const collected = counted.reduce(
-      (sum, o) =>
-        sum +
-        (["Paid", "Partial"].includes(o.paymentStatus)
-          ? Number(o.amountPaid ?? o.total ?? 0)
-          : 0),
-      0,
-    );
-    const unpaid = counted.filter((o) =>
-      ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid"),
-    );
-    const toCollect = unpaid.reduce(
-      (sum, o) =>
-        sum + Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0)),
-      0,
-    );
+    const collected = counted.reduce((sum, o) =>
+      sum + (["Paid", "Partial"].includes(o.paymentStatus) ? Number(o.amountPaid ?? o.total ?? 0) : 0), 0);
+    const unpaid = counted.filter(o => ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid"));
+    const toCollect = unpaid.reduce((sum, o) => sum + Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0)), 0);
 
-    const customers = new Set(
-      orders.map((o) => last10(o.contact) || normalize(o.fullname)),
-    );
+    const customers = new Set(orders.map(o => last10(o.contact) || normalize(o.fullname)));
 
     const sales = {};
-    counted.forEach((o) =>
-      (o.items || []).forEach((i) => {
-        const key = String(i.id ?? i.name);
-        sales[key] = (sales[key] || 0) + Number(i.qty || 0);
-      }),
-    );
+    counted.forEach(o => (o.items || []).forEach(i => {
+      const key = String(i.id ?? i.name);
+      sales[key] = (sales[key] || 0) + Number(i.qty || 0);
+    }));
 
-    const names = new Map(this.products.map((p) => [String(p.id), p.name]));
+    const names = new Map(this.products.map(p => [String(p.id), p.name]));
     const topProducts = Object.entries(sales)
       .map(([id, units]) => ({ id, name: names.get(id) || id, units }))
-      .filter((t) => t.units > 0)
-      .sort(
-        (a, b) =>
-          b.units - a.units || String(a.name).localeCompare(String(b.name)),
-      )
+      .filter(t => t.units > 0)
+      .sort((a, b) => b.units - a.units || String(a.name).localeCompare(String(b.name)))
       .slice(0, 8);
 
     return {
       stats: {
         orders: orders.length,
-        completed: orders.filter((o) => o.status === "Completed").length,
-        pending: orders.filter((o) => ACTIVE_STATUSES.includes(o.status))
-          .length,
-        cancelled: orders.filter((o) => o.status === "Cancelled").length,
+        completed: orders.filter(o => o.status === "Completed").length,
+        pending: orders.filter(o => ACTIVE_STATUSES.includes(o.status)).length,
+        cancelled: orders.filter(o => o.status === "Cancelled").length,
         customers: customers.size,
         expected,
         collected,
         toCollect,
         unpaidOrders: unpaid.length,
         revenue: expected,
-        averageOrderValue: counted.length ? expected / counted.length : 0,
+        averageOrderValue: counted.length ? expected / counted.length : 0
       },
-      topProducts,
+      topProducts
     };
   },
+
 
   renderDashboard(response) {
     this.lastDashboard = response || {};
 
     const range = this.dashboardRange();
-    let stats,
-      topProducts,
-      prev = null;
+    let stats, topProducts, prev = null;
 
     if (this.ordersLoaded) {
       const now = this.computeDashboard(range);
@@ -4327,34 +5094,25 @@ Object.assign(AdminApp.prototype, {
 
       if (range) {
         const span = range.to - range.from + 1;
-        prev = this.computeDashboard({
-          from: new Date(range.from - span),
-          to: new Date(range.from - 1),
-        }).stats;
+        prev = this.computeDashboard({ from: new Date(range.from - span), to: new Date(range.from - 1) }).stats;
       }
     } else {
       const s = this.lastDashboard.stats || {};
       stats = { ...s, expected: s.revenue || 0, collected: null };
-      topProducts = (this.lastDashboard.topProducts || []).filter(
-        (t) => Number(t.units) > 0,
-      );
+      topProducts = (this.lastDashboard.topProducts || []).filter(t => Number(t.units) > 0);
     }
 
     this.renderRangeLabel(range, stats);
     this.renderRevenueChart(range);
 
-    const days = range
-      ? Math.max(1, Math.round((range.to - range.from + 1) / 86400000))
-      : 0;
+    const days = range ? Math.max(1, Math.round((range.to - range.from + 1) / 86400000)) : 0;
     const prevLabel = days === 1 ? "previous day" : `previous ${days} days`;
 
     const delta = (now, before) => {
       if (!prev) return "";
       const pct = pctChange(now, before);
-      if (pct === null)
-        return `<span class="delta up">▲ new vs ${prevLabel}</span>`;
-      if (pct === 0)
-        return `<span class="delta flat">— same as ${prevLabel}</span>`;
+      if (pct === null) return `<span class="delta up">▲ new vs ${prevLabel}</span>`;
+      if (pct === 0) return `<span class="delta flat">— same as ${prevLabel}</span>`;
       return `<span class="delta ${pct > 0 ? "up" : "down"}">${pct > 0 ? "▲" : "▼"} ${Math.abs(pct)}% vs ${prevLabel}</span>`;
     };
 
@@ -4368,97 +5126,46 @@ Object.assign(AdminApp.prototype, {
 
     if (this.dom.statsCards) {
       this.dom.statsCards.innerHTML = [
-        card(
-          "Orders",
-          stats.orders || 0,
-          `${stats.completed || 0} completed · ${stats.pending || 0} open`,
-          delta(stats.orders, prev?.orders),
-        ),
-        card(
-          "Expected sales",
-          formatCurrency(Math.round(stats.expected || 0)),
-          "after discounts, excl. cancelled",
-          delta(stats.expected, prev?.expected),
-        ),
-        card(
-          "Collected",
-          stats.collected == null
-            ? "—"
-            : formatCurrency(Math.round(stats.collected)),
-          "money received",
-          stats.collected == null
-            ? ""
-            : delta(stats.collected, prev?.collected),
-          "highlight",
-        ),
-        card(
-          "To collect",
-          formatCurrency(Math.round(stats.toCollect || 0)),
-          `${stats.unpaidOrders || 0} unpaid order${Number(stats.unpaidOrders) === 1 ? "" : "s"}`,
-        ),
-        card(
-          "Avg. order",
-          formatCurrency(Math.round(stats.averageOrderValue || 0)),
-          "per order",
-        ),
-        card("Customers", stats.customers || 0, "unique numbers"),
+        card("Orders", stats.orders || 0, `${stats.completed || 0} completed · ${stats.pending || 0} open`, delta(stats.orders, prev?.orders)),
+        card("Expected sales", formatCurrency(Math.round(stats.expected || 0)), "after discounts, excl. cancelled", delta(stats.expected, prev?.expected)),
+        card("Collected", stats.collected == null ? "—" : formatCurrency(Math.round(stats.collected)), "money received", stats.collected == null ? "" : delta(stats.collected, prev?.collected), "highlight"),
+        card("To collect", formatCurrency(Math.round(stats.toCollect || 0)), `${stats.unpaidOrders || 0} unpaid order${Number(stats.unpaidOrders) === 1 ? "" : "s"}`),
+        card("Avg. order", formatCurrency(Math.round(stats.averageOrderValue || 0)), "per order"),
+        card("Customers", stats.customers || 0, "unique numbers")
       ].join("");
     }
 
     /* Top products: only what sold, with a bar */
     if (this.dom.topProducts) {
-      const max = Math.max(1, ...topProducts.map((t) => Number(t.units)));
+      const max = Math.max(1, ...topProducts.map(t => Number(t.units)));
       this.dom.topProducts.innerHTML = topProducts.length
-        ? topProducts
-            .map(
-              (t, i) => `
+        ? topProducts.map((t, i) => `
             <div class="top-row">
               <span>${i + 1}. ${escapeHTML(t.name)}</span><b>${escapeHTML(t.units)}</b>
               <div class="bar"><i style="width:${Math.max(4, (Number(t.units) / max) * 100)}%"></i></div>
-            </div>`,
-            )
-            .join("")
+            </div>`).join("")
         : `<p class="empty-note">No sales in this period yet.</p>`;
     }
 
     /* Low stock: live from products, click to edit */
-    const threshold =
-      Number(
-        this.settings?.lowStockThreshold ??
-          response?.settings?.lowStockThreshold,
-      ) || DEFAULT_LOW_STOCK;
-    if (this.dom.lowStockLabel)
-      this.dom.lowStockLabel.textContent = `At or below ${threshold}`;
+    const threshold = Number(this.settings?.lowStockThreshold ?? response?.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+    if (this.dom.lowStockLabel) this.dom.lowStockLabel.textContent = `At or below ${threshold}`;
 
     if (this.dom.lowStock) {
-      const low = (
-        this.products.length ? this.products : response?.lowStock || []
-      )
-        .filter(
-          (p) =>
-            p.active !== false &&
-            p.stock != null &&
-            Number(p.stock) <= threshold,
-        )
-        .sort(
-          (a, b) =>
-            Number(a.stock) - Number(b.stock) ||
-            String(a.name).localeCompare(String(b.name)),
-        );
+      const low = (this.products.length ? this.products : (response?.lowStock || []))
+        .filter(p => p.active !== false && p.stock != null && Number(p.stock) <= threshold)
+        .sort((a, b) => Number(a.stock) - Number(b.stock) || String(a.name).localeCompare(String(b.name)));
 
       this.dom.lowStock.innerHTML = low.length
-        ? `<div class="mini-list">${low
-            .map(
-              (p) => `
+        ? `<div class="mini-list">${low.map(p => `
             <div class="mini" data-product="${escapeHTML(p.id)}" style="cursor:pointer" title="Edit ${escapeHTML(p.name)}">
               <span>${escapeHTML(p.name)}</span>
               <b style="color:${Number(p.stock) === 0 ? "var(--red)" : "inherit"}">${Number(p.stock) === 0 ? "Sold out" : `${escapeHTML(p.stock)} left`}</b>
-            </div>`,
-            )
-            .join("")}</div>`
+            </div>`).join("")}</div>`
         : `<p class="empty-note">Everything is well stocked.</p>`;
     }
   },
+
 
   /* ---------------------------------------------------
      Products: thumbnails, visible switch, side editor
@@ -4474,40 +5181,34 @@ Object.assign(AdminApp.prototype, {
     const badge = this.dom.filterBadge?.value || "";
     const visibility = this.dom.filterActive?.value || "";
     const sortBy = this.dom.sortProducts?.value || "order";
-    const lowLimit =
-      Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
-    const stockOf = (p) => (p.stock == null ? Infinity : Number(p.stock));
+    const lowLimit = Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
+    const stockOf = p => (p.stock == null ? Infinity : Number(p.stock));
 
-    ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach((id) =>
-      this.dom[id]?.classList.toggle("on", Boolean(this.dom[id].value)),
-    );
+    ["filterCat", "filterStock", "filterBadge", "filterActive"].forEach(id =>
+      this.dom[id]?.classList.toggle("on", Boolean(this.dom[id].value)));
 
     const sorters = {
-      order: (a, b) =>
-        Number(a.sortOrder || 0) - Number(b.sortOrder || 0) ||
-        String(a.name).localeCompare(String(b.name)),
+      order: (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)),
       name: (a, b) => String(a.name).localeCompare(String(b.name)),
       stockAsc: (a, b) => stockOf(a) - stockOf(b),
       stockDesc: (a, b) => stockOf(b) - stockOf(a),
       priceAsc: (a, b) => Number(a.price || 0) - Number(b.price || 0),
-      priceDesc: (a, b) => Number(b.price || 0) - Number(a.price || 0),
+      priceDesc: (a, b) => Number(b.price || 0) - Number(a.price || 0)
     };
 
     const products = this.productSearchIndex
-      .filter((item) => !search || item.search.includes(search))
-      .map((item) => item.product)
-      .filter((p) => {
+      .filter(item => !search || item.search.includes(search))
+      .map(item => item.product)
+      .filter(p => {
         if (cat && p.cat !== cat) return false;
         const stock = stockOf(p);
         if (stockFilter === "in" && !(stock > 0)) return false;
-        if (stockFilter === "low" && !(stock > 0 && stock <= lowLimit))
-          return false;
+        if (stockFilter === "low" && !(stock > 0 && stock <= lowLimit)) return false;
         if (stockFilter === "out" && stock !== 0) return false;
         if (stockFilter === "unlimited" && p.stock != null) return false;
-        const badges = (p.badges || []).map((b) => String(b).toUpperCase());
+        const badges = (p.badges || []).map(b => String(b).toUpperCase());
         if (badge === "__none" && badges.length) return false;
-        if (badge && badge !== "__none" && !badges.includes(badge))
-          return false;
+        if (badge && badge !== "__none" && !badges.includes(badge)) return false;
         if (visibility === "active" && p.active === false) return false;
         if (visibility === "hidden" && p.active !== false) return false;
         return true;
@@ -4516,10 +5217,9 @@ Object.assign(AdminApp.prototype, {
       .sort(sorters[sortBy] || sorters.order);
 
     if (this.dom.productCount) {
-      this.dom.productCount.textContent =
-        products.length === this.products.length
-          ? `${products.length} products`
-          : `Showing ${products.length} of ${this.products.length}`;
+      this.dom.productCount.textContent = products.length === this.products.length
+        ? `${products.length} products`
+        : `Showing ${products.length} of ${this.products.length}`;
     }
 
     if (!products.length) {
@@ -4529,20 +5229,18 @@ Object.assign(AdminApp.prototype, {
 
     const catLabel = { men: "For Him", women: "For Her", unisex: "Unisex" };
 
-    table.innerHTML = products
-      .map((p) => {
-        const id = escapeHTML(p.id);
-        const stockCell =
-          p.stock == null
-            ? `<div class="stock-cell"><b>∞</b><button class="mini-btn text" data-stock="${id}" data-op="set" title="Start tracking stock">Set</button></div>`
-            : `<div class="stock-cell">
+    table.innerHTML = products.map(p => {
+      const id = escapeHTML(p.id);
+      const stockCell = p.stock == null
+        ? `<div class="stock-cell"><b>∞</b><button class="mini-btn text" data-stock="${id}" data-op="set" title="Start tracking stock">Set</button></div>`
+        : `<div class="stock-cell">
              <button class="mini-btn" data-stock="${id}" data-op="dec" aria-label="Remove 1 ${escapeHTML(p.name)}">−</button>
              <b class="${Number(p.stock) === 0 ? "zero" : ""}">${escapeHTML(p.stock)}</b>
              <button class="mini-btn" data-stock="${id}" data-op="inc" aria-label="Add 1 ${escapeHTML(p.name)}">+</button>
              <button class="mini-btn text" data-stock="${id}" data-op="restock">Restock</button>
            </div>`;
 
-        return `
+      return `
         <tr>
           <td class="td-main">
             <div class="prod-cell">
@@ -4552,23 +5250,22 @@ Object.assign(AdminApp.prototype, {
           </td>
           <td data-label="Price">${formatCurrency(p.price)}</td>
           <td data-label="Stock">${stockCell}</td>
-          <td data-label="Badges">${(p.badges || []).length ? p.badges.map((b) => `<span class="badge">${escapeHTML(b)}</span>`).join("") : "—"}</td>
+          <td data-label="Badges">${(p.badges || []).length ? p.badges.map(b => `<span class="badge">${escapeHTML(b)}</span>`).join("") : "—"}</td>
           <td data-label="Visible"><input type="checkbox" class="switch" data-toggle-active="${id}" ${p.active !== false ? "checked" : ""} aria-label="Show ${escapeHTML(p.name)} on the website"></td>
           <td><div class="row-actions"><button class="btn" data-edit="${id}">Edit</button></div></td>
         </tr>`;
-      })
-      .join("");
+    }).join("");
   },
+
 
   editProduct(product) {
     _orig.editProduct.call(this, product);
     this.dom.productEditor?.setAttribute("aria-hidden", "false");
     if (this.dom.deleteProduct) this.dom.deleteProduct.hidden = !product;
-    this.dom.productEditor
-      ?.querySelector(".drawer-panel")
-      ?.scrollTo({ top: 0 });
+    this.dom.productEditor?.querySelector(".drawer-panel")?.scrollTo({ top: 0 });
     setTimeout(() => this.dom.pName?.focus(), 50);
   },
+
 
   async setProductActive(id, active, toggle) {
     const product = this.productMap.get(String(id));
@@ -4576,16 +5273,10 @@ Object.assign(AdminApp.prototype, {
 
     toggle.disabled = true;
     try {
-      const res = await this.request("POST", {
-        action: "adminSetProductActive",
-        id,
-        active,
-      });
+      const res = await this.request("POST", { action: "adminSetProductActive", id, active });
       product.active = res.active;
       this.cacheWrite("products", this.products);
-      this.setStatus(
-        `${product.name} is now ${res.active ? "visible" : "hidden"} on the website`,
-      );
+      this.setStatus(`${product.name} is now ${res.active ? "visible" : "hidden"} on the website`);
     } catch (error) {
       toggle.checked = !active;
       this.setStatus(error.message, true);
@@ -4593,6 +5284,7 @@ Object.assign(AdminApp.prototype, {
       toggle.disabled = false;
     }
   },
+
 
   async deleteProduct(id = this.dom.pOriginalId?.value) {
     if (!id) return;
@@ -4602,7 +5294,7 @@ Object.assign(AdminApp.prototype, {
       title: "Delete product?",
       message: `"${product?.name || id}" will be removed from the website and the admin. This can't be undone.\n\nTip: switch off "Visible" instead if you only want to hide it for now.`,
       okText: "Delete product",
-      danger: true,
+      danger: true
     });
     if (!ok) return;
 
@@ -4616,6 +5308,7 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   async adjustStock(id, op) {
     const product = this.productMap.get(String(id));
     if (!product) return;
@@ -4626,24 +5319,16 @@ Object.assign(AdminApp.prototype, {
     else if (op === "dec") params.delta = -1;
     else {
       const asked = await this.ask({
-        title:
-          op === "set"
-            ? `Track stock for ${product.name}`
-            : `Restock ${product.name}`,
-        message:
-          op === "set"
-            ? "How many bottles do you have now?"
-            : `How many bottles are you adding? (now ${product.stock})`,
+        title: op === "set" ? `Track stock for ${product.name}` : `Restock ${product.name}`,
+        message: op === "set" ? "How many bottles do you have now?" : `How many bottles are you adding? (now ${product.stock})`,
         okText: op === "set" ? "Set stock" : "Add bottles",
-        input: { value: op === "set" ? 10 : 5, min: 0 },
+        input: { value: op === "set" ? 10 : 5, min: 0 }
       });
       if (asked === null) return;
 
       const n = parseInt(asked, 10);
-      if (!Number.isFinite(n) || n < 0)
-        return this.setStatus("Please enter a number of bottles.", true);
-      if (op === "set") params.set = n;
-      else params.delta = n;
+      if (!Number.isFinite(n) || n < 0) return this.setStatus("Please enter a number of bottles.", true);
+      if (op === "set") params.set = n; else params.delta = n;
     }
 
     try {
@@ -4659,6 +5344,7 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   /* ---------------------------------------------------
      Promotions: readable cards, switches, side editor
   --------------------------------------------------- */
@@ -4668,9 +5354,7 @@ Object.assign(AdminApp.prototype, {
     if (!box) return;
 
     box.innerHTML = this.promotions.length
-      ? this.promotions
-          .map(
-            (p) => `
+      ? this.promotions.map(p => `
           <div class="promo-card ${p.active ? "" : "off"}">
             <div class="promo-main">
               <b>${escapeHTML(p.name)}</b>
@@ -4682,55 +5366,45 @@ Object.assign(AdminApp.prototype, {
               <button class="btn" data-pedit="${escapeHTML(p.id)}">Edit</button>
               <button class="btn danger" data-pdel="${escapeHTML(p.id)}">Delete</button>
             </div>
-          </div>`,
-          )
-          .join("")
+          </div>`).join("")
       : `<p class="empty-note">No promotions yet. Add one, e.g. "Any 2 bottles for ₱840".</p>`;
   },
 
+
   editPromotion(promotion) {
     _orig.editPromotion.call(this, promotion);
-    if (this.dom.promoTitle)
-      this.dom.promoTitle.textContent = promotion
-        ? "Edit promotion"
-        : "Add promotion";
+    if (this.dom.promoTitle) this.dom.promoTitle.textContent = promotion ? "Edit promotion" : "Add promotion";
     this.dom.promoEditor?.setAttribute("aria-hidden", "false");
     this.updatePromoPreview();
     setTimeout(() => document.getElementById("promoName")?.focus(), 50);
   },
 
+
   updatePromoPreview() {
     const type = document.getElementById("promoType")?.value || "fixed_total";
-    document.querySelectorAll("[data-promo-field]").forEach((el) => {
+    document.querySelectorAll("[data-promo-field]").forEach(el => {
       el.hidden = el.dataset.promoField !== type;
     });
 
     const preview = this.dom.promoPreview;
     if (!preview) return;
-    preview.textContent =
-      "Customers see: " +
-      promoSummary({
-        type,
-        minQty: document.getElementById("promoQty")?.value || 2,
-        fixedTotal: document.getElementById("promoFixed")?.value || 0,
-        percentOff: document.getElementById("promoPercent")?.value || 0,
-      });
+    preview.textContent = "Customers see: " + promoSummary({
+      type,
+      minQty: document.getElementById("promoQty")?.value || 2,
+      fixedTotal: document.getElementById("promoFixed")?.value || 0,
+      percentOff: document.getElementById("promoPercent")?.value || 0
+    });
   },
+
 
   async setPromotionActive(id, active, toggle) {
     const promo = this.promotionMap.get(String(id));
     toggle.disabled = true;
     try {
-      const res = await this.request("POST", {
-        action: "adminSetPromotionActive",
-        id,
-        active,
-      });
+      const res = await this.request("POST", { action: "adminSetPromotionActive", id, active });
       if (promo) promo.active = res.active;
       this.renderPromotions();
-      this.setStatus(
-        `${promo?.name || "Promotion"} turned ${res.active ? "on" : "off"}`,
-      );
+      this.setStatus(`${promo?.name || "Promotion"} turned ${res.active ? "on" : "off"}`);
     } catch (error) {
       toggle.checked = !active;
       this.setStatus(error.message, true);
@@ -4739,13 +5413,14 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   async deletePromotion(id) {
     const promo = this.promotionMap.get(String(id));
     const ok = await this.ask({
       title: "Delete promotion?",
       message: `"${promo?.name || "This promotion"}" will stop applying right away. You can switch it off instead to keep it for later.`,
       okText: "Delete",
-      danger: true,
+      danger: true
     });
     if (!ok) return;
 
@@ -4757,6 +5432,7 @@ Object.assign(AdminApp.prototype, {
       this.setStatus(error.message, true);
     }
   },
+
 
   /* ---------------------------------------------------
      Orders: styled confirmations
@@ -4771,10 +5447,11 @@ Object.assign(AdminApp.prototype, {
       message: `${orderId} · ${order.fullname} · ${peso(order.total)}\n\nThe bottles go back into stock.`,
       okText: "Cancel order",
       cancelText: "Keep order",
-      danger: true,
+      danger: true
     });
     if (ok) this.updateOrder(orderId, "Cancelled");
   },
+
 
   async setOrderStatus(orderId, status) {
     const order = this.findOrder(orderId);
@@ -4786,13 +5463,14 @@ Object.assign(AdminApp.prototype, {
       const ok = await this.ask({
         title: "Re-open cancelled order?",
         message: `It will become "${status}" and its bottles will be taken out of stock again.`,
-        okText: "Re-open",
+        okText: "Re-open"
       });
       if (!ok) return;
     }
 
     this.updateOrder(orderId, status);
   },
+
 
   /* ---------------------------------------------------
      Reviews: tabs + labels for mobile
@@ -4803,48 +5481,26 @@ Object.assign(AdminApp.prototype, {
     if (!table) return;
 
     const all = this.reviews || [];
-    const pending = all.filter((r) => !r.approved);
-    const visible = all.filter((r) => r.approved);
+    const pending = all.filter(r => !r.approved);
+    const visible = all.filter(r => r.approved);
 
-    if (
-      this.reviewTab === "pending" &&
-      !pending.length &&
-      this._reviewTabAuto !== false
-    )
-      this.reviewTab = "all";
+    if (this.reviewTab === "pending" && !pending.length && this._reviewTabAuto !== false) this.reviewTab = "all";
 
     if (this.dom.reviewTabs) {
-      const tabs = [
-        ["pending", "Pending", pending.length],
-        ["visible", "Visible", visible.length],
-        ["all", "All", all.length],
-      ];
-      this.dom.reviewTabs.innerHTML = tabs
-        .map(
-          ([key, label, n]) =>
-            `<button type="button" class="tab ${this.reviewTab === key ? "active" : ""} ${key === "pending" && n ? "urgent" : ""}" data-rtab="${key}">${label}<b>${n}</b></button>`,
-        )
-        .join("");
+      const tabs = [["pending", "Pending", pending.length], ["visible", "Visible", visible.length], ["all", "All", all.length]];
+      this.dom.reviewTabs.innerHTML = tabs.map(([key, label, n]) =>
+        `<button type="button" class="tab ${this.reviewTab === key ? "active" : ""} ${key === "pending" && n ? "urgent" : ""}" data-rtab="${key}">${label}<b>${n}</b></button>`).join("");
     }
 
-    const rows =
-      this.reviewTab === "pending"
-        ? pending
-        : this.reviewTab === "visible"
-          ? visible
-          : all;
+    const rows = this.reviewTab === "pending" ? pending : this.reviewTab === "visible" ? visible : all;
 
     table.innerHTML = rows.length
-      ? rows
-          .map(
-            (r) => `
+      ? rows.map(r => `
           <tr>
             <td class="td-main">
-              ${
-                r.photoUrl
-                  ? `<a href="${escapeHTML(r.photoUrl)}" target="_blank" rel="noopener"><img src="${escapeHTML(r.photoUrl)}" alt="Photo from ${escapeHTML(r.name)}" loading="lazy" style="width:64px;height:64px;object-fit:cover;border:1px solid var(--line)" onerror="this.replaceWith(document.createTextNode('Photo unavailable'))"></a>`
-                  : `<span class="muted">No photo</span>`
-              }
+              ${r.photoUrl
+                ? `<a href="${escapeHTML(r.photoUrl)}" target="_blank" rel="noopener"><img src="${escapeHTML(r.photoUrl)}" alt="Photo from ${escapeHTML(r.name)}" loading="lazy" style="width:64px;height:64px;object-fit:cover;border:1px solid var(--line)" onerror="this.replaceWith(document.createTextNode('Photo unavailable'))"></a>`
+                : `<span class="muted">No photo</span>`}
             </td>
             <td data-label="Customer"><b>${escapeHTML(r.name)}</b><small>${escapeHTML(r.scent || "")}</small></td>
             <td data-label="Rating">${"★".repeat(Number(r.rating) || 0)}</td>
@@ -4852,31 +5508,26 @@ Object.assign(AdminApp.prototype, {
             <td data-label="Status">${r.approved ? `<span class="pill st-completed">Visible</span>` : `<span class="pill st-new">Pending</span>`}</td>
             <td>
               <div class="row-actions">
-                ${
-                  r.approved
-                    ? `<button class="btn" data-review="${escapeHTML(r.id)}" data-op="hide">Hide</button>`
-                    : `<button class="btn primary" data-review="${escapeHTML(r.id)}" data-op="approve">Approve</button>`
-                }
+                ${r.approved
+                  ? `<button class="btn" data-review="${escapeHTML(r.id)}" data-op="hide">Hide</button>`
+                  : `<button class="btn primary" data-review="${escapeHTML(r.id)}" data-op="approve">Approve</button>`}
                 <button class="btn danger" data-review="${escapeHTML(r.id)}" data-op="delete">Delete</button>
               </div>
             </td>
-          </tr>`,
-          )
-          .join("")
+          </tr>`).join("")
       : `<tr><td colspan="6" class="muted">${this.reviewTab === "pending" ? "No reviews waiting. ✓" : "No reviews here yet."}</td></tr>`;
 
     this.updateReviewBadges();
   },
 
+
   async deleteReview(id) {
-    const review = (this.reviews || []).find(
-      (r) => String(r.id) === String(id),
-    );
+    const review = (this.reviews || []).find(r => String(r.id) === String(id));
     const ok = await this.ask({
       title: "Delete review?",
       message: `The review from ${review?.name || "this customer"} and its photo will be removed permanently.`,
       okText: "Delete review",
-      danger: true,
+      danger: true
     });
     if (!ok) return;
 
@@ -4888,6 +5539,7 @@ Object.assign(AdminApp.prototype, {
       this.setStatus(error.message, true);
     }
   },
+
 
   /* ---------------------------------------------------
      Audit log: filter, search, grouped by day
@@ -4903,11 +5555,12 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   renderAudit() {
     const box = this.dom.auditList;
     if (!box) return;
 
-    const kindOf = (log) => {
+    const kindOf = log => {
       const k = log.details?.kind;
       if (k) return k;
       const a = String(log.action || "").toLowerCase();
@@ -4920,22 +5573,13 @@ Object.assign(AdminApp.prototype, {
       return "other";
     };
 
-    const icon = {
-      order: ["🛍", "order"],
-      payment: ["₱", "payment"],
-      product: ["◇", "stock"],
-      promotion: ["%", "order"],
-      review: ["★", "review"],
-      "homepage settings": ["⚙", ""],
-    };
+    const icon = { order: ["🛍", "order"], payment: ["₱", "payment"], product: ["◇", "stock"], promotion: ["%", "order"], review: ["★", "review"], "homepage settings": ["⚙", ""] };
     const filter = this.dom.auditFilter?.value || "";
     const search = normalize(this.dom.auditSearch?.value);
 
-    const logs = (this.auditLogs || []).filter(
-      (log) =>
-        (!filter || kindOf(log) === filter) &&
-        (!search || normalize(`${log.action} ${log.actor}`).includes(search)),
-    );
+    const logs = (this.auditLogs || []).filter(log =>
+      (!filter || kindOf(log) === filter) &&
+      (!search || normalize(`${log.action} ${log.actor}`).includes(search)));
 
     if (!logs.length) {
       box.innerHTML = `<p class="empty-note">Nothing in the log matches.</p>`;
@@ -4945,49 +5589,36 @@ Object.assign(AdminApp.prototype, {
     const today = dayKey(new Date());
     const yesterday = dayKey(new Date(Date.now() - 86400000));
     const groups = new Map();
-    logs.forEach((log) => {
+    logs.forEach(log => {
       const d = new Date(log.timestamp);
       const key = isNaN(d) ? "Unknown date" : dayKey(d);
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(log);
     });
 
-    box.innerHTML = [...groups.entries()]
-      .map(([key, items]) => {
-        const label =
-          key === today
-            ? "Today"
-            : key === yesterday
-              ? "Yesterday"
-              : key === "Unknown date"
-                ? key
-                : new Date(`${key}T00:00`).toLocaleDateString(undefined, {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  });
+    box.innerHTML = [...groups.entries()].map(([key, items]) => {
+      const label = key === today ? "Today" : key === yesterday ? "Yesterday"
+        : key === "Unknown date" ? key
+        : new Date(`${key}T00:00`).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric", year: "numeric" });
 
-        return `
+      return `
         <div class="audit-day">
           <h4>${escapeHTML(label)}</h4>
-          ${items
-            .map((log) => {
-              const [sym, cls] = icon[kindOf(log)] || ["•", ""];
-              const d = new Date(log.timestamp);
-              return `
+          ${items.map(log => {
+            const [sym, cls] = icon[kindOf(log)] || ["•", ""];
+            const d = new Date(log.timestamp);
+            return `
               <div class="audit-item">
                 <span class="notif-icon ${cls}">${sym}</span>
                 <div>${escapeHTML(log.action)}<small>${escapeHTML(log.actor || "")}</small></div>
                 <time>${isNaN(d) ? "" : escapeHTML(d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" }))}</time>
               </div>`;
-            })
-            .join("")}
+          }).join("")}
         </div>`;
-      })
-      .join("");
-  },
+    }).join("");
+  }
 });
+
 
 /* =========================================================
    BUSINESS TOOLS (v3)
@@ -4999,36 +5630,24 @@ const _orig3 = {
   showView: AdminApp.prototype.showView,
   closeEditors: AdminApp.prototype.closeEditors,
   loadOrders: AdminApp.prototype.loadOrders,
-  loadProducts: AdminApp.prototype.loadProducts,
+  loadProducts: AdminApp.prototype.loadProducts
 };
 
 MORE_VIEWS.push("reports", "inventory", "vouchers");
 
-const byId = (id) => document.getElementById(id);
+const byId = id => document.getElementById(id);
 const MANILA = "Asia/Manila";
 
 // ₱1,234 or ₱1,234.50
 function peso2(value) {
   const n = Math.round(Number(value || 0) * 100) / 100;
-  return (
-    "₱" +
-    n.toLocaleString(undefined, {
-      minimumFractionDigits: n % 1 ? 2 : 0,
-      maximumFractionDigits: 2,
-    })
-  );
+  return "₱" + n.toLocaleString(undefined, { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 });
 }
 
 // Same for the PDF (the built-in PDF font has no ₱ sign)
 function phpText(value) {
   const n = Math.round(Number(value || 0) * 100) / 100;
-  return (
-    "PHP " +
-    n.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
+  return "PHP " + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function pctText(n) {
@@ -5038,25 +5657,14 @@ function pctText(n) {
 // YYYY-MM-DD of a moment, in Manila time
 function manilaDay(value) {
   if (!value) return "";
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: MANILA,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value));
+  return new Intl.DateTimeFormat("en-CA", { timeZone: MANILA, year: "numeric", month: "2-digit", day: "2-digit" })
+    .format(new Date(value));
 }
 
 function niceDate(value) {
   if (!value) return "";
-  const d = /^\d{4}-\d{2}-\d{2}$/.test(value)
-    ? new Date(value + "T12:00:00+08:00")
-    : new Date(value);
-  return d.toLocaleDateString(undefined, {
-    timeZone: MANILA,
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const d = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(value + "T12:00:00+08:00") : new Date(value);
+  return d.toLocaleDateString(undefined, { timeZone: MANILA, month: "short", day: "numeric", year: "numeric" });
 }
 
 function monthKeyOf(value) {
@@ -5065,11 +5673,7 @@ function monthKeyOf(value) {
 
 function monthName(key) {
   const [y, m] = key.split("-").map(Number);
-  return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString(undefined, {
-    month: "long",
-    year: "numeric",
-    timeZone: "UTC",
-  });
+  return new Date(Date.UTC(y, m - 1, 15)).toLocaleDateString(undefined, { month: "long", year: "numeric", timeZone: "UTC" });
 }
 
 function orderSales(o) {
@@ -5078,31 +5682,19 @@ function orderSales(o) {
 
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[data-src="${src}"]`)?.dataset.loaded)
-      return resolve();
+    if (document.querySelector(`script[data-src="${src}"]`)?.dataset.loaded) return resolve();
     const s = document.createElement("script");
     s.src = src;
     s.dataset.src = src;
-    s.onload = () => {
-      s.dataset.loaded = "1";
-      resolve();
-    };
-    s.onerror = () =>
-      reject(
-        new Error(
-          "Could not load the PDF tool. Check your internet connection.",
-        ),
-      );
+    s.onload = () => { s.dataset.loaded = "1"; resolve(); };
+    s.onerror = () => reject(new Error("Could not load the PDF tool. Check your internet connection."));
     document.head.appendChild(s);
   });
 }
 
 function voucherDiscountText(v) {
   if (v.type === "percent") {
-    return (
-      `${Number(v.value)}% off` +
-      (v.maxDiscount ? ` (up to ${peso2(v.maxDiscount)})` : "")
-    );
+    return `${Number(v.value)}% off` + (v.maxDiscount ? ` (up to ${peso2(v.maxDiscount)})` : "");
   }
   return `${peso2(v.value)} off`;
 }
@@ -5112,14 +5704,15 @@ function voucherRulesText(v) {
   if (Number(v.minOrder) > 0) parts.push(`min. order ${peso2(v.minOrder)}`);
   if (v.perCustomer === 1) parts.push("once per customer");
   else if (v.perCustomer) parts.push(`${v.perCustomer}× per customer`);
+  if (v.firstOrderOnly) parts.push("first order only");
   if (v.usageLimit) parts.push(`first ${v.usageLimit} uses`);
-  if (v.startsAt && new Date(v.startsAt) > new Date())
-    parts.push(`starts ${niceDate(v.startsAt)}`);
+  if (v.startsAt && new Date(v.startsAt) > new Date()) parts.push(`starts ${niceDate(v.startsAt)}`);
   if (v.expiresAt) parts.push(`until ${niceDate(v.expiresAt)}`);
   return parts.join(" · ");
 }
 
 Object.assign(AdminApp.prototype, {
+
   /* ---------------------------------------------------
      Setup
   --------------------------------------------------- */
@@ -5127,106 +5720,57 @@ Object.assign(AdminApp.prototype, {
   bind() {
     _orig3.bind.call(this);
 
-    ["inventory", "vouchers", "reports"].forEach((v) => {
-      if (!this.views.includes(v)) this.views.push(v);
-    });
+    ["inventory", "vouchers", "reports"].forEach(v => { if (!this.views.includes(v)) this.views.push(v); });
     this.vouchers = [];
     this.restocks = [];
 
     /* Vouchers */
     byId("newVoucher")?.addEventListener("click", () => this.editVoucher(null));
     byId("closeVoucher")?.addEventListener("click", () => this.closeEditors());
-    byId("voucherForm")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      this.saveVoucher();
-    });
-    byId("deleteVoucher")?.addEventListener("click", () =>
-      this.deleteVoucher(byId("vOriginal").value),
-    );
-    byId("voucherSearch")?.addEventListener(
-      "input",
-      debounce(() => this.renderVouchers(), 150),
-    );
-    byId("voucherFilter")?.addEventListener("change", () =>
-      this.renderVouchers(),
-    );
+    byId("voucherForm")?.addEventListener("submit", e => { e.preventDefault(); this.saveVoucher(); });
+    byId("deleteVoucher")?.addEventListener("click", () => this.deleteVoucher(byId("vOriginal").value));
+    byId("voucherSearch")?.addEventListener("input", debounce(() => this.renderVouchers(), 150));
+    byId("voucherFilter")?.addEventListener("change", () => this.renderVouchers());
     byId("vRandom")?.addEventListener("click", () => {
       const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
       const bytes = crypto.getRandomValues(new Uint8Array(6));
-      byId("vCode").value =
-        "AE" + Array.from(bytes, (b) => chars[b % chars.length]).join("");
+      byId("vCode").value = "AE" + Array.from(bytes, b => chars[b % chars.length]).join("");
       this.updateVoucherPreview();
     });
-    [
-      "vCode",
-      "vType",
-      "vValue",
-      "vMax",
-      "vMin",
-      "vStart",
-      "vEnd",
-      "vLimit",
-      "vPer",
-      "vActive",
-    ].forEach((id) =>
-      byId(id)?.addEventListener(
-        id === "vType" || id === "vPer" || id === "vActive"
-          ? "change"
-          : "input",
-        () => this.updateVoucherPreview(),
-      ),
-    );
-    byId("vCode")?.addEventListener("blur", (e) => {
-      e.target.value = e.target.value.trim().toUpperCase().replace(/\s+/g, "");
-    });
+    ["vCode", "vType", "vValue", "vMax", "vMin", "vStart", "vEnd", "vLimit", "vPer", "vActive"].forEach(id =>
+      byId(id)?.addEventListener(id === "vType" || id === "vPer" || id === "vActive" ? "change" : "input", () => this.updateVoucherPreview()));
+    byId("vCode")?.addEventListener("blur", e => { e.target.value = e.target.value.trim().toUpperCase().replace(/\s+/g, ""); });
 
-    byId("vouchersList")?.addEventListener("click", (e) => {
+    byId("vouchersList")?.addEventListener("click", e => {
       const edit = e.target.closest("[data-vedit]");
-      if (edit)
-        return this.editVoucher(
-          this.vouchers.find((v) => v.code === edit.dataset.vedit),
-        );
+      if (edit) return this.editVoucher(this.vouchers.find(v => v.code === edit.dataset.vedit));
       const copy = e.target.closest("[data-vcopy]");
       if (copy) return this.copyVoucherLink(copy.dataset.vcopy);
       const del = e.target.closest("[data-vdel]");
       if (del) return this.deleteVoucher(del.dataset.vdel);
     });
-    byId("vouchersList")?.addEventListener("change", (e) => {
+    byId("vouchersList")?.addEventListener("change", e => {
       const t = e.target.closest("[data-vtoggle]");
       if (t) this.setVoucherActive(t.dataset.vtoggle, t.checked, t);
     });
 
     /* Restocks */
-    byId("restockForm")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      this.saveRestock();
-    });
-    ["rProduct", "rQty", "rCost"].forEach((id) =>
-      byId(id)?.addEventListener(id === "rProduct" ? "change" : "input", () =>
-        this.updateRestockPreview(),
-      ),
-    );
-    byId("restockSearch")?.addEventListener(
-      "input",
-      debounce(() => this.renderRestocks(), 150),
-    );
-    byId("refreshRestocks")?.addEventListener("click", () =>
-      this.loadRestocks(),
-    );
-    byId("restockRows")?.addEventListener("click", (e) => {
+    byId("restockForm")?.addEventListener("submit", e => { e.preventDefault(); this.saveRestock(); });
+    ["rProduct", "rQty", "rCost"].forEach(id =>
+      byId(id)?.addEventListener(id === "rProduct" ? "change" : "input", () => this.updateRestockPreview()));
+    byId("restockSearch")?.addEventListener("input", debounce(() => this.renderRestocks(), 150));
+    byId("refreshRestocks")?.addEventListener("click", () => this.loadRestocks());
+    byId("restockRows")?.addEventListener("click", e => {
       const del = e.target.closest("[data-rdel]");
       if (del) this.deleteRestock(del.dataset.rdel);
     });
-    byId("invRows")?.addEventListener("click", (e) => {
+    byId("invRows")?.addEventListener("click", e => {
       const pick = e.target.closest("[data-restock]");
       if (!pick) return;
       byId("rProduct").value = pick.dataset.restock;
       this.updateRestockPreview();
       byId("rQty")?.focus();
-      byId("restockForm")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+      byId("restockForm")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     /* Reports */
@@ -5234,24 +5778,16 @@ Object.assign(AdminApp.prototype, {
     if (month) month.value = manilaDay(new Date()).slice(0, 7);
     byId("reportRange")?.addEventListener("change", () => this.renderReports());
     month?.addEventListener("change", () => this.renderReports());
-    byId("reportExcel")?.addEventListener("click", () =>
-      this.downloadReportExcel(),
-    );
-    byId("reportPdf")?.addEventListener("click", () =>
-      this.downloadReportPdf(),
-    );
+    byId("reportExcel")?.addEventListener("click", () => this.downloadReportExcel());
+    byId("reportPdf")?.addEventListener("click", () => this.downloadReportPdf());
   },
+
 
   showView(view) {
     _orig3.showView.call(this, view);
 
-    const titles = {
-      inventory: "Restocks & Cost",
-      vouchers: "Vouchers",
-      reports: "Profit & Reports",
-    };
-    if (this.dom.viewTitle && titles[view])
-      this.dom.viewTitle.textContent = titles[view];
+    const titles = { inventory: "Restocks & Cost", vouchers: "Vouchers", reports: "Profit & Reports" };
+    if (this.dom.viewTitle && titles[view]) this.dom.viewTitle.textContent = titles[view];
 
     if (view === "vouchers") this.loadVouchers();
     if (view === "inventory") this.loadRestocks();
@@ -5261,6 +5797,7 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   closeEditors() {
     _orig3.closeEditors.call(this);
     const el = byId("voucherEditor");
@@ -5268,21 +5805,22 @@ Object.assign(AdminApp.prototype, {
     el?.setAttribute("aria-hidden", "true");
   },
 
+
   async loadOrders(silent = false) {
     await _orig3.loadOrders.call(this, silent);
-    const visible = (v) => !byId(v + "View")?.classList.contains("hidden");
+    const visible = v => !byId(v + "View")?.classList.contains("hidden");
     if (visible("vouchers")) this.renderVouchers();
     if (visible("reports")) this.renderReports();
   },
 
+
   async loadProducts() {
     await _orig3.loadProducts.call(this);
     this.fillRestockProducts();
-    if (!byId("inventoryView")?.classList.contains("hidden"))
-      this.renderInventory();
-    if (!byId("reportsView")?.classList.contains("hidden"))
-      this.renderReports();
+    if (!byId("inventoryView")?.classList.contains("hidden")) this.renderInventory();
+    if (!byId("reportsView")?.classList.contains("hidden")) this.renderReports();
   },
+
 
   /* ---------------------------------------------------
      VOUCHERS
@@ -5298,32 +5836,27 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   voucherUsage(code) {
-    const orders = (this.orders || []).filter(
-      (o) => o.voucherCode === code && o.status !== "Cancelled",
-    );
+    const orders = (this.orders || []).filter(o => o.voucherCode === code && o.status !== "Cancelled");
     return {
       uses: orders.length,
       discount: orders.reduce((s, o) => s + Number(o.discount || 0), 0),
       sales: orders.reduce((s, o) => s + orderSales(o), 0),
-      last: orders.reduce(
-        (m, o) => (!m || o.timestamp > m ? o.timestamp : m),
-        "",
-      ),
+      last: orders.reduce((m, o) => (!m || o.timestamp > m ? o.timestamp : m), "")
     };
   },
+
 
   voucherState(v, usage) {
     const now = new Date();
     if (!v.active) return { key: "off", label: "Off" };
-    if (v.expiresAt && new Date(v.expiresAt) < now)
-      return { key: "ended", label: "Expired" };
-    if (v.usageLimit && usage.uses >= v.usageLimit)
-      return { key: "ended", label: "Used up" };
-    if (v.startsAt && new Date(v.startsAt) > now)
-      return { key: "scheduled", label: "Scheduled" };
+    if (v.expiresAt && new Date(v.expiresAt) < now) return { key: "ended", label: "Expired" };
+    if (v.usageLimit && usage.uses >= v.usageLimit) return { key: "ended", label: "Used up" };
+    if (v.startsAt && new Date(v.startsAt) > now) return { key: "scheduled", label: "Scheduled" };
     return { key: "live", label: "Active" };
   },
+
 
   renderVouchers() {
     const box = byId("vouchersList");
@@ -5332,7 +5865,7 @@ Object.assign(AdminApp.prototype, {
     const q = (byId("voucherSearch")?.value || "").trim().toLowerCase();
     const filter = byId("voucherFilter")?.value || "";
 
-    const rows = this.vouchers.map((v) => {
+    const rows = this.vouchers.map(v => {
       const usage = this.voucherUsage(v.code);
       return { v, usage, state: this.voucherState(v, usage) };
     });
@@ -5340,17 +5873,16 @@ Object.assign(AdminApp.prototype, {
     // Summary cards
     const stats = byId("voucherStats");
     if (stats) {
-      const live = rows.filter((r) => r.state.key === "live").length;
+      const live = rows.filter(r => r.state.key === "live").length;
       const uses = rows.reduce((s, r) => s + r.usage.uses, 0);
       const disc = rows.reduce((s, r) => s + r.usage.discount, 0);
       const sales = rows.reduce((s, r) => s + r.usage.sales, 0);
-      const card = (label, value, sub) =>
-        `<div class="stat"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+      const card = (label, value, sub) => `<div class="stat"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
       stats.innerHTML = [
         card("Active vouchers", String(live), `${rows.length} total`),
         card("Times used", String(uses), "orders, excl. cancelled"),
         card("Discounts given", peso2(disc), "through vouchers"),
-        card("Sales with vouchers", peso2(sales), "after discount"),
+        card("Sales with vouchers", peso2(sales), "after discount")
       ].join("");
     }
 
@@ -5369,14 +5901,13 @@ Object.assign(AdminApp.prototype, {
       return;
     }
 
-    box.innerHTML = list
-      .map(({ v, usage, state }) => {
-        const code = escapeHTML(v.code);
-        const limit = v.usageLimit ? ` of ${v.usageLimit}` : "";
-        const bar = v.usageLimit
-          ? `<span class="v-bar"><i style="width:${Math.min(100, Math.round((usage.uses / v.usageLimit) * 100))}%"></i></span>`
-          : "";
-        return `
+    box.innerHTML = list.map(({ v, usage, state }) => {
+      const code = escapeHTML(v.code);
+      const limit = v.usageLimit ? ` of ${v.usageLimit}` : "";
+      const bar = v.usageLimit
+        ? `<span class="v-bar"><i style="width:${Math.min(100, Math.round(usage.uses / v.usageLimit * 100))}%"></i></span>`
+        : "";
+      return `
         <div class="promo-card voucher-card ${state.key}">
           <div class="v-code"><b>${code}</b><span class="v-state ${state.key}">${state.label}</span></div>
           <div class="promo-main">
@@ -5391,17 +5922,14 @@ Object.assign(AdminApp.prototype, {
             <button class="btn" type="button" data-vedit="${code}">Edit</button>
           </div>
         </div>`;
-      })
-      .join("");
+    }).join("");
   },
+
 
   editVoucher(v) {
     const el = byId("voucherEditor");
     if (!el) return;
-    const set = (id, value) => {
-      const f = byId(id);
-      if (f) f.value = value ?? "";
-    };
+    const set = (id, value) => { const f = byId(id); if (f) f.value = value ?? ""; };
 
     byId("voucherTitle").textContent = v ? `Edit ${v.code}` : "New voucher";
     set("vOriginal", v?.code || "");
@@ -5424,8 +5952,9 @@ Object.assign(AdminApp.prototype, {
     setTimeout(() => byId(v ? "vValue" : "vCode")?.focus(), 50);
   },
 
+
   voucherFormData() {
-    const val = (id) => byId(id)?.value ?? "";
+    const val = id => byId(id)?.value ?? "";
     return {
       code: val("vCode").trim().toUpperCase().replace(/\s+/g, ""),
       originalCode: val("vOriginal"),
@@ -5438,19 +5967,16 @@ Object.assign(AdminApp.prototype, {
       usageLimit: val("vLimit"),
       perCustomer: val("vPer"),
       note: val("vNote"),
-      active: byId("vActive")?.checked ?? true,
+      active: byId("vActive")?.checked ?? true
     };
   },
 
+
   updateVoucherPreview() {
     const type = byId("vType")?.value || "percent";
-    document.querySelectorAll("[data-vfield]").forEach((el) => {
-      el.hidden = el.dataset.vfield !== type;
-    });
+    document.querySelectorAll("[data-vfield]").forEach(el => { el.hidden = el.dataset.vfield !== type; });
     const label = byId("vValueLabel");
-    if (label)
-      label.textContent =
-        type === "percent" ? "Percent off (%)" : "Amount off (₱)";
+    if (label) label.textContent = type === "percent" ? "Percent off (%)" : "Amount off (₱)";
 
     const f = this.voucherFormData();
     const preview = byId("vPreview");
@@ -5460,33 +5986,23 @@ Object.assign(AdminApp.prototype, {
       return;
     }
     const v = {
-      type: f.type,
-      value: Number(f.value),
-      maxDiscount: Number(f.maxDiscount) || null,
-      minOrder: Number(f.minOrder) || 0,
-      perCustomer: f.perCustomer ? Number(f.perCustomer) : null,
-      usageLimit: f.usageLimit ? Number(f.usageLimit) : null,
-      startsAt: f.startsAt ? f.startsAt + "T00:00:00+08:00" : null,
-      expiresAt: f.expiresAt ? f.expiresAt + "T23:59:59+08:00" : null,
+      type: f.type, value: Number(f.value), maxDiscount: Number(f.maxDiscount) || null, minOrder: Number(f.minOrder) || 0,
+      perCustomer: f.perCustomer ? Number(f.perCustomer) : null, usageLimit: f.usageLimit ? Number(f.usageLimit) : null,
+      firstOrderOnly: !!f.firstOrderOnly,
+      startsAt: f.startsAt ? f.startsAt + "T00:00:00+08:00" : null, expiresAt: f.expiresAt ? f.expiresAt + "T23:59:59+08:00" : null
     };
     const example = Math.max(860, v.minOrder);
-    const disc =
-      v.type === "percent"
-        ? Math.min(
-            Math.round(example * v.value) / 100,
-            v.maxDiscount || Infinity,
-          )
-        : Math.min(v.value, example);
+    const disc = v.type === "percent"
+      ? Math.min(Math.round(example * v.value) / 100, v.maxDiscount || Infinity)
+      : Math.min(v.value, example);
     preview.textContent = `${f.code || "CODE"}: ${voucherRulesText(v)}. Example: a ${peso2(example)} order saves ${peso2(disc)}. If a promo gives more, the promo is used instead.`;
   },
+
 
   async saveVoucher() {
     const data = this.voucherFormData();
     try {
-      const res = await this.request("POST", {
-        action: "adminSaveVoucher",
-        ...data,
-      });
+      const res = await this.request("POST", { action: "adminSaveVoucher", ...data });
       this.toast(`Voucher ${res.code} saved`);
       this.closeEditors();
       await this.loadVouchers();
@@ -5495,15 +6011,12 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   async setVoucherActive(code, active, toggle) {
     toggle.disabled = true;
     try {
-      const res = await this.request("POST", {
-        action: "adminSetVoucherActive",
-        code,
-        active,
-      });
-      const v = this.vouchers.find((x) => x.code === code);
+      const res = await this.request("POST", { action: "adminSetVoucherActive", code, active });
+      const v = this.vouchers.find(x => x.code === code);
       if (v) v.active = res.active;
       this.toast(`${code} turned ${res.active ? "on" : "off"}`);
       this.renderVouchers();
@@ -5515,6 +6028,7 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   async deleteVoucher(code) {
     if (!code) return;
     const used = this.voucherUsage(code).uses;
@@ -5523,8 +6037,7 @@ Object.assign(AdminApp.prototype, {
       message: used
         ? `It was used in ${used} order${used === 1 ? "" : "s"}. Those orders keep their discount, but the code stops working. Tip: turn it off instead to keep the history here.`
         : "Customers will no longer be able to use this code.",
-      okText: "Delete",
-      danger: true,
+      okText: "Delete", danger: true
     });
     if (!ok) return;
     try {
@@ -5537,6 +6050,7 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   async copyVoucherLink(code) {
     const url = new URL("index.html", location.href);
     url.searchParams.set("voucher", code);
@@ -5546,14 +6060,10 @@ Object.assign(AdminApp.prototype, {
       await navigator.clipboard.writeText(text);
       this.toast(`Link copied — opening it fills in ${code} at checkout`);
     } catch {
-      await this.ask({
-        title: "Copy this link",
-        message: text,
-        okText: "Done",
-        cancelText: "Close",
-      });
+      await this.ask({ title: "Copy this link", message: text, okText: "Done", cancelText: "Close" });
     }
   },
+
 
   /* ---------------------------------------------------
      RESTOCKS & COST
@@ -5567,91 +6077,62 @@ Object.assign(AdminApp.prototype, {
       this.fillRestockProducts();
       this.renderInventory();
       this.renderRestocks();
-      if (!byId("reportsView")?.classList.contains("hidden"))
-        this.renderReports();
+      if (!byId("reportsView")?.classList.contains("hidden")) this.renderReports();
     } catch (error) {
-      if (!quiet)
-        this.setStatus("Could not load restocks: " + error.message, true);
+      if (!quiet) this.setStatus("Could not load restocks: " + error.message, true);
     }
   },
+
 
   fillRestockProducts() {
     const select = byId("rProduct");
     if (!select) return;
     const current = select.value;
-    const products = [...(this.products || [])].sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
-    select.innerHTML =
-      `<option value="">Choose a product…</option>` +
-      products
-        .map(
-          (p) =>
-            `<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)}${p.stock == null ? " (unlimited)" : ` — ${p.stock} in stock`}</option>`,
-        )
-        .join("");
-    if (current && products.some((p) => p.id === current))
-      select.value = current;
+    const products = [...(this.products || [])].sort((a, b) => a.name.localeCompare(b.name));
+    select.innerHTML = `<option value="">Choose a product…</option>` + products.map(p =>
+      `<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)}${p.stock == null ? " (unlimited)" : ` — ${p.stock} in stock`}</option>`).join("");
+    if (current && products.some(p => p.id === current)) select.value = current;
 
     const date = byId("rDate");
     if (date && !date.value) date.value = manilaDay(new Date());
 
-    const suppliers = [
-      ...new Set((this.restocks || []).map((r) => r.supplier).filter(Boolean)),
-    ];
+    const suppliers = [...new Set((this.restocks || []).map(r => r.supplier).filter(Boolean))];
     const dl = byId("supplierList");
-    if (dl)
-      dl.innerHTML = suppliers
-        .map((s) => `<option value="${escapeHTML(s)}">`)
-        .join("");
+    if (dl) dl.innerHTML = suppliers.map(s => `<option value="${escapeHTML(s)}">`).join("");
 
     this.updateRestockPreview();
   },
 
+
   updateRestockPreview() {
     const out = byId("rPreview");
     if (!out) return;
-    const p = (this.products || []).find(
-      (x) => x.id === byId("rProduct")?.value,
-    );
+    const p = (this.products || []).find(x => x.id === byId("rProduct")?.value);
     const qty = parseInt(byId("rQty")?.value, 10);
     const costText = byId("rCost")?.value ?? "";
-    if (!p) {
-      out.textContent =
-        "Choose a product to see the new stock and average cost.";
-      return;
-    }
-    if (!(qty > 0)) {
-      out.textContent = `${p.name}: ${p.stock == null ? "unlimited stock" : `${p.stock} in stock`} · average cost ${p.cost == null ? "not set yet" : peso2(p.cost)}.`;
-      return;
-    }
+    if (!p) { out.textContent = "Choose a product to see the new stock and average cost."; return; }
+    if (!(qty > 0)) { out.textContent = `${p.name}: ${p.stock == null ? "unlimited stock" : `${p.stock} in stock`} · average cost ${p.cost == null ? "not set yet" : peso2(p.cost)}.`; return; }
 
     const onHand = Math.max(0, Number(p.stock || 0));
     const unit = costText === "" ? null : Number(costText);
     let newCost = p.cost;
-    if (unit != null)
-      newCost =
-        p.cost == null || onHand === 0
-          ? unit
-          : (p.cost * onHand + unit * qty) / (onHand + qty);
+    if (unit != null) newCost = p.cost == null || onHand === 0 ? unit : (p.cost * onHand + unit * qty) / (onHand + qty);
 
-    const stockText =
-      p.stock == null ? "stays unlimited" : `${p.stock} → ${p.stock + qty}`;
-    const costLine =
-      unit == null
-        ? `cost stays ${p.cost == null ? "not set" : peso2(p.cost)} (no cost entered)`
-        : `average cost ${p.cost == null ? "—" : peso2(p.cost)} → ${peso2(Math.round(newCost * 100) / 100)}`;
+    const stockText = p.stock == null ? "stays unlimited" : `${p.stock} → ${p.stock + qty}`;
+    const costLine = unit == null
+      ? `cost stays ${p.cost == null ? "not set" : peso2(p.cost)} (no cost entered)`
+      : `average cost ${p.cost == null ? "—" : peso2(p.cost)} → ${peso2(Math.round(newCost * 100) / 100)}`;
     out.textContent = `Stock ${stockText} · ${costLine}${unit != null ? ` · total ${peso2(unit * qty)}` : ""}`;
   },
+
 
   async saveRestock() {
     const productId = byId("rProduct")?.value;
     const qty = byId("rQty")?.value;
     if (!productId) return this.setStatus("Choose a product first.", true);
-    if (!(Number(qty) > 0))
-      return this.setStatus("Enter how many bottles arrived.", true);
+    if (!(Number(qty) > 0)) return this.setStatus("Enter how many bottles arrived.", true);
 
-    const product = (this.products || []).find((p) => p.id === productId);
+    const product = (this.products || []).find(p => p.id === productId);
     try {
       const res = await this.request("POST", {
         action: "adminRestock",
@@ -5660,33 +6141,25 @@ Object.assign(AdminApp.prototype, {
         unitCost: byId("rCost")?.value ?? "",
         supplier: byId("rSupplier")?.value || "",
         note: byId("rNote")?.value || "",
-        date: byId("rDate")?.value || "",
+        date: byId("rDate")?.value || ""
       });
-      if (product) {
-        product.stock = res.stock;
-        product.cost = res.cost;
-      }
-      this.toast(
-        `${product?.name || "Product"}: +${qty} bottles${res.stock != null ? ` (now ${res.stock})` : ""}${res.cost != null ? ` · avg cost ${peso2(res.cost)}` : ""}`,
-      );
-      ["rQty", "rCost", "rNote"].forEach((id) => {
-        const f = byId(id);
-        if (f) f.value = "";
-      });
+      if (product) { product.stock = res.stock; product.cost = res.cost; }
+      this.toast(`${product?.name || "Product"}: +${qty} bottles${res.stock != null ? ` (now ${res.stock})` : ""}${res.cost != null ? ` · avg cost ${peso2(res.cost)}` : ""}`);
+      ["rQty", "rCost", "rNote"].forEach(id => { const f = byId(id); if (f) f.value = ""; });
       await Promise.all([this.loadRestocks(true), this.loadProducts()]);
     } catch (error) {
       this.setStatus(error.message, true);
     }
   },
 
+
   async deleteRestock(id) {
-    const r = this.restocks.find((x) => String(x.id) === String(id));
+    const r = this.restocks.find(x => String(x.id) === String(id));
     if (!r) return;
     const ok = await this.ask({
       title: "Undo this restock?",
       message: `Removes "${r.productName} +${r.qty}" from the history and takes ${r.qty} bottle${r.qty === 1 ? "" : "s"} back out of stock. The average cost stays as is (you can edit it in the product).`,
-      okText: "Undo restock",
-      danger: true,
+      okText: "Undo restock", danger: true
     });
     if (!ok) return;
     try {
@@ -5698,93 +6171,58 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   renderInventory() {
-    const products = [...(this.products || [])].sort((a, b) =>
-      a.name.localeCompare(b.name),
-    );
+    const products = [...(this.products || [])].sort((a, b) => a.name.localeCompare(b.name));
     const thisMonth = manilaDay(new Date()).slice(0, 7);
 
-    const onHand = products.reduce(
-      (s, p) => s + (p.stock == null ? 0 : Math.max(0, p.stock)),
-      0,
-    );
-    const value = products.reduce(
-      (s, p) =>
-        s +
-        (p.stock == null || p.cost == null ? 0 : Math.max(0, p.stock) * p.cost),
-      0,
-    );
-    const spent = (this.restocks || [])
-      .filter((r) => String(r.receivedAt).slice(0, 7) === thisMonth)
+    const onHand = products.reduce((s, p) => s + (p.stock == null ? 0 : Math.max(0, p.stock)), 0);
+    const value = products.reduce((s, p) => s + (p.stock == null || p.cost == null ? 0 : Math.max(0, p.stock) * p.cost), 0);
+    const spent = (this.restocks || []).filter(r => String(r.receivedAt).slice(0, 7) === thisMonth)
       .reduce((s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty), 0);
-    const noCost = products.filter((p) => p.cost == null).length;
+    const noCost = products.filter(p => p.cost == null).length;
 
     const cards = byId("invCards");
     if (cards) {
-      const card = (label, value, sub, cls = "") =>
-        `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+      const card = (label, value, sub, cls = "") => `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
       cards.innerHTML = [
-        card(
-          "Bottles on hand",
-          onHand.toLocaleString(),
-          `${products.length} products`,
-        ),
+        card("Bottles on hand", onHand.toLocaleString(), `${products.length} products`),
         card("Stock value", peso2(value), "at average cost"),
         card("Spent on restocks", peso2(spent), "this month"),
-        card(
-          "Missing cost",
-          String(noCost),
-          noCost ? "set a cost to see profit" : "all products have a cost",
-          noCost ? "warn" : "",
-        ),
+        card("Missing cost", String(noCost), noCost ? "set a cost to see profit" : "all products have a cost", noCost ? "warn" : "")
       ].join("");
     }
 
     const rows = byId("invRows");
     if (rows) {
-      rows.innerHTML = products
-        .map((p) => {
-          const margin =
-            p.cost == null || !p.price
-              ? null
-              : ((p.price - p.cost) / p.price) * 100;
-          return `<tr>
+      rows.innerHTML = products.map(p => {
+        const margin = p.cost == null || !p.price ? null : (p.price - p.cost) / p.price * 100;
+        return `<tr>
           <td data-label="Product" class="td-main"><button type="button" class="link-btn" data-restock="${escapeHTML(p.id)}" title="Record a restock">${escapeHTML(p.name)}</button></td>
           <td data-label="Stock">${p.stock == null ? "∞" : p.stock}</td>
           <td data-label="Avg. cost">${p.cost == null ? `<span class="muted">not set</span>` : peso2(p.cost)}</td>
           <td data-label="Price">${peso2(p.price)}</td>
           <td data-label="Margin">${margin == null ? "—" : `<span class="${margin < 20 ? "neg" : "pos"}">${pctText(margin)}</span>`}</td>
         </tr>`;
-        })
-        .join("");
+      }).join("");
     }
   },
+
 
   renderRestocks() {
     const tbody = byId("restockRows");
     if (!tbody) return;
     const q = (byId("restockSearch")?.value || "").trim().toLowerCase();
-    const list = (this.restocks || []).filter(
-      (r) =>
-        !q ||
-        `${r.productName} ${r.supplier} ${r.note} ${r.createdBy}`
-          .toLowerCase()
-          .includes(q),
-    );
+    const list = (this.restocks || []).filter(r =>
+      !q || `${r.productName} ${r.supplier} ${r.note} ${r.createdBy}`.toLowerCase().includes(q));
 
     const count = byId("restockCount");
     if (count) {
-      const total = list.reduce(
-        (s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty),
-        0,
-      );
+      const total = list.reduce((s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty), 0);
       count.textContent = `${list.length} entr${list.length === 1 ? "y" : "ies"} · ${peso2(total)}`;
     }
 
-    tbody.innerHTML = list.length
-      ? list
-          .map(
-            (r) => `
+    tbody.innerHTML = list.length ? list.map(r => `
       <tr>
         <td data-label="Date">${escapeHTML(niceDate(r.receivedAt))}</td>
         <td data-label="Product" class="td-main"><b>${escapeHTML(r.productName)}</b><small>by ${escapeHTML(r.createdBy)}</small></td>
@@ -5793,11 +6231,10 @@ Object.assign(AdminApp.prototype, {
         <td data-label="Total">${r.unitCost == null ? "—" : peso2(r.unitCost * r.qty)}</td>
         <td data-label="Supplier / note">${escapeHTML([r.supplier, r.note].filter(Boolean).join(" · ")) || `<span class="muted">—</span>`}</td>
         <td data-label=""><button class="btn ghost small" type="button" data-rdel="${r.id}" title="Undo this restock">Undo</button></td>
-      </tr>`,
-          )
-          .join("")
+      </tr>`).join("")
       : `<tr><td colspan="7" class="muted">${q ? "No restocks match." : "No restocks recorded yet. Use the form above when a new batch arrives."}</td></tr>`;
   },
+
 
   /* ---------------------------------------------------
      PROFIT & REPORTS
@@ -5805,115 +6242,60 @@ Object.assign(AdminApp.prototype, {
 
   reportPeriod() {
     const range = byId("reportRange")?.value || "month";
-    const month =
-      byId("reportMonth")?.value || manilaDay(new Date()).slice(0, 7);
-    if (range === "all")
-      return {
-        key: "all",
-        label: "All time",
-        match: () => true,
-        file: "all-time",
-      };
+    const month = byId("reportMonth")?.value || manilaDay(new Date()).slice(0, 7);
+    if (range === "all") return { key: "all", label: "All time", match: () => true, file: "all-time" };
     if (range === "year") {
       const y = month.slice(0, 4);
-      return {
-        key: y,
-        label: `Year ${y}`,
-        match: (d) => d.startsWith(y),
-        file: y,
-      };
+      return { key: y, label: `Year ${y}`, match: d => d.startsWith(y), file: y };
     }
-    return {
-      key: month,
-      label: monthName(month),
-      match: (d) => d.startsWith(month),
-      file: month,
-    };
+    return { key: month, label: monthName(month), match: d => d.startsWith(month), file: month };
   },
+
 
   // Everything the report needs, for one period
   computeProfit(period) {
-    const productMap = new Map((this.products || []).map((p) => [p.id, p]));
-    const orders = (this.orders || []).filter(
-      (o) => o.status !== "Cancelled" && period.match(manilaDay(o.timestamp)),
-    );
+    const productMap = new Map((this.products || []).map(p => [p.id, p]));
+    const orders = (this.orders || []).filter(o => o.status !== "Cancelled" && period.match(manilaDay(o.timestamp)));
 
     const perProduct = new Map();
     const discounts = new Map();
-    let sales = 0,
-      cost = 0,
-      missingBottles = 0,
-      bottles = 0,
-      gross = 0,
-      discountTotal = 0,
-      collected = 0,
-      unpaid = 0;
+    let sales = 0, cost = 0, missingBottles = 0, bottles = 0, gross = 0, discountTotal = 0, collected = 0, unpaid = 0;
 
-    const orderRows = orders.map((o) => {
+    const orderRows = orders.map(o => {
       const oSales = orderSales(o);
       const lines = Array.isArray(o.items) && o.items.length ? o.items : [];
       // Older (imported) orders may not have a price per line: use the product price, else an even split
       const totalQty = lines.reduce((s, i) => s + Number(i.qty || 0), 0) || 1;
-      const unitPrice = (i) =>
-        i.price != null && i.price !== ""
-          ? Number(i.price)
-          : (productMap.get(i.id)?.price ?? Number(o.subtotal || 0) / totalQty);
-      const lineGross =
-        lines.reduce((s, i) => s + unitPrice(i) * Number(i.qty || 0), 0) || 1;
-      let oCost = 0,
-        oMissing = false;
+      const unitPrice = i => i.price != null && i.price !== ""
+        ? Number(i.price)
+        : productMap.get(i.id)?.price ?? Number(o.subtotal || 0) / totalQty;
+      const lineGross = lines.reduce((s, i) => s + unitPrice(i) * Number(i.qty || 0), 0) || 1;
+      let oCost = 0, oMissing = false;
 
-      lines.forEach((i) => {
+      lines.forEach(i => {
         const qty = Number(i.qty || 0);
-        const unit =
-          i.cost != null
-            ? Number(i.cost)
-            : (productMap.get(i.id)?.cost ?? null);
+        const unit = i.cost != null ? Number(i.cost) : productMap.get(i.id)?.cost ?? null;
         const share = (unitPrice(i) * qty) / lineGross;
         const lineSales = oSales * share;
         const key = i.id || i.name;
-        const row = perProduct.get(key) || {
-          id: i.id,
-          name: productMap.get(i.id)?.name || i.name || i.id,
-          bottles: 0,
-          sales: 0,
-          cost: 0,
-          missing: 0,
-        };
+        const row = perProduct.get(key) || { id: i.id, name: productMap.get(i.id)?.name || i.name || i.id, bottles: 0, sales: 0, cost: 0, missing: 0 };
         row.bottles += qty;
         row.sales += lineSales;
-        if (unit == null) {
-          row.missing += qty;
-          missingBottles += qty;
-          oMissing = true;
-        } else {
-          row.cost += unit * qty;
-          oCost += unit * qty;
-        }
+        if (unit == null) { row.missing += qty; missingBottles += qty; oMissing = true; }
+        else { row.cost += unit * qty; oCost += unit * qty; }
         perProduct.set(key, row);
         bottles += qty;
       });
 
       if (Number(o.discount) > 0) {
-        const label = o.voucherCode
-          ? `Voucher ${o.voucherCode}`
-          : o.promotion || "Discount";
-        const d = discounts.get(label) || {
-          label,
-          orders: 0,
-          amount: 0,
-          voucher: Boolean(o.voucherCode),
-        };
+        const label = o.voucherCode ? `Voucher ${o.voucherCode}` : (o.promotion || "Discount");
+        const d = discounts.get(label) || { label, orders: 0, amount: 0, voucher: Boolean(o.voucherCode) };
         d.orders += 1;
         d.amount += Number(o.discount);
         discounts.set(label, d);
       }
       // money taken off outside the system (amount paid lower than the order total)
-      if (
-        o.amountPaid != null &&
-        Number(o.amountPaid) < Number(o.total) &&
-        o.paymentStatus === "Paid"
-      ) {
+      if (o.amountPaid != null && Number(o.amountPaid) < Number(o.total) && o.paymentStatus === "Paid") {
         const label = "Extra discounts (paid less than total)";
         const d = discounts.get(label) || { label, orders: 0, amount: 0 };
         d.orders += 1;
@@ -5926,76 +6308,44 @@ Object.assign(AdminApp.prototype, {
       gross += Number(o.subtotal || 0);
       discountTotal += Number(o.discount || 0);
       if (o.paymentStatus === "Paid") collected += oSales;
-      else
-        unpaid += Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0));
+      else unpaid += Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0));
 
-      return {
-        o,
-        sales: oSales,
-        cost: oCost,
-        profit: oSales - oCost,
-        missing: oMissing,
-      };
+      return { o, sales: oSales, cost: oCost, profit: oSales - oCost, missing: oMissing };
     });
 
-    const restocks = (this.restocks || []).filter((r) =>
-      period.match(String(r.receivedAt)),
-    );
-    const restockSpend = restocks.reduce(
-      (s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty),
-      0,
-    );
+    const restocks = (this.restocks || []).filter(r => period.match(String(r.receivedAt)));
+    const restockSpend = restocks.reduce((s, r) => s + (r.unitCost == null ? 0 : r.unitCost * r.qty), 0);
 
     const products = [...perProduct.values()]
-      .map((r) => ({
-        ...r,
-        profit: r.sales - r.cost,
-        margin: r.sales ? ((r.sales - r.cost) / r.sales) * 100 : NaN,
-      }))
+      .map(r => ({ ...r, profit: r.sales - r.cost, margin: r.sales ? (r.sales - r.cost) / r.sales * 100 : NaN }))
       .sort((a, b) => b.profit - a.profit || b.bottles - a.bottles);
 
     return {
-      period,
-      orders,
-      orderRows,
-      products,
-      restocks,
-      restockSpend,
+      period, orders, orderRows, products, restocks, restockSpend,
       discounts: [...discounts.values()].sort((a, b) => b.amount - a.amount),
-      sales,
-      cost,
-      profit: sales - cost,
-      margin: sales ? ((sales - cost) / sales) * 100 : NaN,
-      bottles,
-      missingBottles,
-      gross,
-      discountTotal,
-      collected,
-      unpaid,
+      sales, cost, profit: sales - cost, margin: sales ? (sales - cost) / sales * 100 : NaN,
+      bottles, missingBottles, gross, discountTotal, collected, unpaid
     };
   },
 
+
   monthlySummary(limit = 12) {
     const map = new Map();
-    const productMap = new Map((this.products || []).map((p) => [p.id, p]));
-    (this.orders || [])
-      .filter((o) => o.status !== "Cancelled")
-      .forEach((o) => {
-        const key = monthKeyOf(o.timestamp);
-        const row = map.get(key) || { key, orders: 0, sales: 0, cost: 0 };
-        row.orders += 1;
-        row.sales += orderSales(o);
-        (o.items || []).forEach((i) => {
-          const unit =
-            i.cost != null ? Number(i.cost) : productMap.get(i.id)?.cost;
-          if (unit != null) row.cost += unit * Number(i.qty || 0);
-        });
-        map.set(key, row);
+    const productMap = new Map((this.products || []).map(p => [p.id, p]));
+    (this.orders || []).filter(o => o.status !== "Cancelled").forEach(o => {
+      const key = monthKeyOf(o.timestamp);
+      const row = map.get(key) || { key, orders: 0, sales: 0, cost: 0 };
+      row.orders += 1;
+      row.sales += orderSales(o);
+      (o.items || []).forEach(i => {
+        const unit = i.cost != null ? Number(i.cost) : productMap.get(i.id)?.cost;
+        if (unit != null) row.cost += unit * Number(i.qty || 0);
       });
-    return [...map.values()]
-      .sort((a, b) => b.key.localeCompare(a.key))
-      .slice(0, limit);
+      map.set(key, row);
+    });
+    return [...map.values()].sort((a, b) => b.key.localeCompare(a.key)).slice(0, limit);
   },
+
 
   renderReports() {
     if (!byId("profitCards")) return;
@@ -6006,31 +6356,16 @@ Object.assign(AdminApp.prototype, {
     const r = this.computeProfit(this.reportPeriod());
     this.lastReport = r;
 
-    byId("reportLabel").textContent =
-      `${r.period.label} · ${r.orders.length} order${r.orders.length === 1 ? "" : "s"} · ${r.bottles} bottle${r.bottles === 1 ? "" : "s"}`;
+    byId("reportLabel").textContent = `${r.period.label} · ${r.orders.length} order${r.orders.length === 1 ? "" : "s"} · ${r.bottles} bottle${r.bottles === 1 ? "" : "s"}`;
 
-    const card = (label, value, sub, cls = "") =>
-      `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+    const card = (label, value, sub, cls = "") => `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
     byId("profitCards").innerHTML = [
       card("Sales", peso2(r.sales), "after all discounts"),
-      card(
-        "Cost of bottles sold",
-        peso2(r.cost),
-        `${r.bottles - r.missingBottles} of ${r.bottles} bottles have a cost`,
-      ),
-      card(
-        "Gross profit",
-        peso2(r.profit),
-        "sales − cost",
-        r.profit >= 0 ? "highlight" : "warn",
-      ),
+      card("Cost of bottles sold", peso2(r.cost), `${r.bottles - r.missingBottles} of ${r.bottles} bottles have a cost`),
+      card("Gross profit", peso2(r.profit), "sales − cost", r.profit >= 0 ? "highlight" : "warn"),
       card("Margin", pctText(r.margin), "profit ÷ sales"),
       card("Discounts given", peso2(r.discountTotal), "promos + vouchers"),
-      card(
-        "Spent on restocks",
-        peso2(r.restockSpend),
-        `${r.restocks.length} restock${r.restocks.length === 1 ? "" : "s"} this period`,
-      ),
+      card("Spent on restocks", peso2(r.restockSpend), `${r.restocks.length} restock${r.restocks.length === 1 ? "" : "s"} this period`)
     ].join("");
 
     const warn = byId("profitWarn");
@@ -6041,10 +6376,7 @@ Object.assign(AdminApp.prototype, {
         : "";
     }
 
-    byId("profitRows").innerHTML = r.products.length
-      ? r.products
-          .map(
-            (p) => `
+    byId("profitRows").innerHTML = r.products.length ? r.products.map(p => `
       <tr>
         <td data-label="Product" class="td-main"><b>${escapeHTML(p.name)}</b>${p.missing ? `<small class="neg">${p.missing} without cost</small>` : ""}</td>
         <td data-label="Bottles">${p.bottles}</td>
@@ -6052,53 +6384,37 @@ Object.assign(AdminApp.prototype, {
         <td data-label="Cost">${p.missing && !p.cost ? "—" : peso2(p.cost)}</td>
         <td data-label="Profit">${p.missing === p.bottles ? `<span class="muted">needs cost</span>` : `<b class="${p.profit < 0 ? "neg" : ""}">${peso2(p.profit)}</b>`}</td>
         <td data-label="Margin">${p.missing === p.bottles ? "—" : pctText(p.margin)}</td>
-      </tr>`,
-          )
-          .join("")
+      </tr>`).join("")
       : `<tr><td colspan="6" class="muted">No sales in this period.</td></tr>`;
 
-    byId("discountList").innerHTML = r.discounts.length
-      ? r.discounts
-          .map(
-            (d) => `
-      <div class="mini"><span>${escapeHTML(d.label)} <small class="muted">· ${d.orders} order${d.orders === 1 ? "" : "s"}</small></span><b>${peso2(d.amount)}</b></div>`,
-          )
-          .join("")
+    byId("discountList").innerHTML = r.discounts.length ? r.discounts.map(d => `
+      <div class="mini"><span>${escapeHTML(d.label)} <small class="muted">· ${d.orders} order${d.orders === 1 ? "" : "s"}</small></span><b>${peso2(d.amount)}</b></div>`).join("")
       : `<p class="muted">No discounts in this period.</p>`;
 
     const months = this.monthlySummary(12);
-    byId("monthlyRows").innerHTML = months.length
-      ? months
-          .map(
-            (m) => `
+    byId("monthlyRows").innerHTML = months.length ? months.map(m => `
       <tr data-month="${m.key}" class="clickable">
         <td data-label="Month" class="td-main">${escapeHTML(monthName(m.key))}</td>
         <td data-label="Orders">${m.orders}</td>
         <td data-label="Sales">${peso2(m.sales)}</td>
         <td data-label="Profit">${peso2(m.sales - m.cost)}</td>
-      </tr>`,
-          )
-          .join("")
+      </tr>`).join("")
       : `<tr><td colspan="4" class="muted">No orders yet.</td></tr>`;
 
-    byId("monthlyRows")
-      .querySelectorAll("[data-month]")
-      .forEach((tr) =>
-        tr.addEventListener("click", () => {
-          byId("reportRange").value = "month";
-          byId("reportMonth").value = tr.dataset.month;
-          this.renderReports();
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }),
-      );
+    byId("monthlyRows").querySelectorAll("[data-month]").forEach(tr => tr.addEventListener("click", () => {
+      byId("reportRange").value = "month";
+      byId("reportMonth").value = tr.dataset.month;
+      this.renderReports();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }));
   },
+
 
   async downloadReportExcel() {
     const r = this.lastReport || this.computeProfit(this.reportPeriod());
     try {
-      const XLSX =
-        await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
-      const round = (n) => Math.round(Number(n || 0) * 100) / 100;
+      const XLSX = await import("https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm");
+      const round = n => Math.round(Number(n || 0) * 100) / 100;
       const book = XLSX.utils.book_new();
 
       const summary = [
@@ -6117,87 +6433,40 @@ Object.assign(AdminApp.prototype, {
         ["Gross profit", round(r.profit)],
         ["Margin %", Number.isFinite(r.margin) ? round(r.margin) : ""],
         ["Spent on restocks", round(r.restockSpend)],
-        ...(r.missingBottles
-          ? [
-              [],
-              [
-                `Note: ${r.missingBottles} bottle(s) have no cost — profit is overstated.`,
-              ],
-            ]
-          : []),
+        ...(r.missingBottles ? [[], [`Note: ${r.missingBottles} bottle(s) have no cost — profit is overstated.`]] : [])
       ];
       const s1 = XLSX.utils.aoa_to_sheet(summary);
       s1["!cols"] = [{ wch: 34 }, { wch: 22 }];
       XLSX.utils.book_append_sheet(book, s1, "Summary");
 
-      const s2 = XLSX.utils.json_to_sheet(
-        r.products.map((p) => ({
-          Product: p.name,
-          Bottles: p.bottles,
-          Sales: round(p.sales),
-          Cost: round(p.cost),
-          Profit: round(p.profit),
-          "Margin %": Number.isFinite(p.margin) ? round(p.margin) : "",
-          "Bottles without cost": p.missing || "",
-        })),
-      );
+      const s2 = XLSX.utils.json_to_sheet(r.products.map(p => ({
+        "Product": p.name, "Bottles": p.bottles, "Sales": round(p.sales), "Cost": round(p.cost),
+        "Profit": round(p.profit), "Margin %": Number.isFinite(p.margin) ? round(p.margin) : "",
+        "Bottles without cost": p.missing || ""
+      })));
       XLSX.utils.book_append_sheet(book, s2, "Per Product");
 
-      const s3 = XLSX.utils.json_to_sheet(
-        r.orderRows.map(({ o, sales, cost, profit, missing }) => ({
-          Date: new Date(o.timestamp).toLocaleString(undefined, {
-            timeZone: MANILA,
-          }),
-          "Order ID": o.orderId,
-          Customer: o.fullname,
-          Contact: o.contact,
-          Items: (o.items || []).map((i) => `${i.name} × ${i.qty}`).join(" | "),
-          Bottles: o.qty,
-          Subtotal: round(o.subtotal),
-          Discount: round(o.discount),
-          "Promo / Voucher": o.voucherCode
-            ? `Voucher ${o.voucherCode}`
-            : o.promotion || "",
-          Total: round(o.total),
-          "Amount Paid": o.amountPaid == null ? "" : round(o.amountPaid),
-          "Payment Status": o.paymentStatus,
-          Status: o.status,
-          Sales: round(sales),
-          Cost: missing && !cost ? "" : round(cost),
-          Profit: round(profit),
-        })),
-      );
+      const s3 = XLSX.utils.json_to_sheet(r.orderRows.map(({ o, sales, cost, profit, missing }) => ({
+        "Date": new Date(o.timestamp).toLocaleString(undefined, { timeZone: MANILA }),
+        "Order ID": o.orderId, "Customer": o.fullname, "Contact": o.contact,
+        "Items": (o.items || []).map(i => `${i.name} × ${i.qty}`).join(" | "),
+        "Bottles": o.qty, "Subtotal": round(o.subtotal), "Discount": round(o.discount),
+        "Promo / Voucher": o.voucherCode ? `Voucher ${o.voucherCode}` : (o.promotion || ""),
+        "Total": round(o.total), "Amount Paid": o.amountPaid == null ? "" : round(o.amountPaid),
+        "Payment Status": o.paymentStatus, "Status": o.status,
+        "Sales": round(sales), "Cost": missing && !cost ? "" : round(cost), "Profit": round(profit)
+      })));
       XLSX.utils.book_append_sheet(book, s3, "Orders");
 
-      const s4 = XLSX.utils.json_to_sheet(
-        r.discounts.map((d) => ({
-          Discount: d.label,
-          Orders: d.orders,
-          Amount: round(d.amount),
-        })),
-      );
-      XLSX.utils.book_append_sheet(
-        book,
-        r.discounts.length ? s4 : XLSX.utils.aoa_to_sheet([["No discounts"]]),
-        "Discounts",
-      );
+      const s4 = XLSX.utils.json_to_sheet(r.discounts.map(d => ({ "Discount": d.label, "Orders": d.orders, "Amount": round(d.amount) })));
+      XLSX.utils.book_append_sheet(book, r.discounts.length ? s4 : XLSX.utils.aoa_to_sheet([["No discounts"]]), "Discounts");
 
-      const s5 = XLSX.utils.json_to_sheet(
-        r.restocks.map((x) => ({
-          Date: x.receivedAt,
-          Product: x.productName,
-          Bottles: x.qty,
-          "Cost / bottle": x.unitCost == null ? "" : round(x.unitCost),
-          Total: x.unitCost == null ? "" : round(x.unitCost * x.qty),
-          Supplier: x.supplier,
-          Note: x.note,
-        })),
-      );
-      XLSX.utils.book_append_sheet(
-        book,
-        r.restocks.length ? s5 : XLSX.utils.aoa_to_sheet([["No restocks"]]),
-        "Restocks",
-      );
+      const s5 = XLSX.utils.json_to_sheet(r.restocks.map(x => ({
+        "Date": x.receivedAt, "Product": x.productName, "Bottles": x.qty,
+        "Cost / bottle": x.unitCost == null ? "" : round(x.unitCost),
+        "Total": x.unitCost == null ? "" : round(x.unitCost * x.qty), "Supplier": x.supplier, "Note": x.note
+      })));
+      XLSX.utils.book_append_sheet(book, r.restocks.length ? s5 : XLSX.utils.aoa_to_sheet([["No restocks"]]), "Restocks");
 
       XLSX.writeFile(book, `aura-essence-report-${r.period.file}.xlsx`);
       this.toast(`Excel report downloaded (${r.period.label})`);
@@ -6206,28 +6475,20 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   async downloadReportPdf() {
     const r = this.lastReport || this.computeProfit(this.reportPeriod());
     const btn = byId("reportPdf");
     const label = btn?.textContent;
     try {
-      if (btn) {
-        btn.disabled = true;
-        btn.textContent = "Preparing PDF…";
-      }
-      await loadScriptOnce(
-        "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js",
-      );
-      await loadScriptOnce(
-        "https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js",
-      );
+      if (btn) { btn.disabled = true; btn.textContent = "Preparing PDF…"; }
+      await loadScriptOnce("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js");
+      await loadScriptOnce("https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js");
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const W = doc.internal.pageSize.getWidth();
-      const gold = [176, 141, 79],
-        ink = [24, 22, 20],
-        muted = [120, 112, 100];
+      const gold = [176, 141, 79], ink = [24, 22, 20], muted = [120, 112, 100];
       const M = 40;
 
       // Header
@@ -6242,19 +6503,14 @@ Object.assign(AdminApp.prototype, {
       doc.setTextColor(235, 228, 214);
       doc.text(`Sales & Profit Report  ·  ${r.period.label}`, M, 62);
       doc.setTextColor(170, 160, 143);
-      doc.text(
-        `Generated ${new Date().toLocaleString("en-PH", { timeZone: MANILA })}`,
-        W - M,
-        62,
-        { align: "right" },
-      );
+      doc.text(`Generated ${new Date().toLocaleString("en-PH", { timeZone: MANILA })}`, W - M, 62, { align: "right" });
 
       // Summary boxes
       const boxes = [
         ["Sales", phpText(r.sales)],
         ["Cost of goods", phpText(r.cost)],
         ["Gross profit", phpText(r.profit)],
-        ["Margin", pctText(r.margin)],
+        ["Margin", pctText(r.margin)]
       ];
       const bw = (W - M * 2 - 30) / 4;
       boxes.forEach(([k, v], i) => {
@@ -6272,21 +6528,10 @@ Object.assign(AdminApp.prototype, {
 
       const tableStyle = {
         theme: "grid",
-        headStyles: {
-          fillColor: ink,
-          textColor: [216, 189, 114],
-          fontStyle: "normal",
-          fontSize: 8.5,
-        },
-        styles: {
-          fontSize: 8.5,
-          cellPadding: 5,
-          lineColor: [225, 218, 205],
-          lineWidth: 0.5,
-          textColor: [40, 36, 32],
-        },
+        headStyles: { fillColor: ink, textColor: [216, 189, 114], fontStyle: "normal", fontSize: 8.5 },
+        styles: { fontSize: 8.5, cellPadding: 5, lineColor: [225, 218, 205], lineWidth: 0.5, textColor: [40, 36, 32] },
         alternateRowStyles: { fillColor: [250, 247, 241] },
-        margin: { left: M, right: M },
+        margin: { left: M, right: M }
       };
       const heading = (text, y) => {
         doc.setFontSize(12);
@@ -6312,9 +6557,9 @@ Object.assign(AdminApp.prototype, {
           ["Still to collect", phpText(r.unpaid)],
           ["Cost of bottles sold", phpText(r.cost)],
           ["Gross profit", phpText(r.profit)],
-          ["Spent on restocks", phpText(r.restockSpend)],
+          ["Spent on restocks", phpText(r.restockSpend)]
         ],
-        columnStyles: { 1: { halign: "right" } },
+        columnStyles: { 1: { halign: "right" } }
       });
 
       y = heading("Profit per product", doc.lastAutoTable.finalY + 26);
@@ -6323,22 +6568,9 @@ Object.assign(AdminApp.prototype, {
         startY: y,
         head: [["Product", "Bottles", "Sales", "Cost", "Profit", "Margin"]],
         body: r.products.length
-          ? r.products.map((p) => [
-              p.name + (p.missing ? " *" : ""),
-              String(p.bottles),
-              phpText(p.sales),
-              phpText(p.cost),
-              phpText(p.profit),
-              p.missing === p.bottles ? "-" : pctText(p.margin),
-            ])
+          ? r.products.map(p => [p.name + (p.missing ? " *" : ""), String(p.bottles), phpText(p.sales), phpText(p.cost), phpText(p.profit), p.missing === p.bottles ? "-" : pctText(p.margin)])
           : [["No sales in this period", "", "", "", "", ""]],
-        columnStyles: {
-          1: { halign: "right" },
-          2: { halign: "right" },
-          3: { halign: "right" },
-          4: { halign: "right" },
-          5: { halign: "right" },
-        },
+        columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" }, 4: { halign: "right" }, 5: { halign: "right" } }
       });
 
       if (r.discounts.length) {
@@ -6347,12 +6579,8 @@ Object.assign(AdminApp.prototype, {
           ...tableStyle,
           startY: y,
           head: [["Discount", "Orders", "Amount"]],
-          body: r.discounts.map((d) => [
-            d.label,
-            String(d.orders),
-            phpText(d.amount),
-          ]),
-          columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } },
+          body: r.discounts.map(d => [d.label, String(d.orders), phpText(d.amount)]),
+          columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } }
         });
       }
 
@@ -6360,42 +6588,24 @@ Object.assign(AdminApp.prototype, {
       doc.autoTable({
         ...tableStyle,
         startY: y,
-        head: [
-          ["Date", "Order ID", "Customer", "Items", "Total", "Paid", "Profit"],
-        ],
+        head: [["Date", "Order ID", "Customer", "Items", "Total", "Paid", "Profit"]],
         body: r.orderRows.length
           ? r.orderRows.map(({ o, profit }) => [
-              new Date(o.timestamp).toLocaleDateString("en-PH", {
-                timeZone: MANILA,
-                month: "short",
-                day: "numeric",
-              }),
-              o.orderId,
-              o.fullname,
-              (o.items || []).map((i) => `${i.name} x${i.qty}`).join(", ") +
-                (o.voucherCode ? ` (${o.voucherCode})` : ""),
-              phpText(o.total),
-              o.paymentStatus,
-              phpText(profit),
+              new Date(o.timestamp).toLocaleDateString("en-PH", { timeZone: MANILA, month: "short", day: "numeric" }),
+              o.orderId, o.fullname,
+              (o.items || []).map(i => `${i.name} x${i.qty}`).join(", ") + (o.voucherCode ? ` (${o.voucherCode})` : ""),
+              phpText(o.total), o.paymentStatus, phpText(profit)
             ])
           : [["No orders in this period", "", "", "", "", "", ""]],
         styles: { ...tableStyle.styles, fontSize: 7.5 },
-        columnStyles: {
-          1: { cellWidth: 92 },
-          4: { halign: "right" },
-          6: { halign: "right" },
-        },
+        columnStyles: { 1: { cellWidth: 92 }, 4: { halign: "right" }, 6: { halign: "right" } }
       });
 
       if (r.missingBottles) {
         const yy = doc.lastAutoTable.finalY + 18;
         doc.setFontSize(8);
         doc.setTextColor(170, 90, 60);
-        doc.text(
-          `* ${r.missingBottles} bottle(s) sold have no cost recorded, so profit is overstated.`,
-          M,
-          yy,
-        );
+        doc.text(`* ${r.missingBottles} bottle(s) sold have no cost recorded, so profit is overstated.`, M, yy);
       }
 
       // Page numbers
@@ -6404,12 +6614,7 @@ Object.assign(AdminApp.prototype, {
         doc.setPage(i);
         doc.setFontSize(8);
         doc.setTextColor(...muted);
-        doc.text(
-          `Aura & Essence · ${r.period.label} · Page ${i} of ${pages}`,
-          W / 2,
-          doc.internal.pageSize.getHeight() - 20,
-          { align: "center" },
-        );
+        doc.text(`Aura & Essence · ${r.period.label} · Page ${i} of ${pages}`, W / 2, doc.internal.pageSize.getHeight() - 20, { align: "center" });
       }
 
       doc.save(`aura-essence-report-${r.period.file}.pdf`);
@@ -6417,13 +6622,11 @@ Object.assign(AdminApp.prototype, {
     } catch (error) {
       this.setStatus("PDF report failed: " + error.message, true);
     } finally {
-      if (btn) {
-        btn.disabled = false;
-        btn.textContent = label;
-      }
+      if (btn) { btn.disabled = false; btn.textContent = label; }
     }
-  },
+  }
 });
+
 
 /* =========================================================
    ADMIN UX (v4)
@@ -6436,166 +6639,108 @@ const _orig4 = {
   showView: AdminApp.prototype.showView,
   openApp: AdminApp.prototype.openApp,
   renderOrders: AdminApp.prototype.renderOrders,
-  renderInventory: AdminApp.prototype.renderInventory,
+  renderInventory: AdminApp.prototype.renderInventory
 };
 
 const STATE_KEY = "aeAdminState";
 // Filters that are remembered between visits (element ids)
 const REMEMBER_FIELDS = [
-  "orderPayFilter",
-  "rangePreset",
-  "rangeFrom",
-  "rangeTo",
-  "filterCat",
-  "filterStock",
-  "filterBadge",
-  "filterActive",
-  "sortProducts",
-  "reportRange",
-  "reportMonth",
-  "voucherFilter",
-  "auditFilter",
+  "orderPayFilter", "rangePreset", "rangeFrom", "rangeTo",
+  "filterCat", "filterStock", "filterBadge", "filterActive", "sortProducts",
+  "reportRange", "reportMonth", "voucherFilter", "auditFilter"
 ];
 
 function readAdminState() {
-  try {
-    return JSON.parse(localStorage.getItem(STATE_KEY) || "{}") || {};
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(localStorage.getItem(STATE_KEY) || "{}") || {}; } catch { return {}; }
 }
 function writeAdminState(patch) {
-  try {
-    localStorage.setItem(
-      STATE_KEY,
-      JSON.stringify({ ...readAdminState(), ...patch }),
-    );
-  } catch {
-    /* private mode */
-  }
+  try { localStorage.setItem(STATE_KEY, JSON.stringify({ ...readAdminState(), ...patch })); } catch { /* private mode */ }
 }
 
 let deferredInstall = null;
-window.addEventListener("beforeinstallprompt", (e) => {
+window.addEventListener("beforeinstallprompt", e => {
   e.preventDefault();
   deferredInstall = e;
-  ["installBtn", "mInstallBtn"].forEach((id) => {
-    const b = byId(id);
-    if (b) b.hidden = false;
-  });
+  ["installBtn", "mInstallBtn"].forEach(id => { const b = byId(id); if (b) b.hidden = false; });
 });
 
 Object.assign(AdminApp.prototype, {
+
   bind() {
     _orig4.bind.call(this);
     this.selectedOrders = new Set();
 
     /* ----- Ctrl+K search ----- */
     byId("paletteBtn")?.addEventListener("click", () => this.openPalette());
-    document.addEventListener("keydown", (e) => {
+    document.addEventListener("keydown", e => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
         if (byId("appView")?.classList.contains("hidden")) return;
         e.preventDefault();
-        byId("palette")?.classList.contains("hidden")
-          ? this.openPalette()
-          : this.closePalette();
-      } else if (
-        e.key === "/" &&
-        !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "") &&
-        !byId("appView")?.classList.contains("hidden")
-      ) {
+        byId("palette")?.classList.contains("hidden") ? this.openPalette() : this.closePalette();
+      } else if (e.key === "/" && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || "") &&
+                 !byId("appView")?.classList.contains("hidden")) {
         e.preventDefault();
         this.openPalette();
       }
     });
-    byId("palette")
-      ?.querySelector("[data-close-palette]")
-      ?.addEventListener("click", () => this.closePalette());
-    byId("paletteInput")?.addEventListener("input", () => {
-      this.paletteIndex = 0;
-      this.renderPalette();
-    });
-    byId("paletteInput")?.addEventListener("keydown", (e) => {
+    byId("palette")?.querySelector("[data-close-palette]")?.addEventListener("click", () => this.closePalette());
+    byId("paletteInput")?.addEventListener("input", () => { this.paletteIndex = 0; this.renderPalette(); });
+    byId("paletteInput")?.addEventListener("keydown", e => {
       const n = (this.paletteItems || []).length;
-      if (e.key === "ArrowDown") {
-        e.preventDefault();
-        this.paletteIndex = (this.paletteIndex + 1) % Math.max(1, n);
-        this.highlightPalette();
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        this.paletteIndex = (this.paletteIndex - 1 + n) % Math.max(1, n);
-        this.highlightPalette();
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        this.runPaletteItem(this.paletteIndex);
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        this.closePalette();
-      }
+      if (e.key === "ArrowDown") { e.preventDefault(); this.paletteIndex = (this.paletteIndex + 1) % Math.max(1, n); this.highlightPalette(); }
+      else if (e.key === "ArrowUp") { e.preventDefault(); this.paletteIndex = (this.paletteIndex - 1 + n) % Math.max(1, n); this.highlightPalette(); }
+      else if (e.key === "Enter") { e.preventDefault(); this.runPaletteItem(this.paletteIndex); }
+      else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); this.closePalette(); }
     });
-    byId("paletteList")?.addEventListener("click", (e) => {
+    byId("paletteList")?.addEventListener("click", e => {
       const item = e.target.closest("[data-pi]");
       if (item) this.runPaletteItem(Number(item.dataset.pi));
     });
-    byId("paletteList")?.addEventListener("mousemove", (e) => {
+    byId("paletteList")?.addEventListener("mousemove", e => {
       const item = e.target.closest("[data-pi]");
-      if (item && Number(item.dataset.pi) !== this.paletteIndex) {
-        this.paletteIndex = Number(item.dataset.pi);
-        this.highlightPalette();
-      }
+      if (item && Number(item.dataset.pi) !== this.paletteIndex) { this.paletteIndex = Number(item.dataset.pi); this.highlightPalette(); }
     });
 
     /* ----- Bulk order actions ----- */
     // Capture phase: a checkbox click must not open the order drawer.
-    this.dom.ordersRows?.addEventListener(
-      "click",
-      (e) => {
-        const box = e.target.closest("input[data-sel]");
-        const cell = e.target.closest("td.td-check");
-        if (!box && !cell) return;
-        e.stopPropagation();
-        if (!box && cell) {
-          const b = cell.querySelector("input[data-sel]");
-          if (b) {
-            b.checked = !b.checked;
-            this.toggleOrderSelection(b.dataset.sel, b.checked);
-          }
-          return;
-        }
-        this.toggleOrderSelection(box.dataset.sel, box.checked);
-      },
-      true,
-    );
-    byId("selectAllOrders")?.addEventListener("change", (e) => {
-      document.querySelectorAll("#ordersRows input[data-sel]").forEach((b) => {
+    this.dom.ordersRows?.addEventListener("click", e => {
+      const box = e.target.closest("input[data-sel]");
+      const cell = e.target.closest("td.td-check");
+      if (!box && !cell) return;
+      e.stopPropagation();
+      if (!box && cell) {
+        const b = cell.querySelector("input[data-sel]");
+        if (b) { b.checked = !b.checked; this.toggleOrderSelection(b.dataset.sel, b.checked); }
+        return;
+      }
+      this.toggleOrderSelection(box.dataset.sel, box.checked);
+    }, true);
+    byId("selectAllOrders")?.addEventListener("change", e => {
+      document.querySelectorAll("#ordersRows input[data-sel]").forEach(b => {
         b.checked = e.target.checked;
         this.toggleOrderSelection(b.dataset.sel, b.checked, true);
       });
       this.updateBulkBar();
     });
-    byId("bulkStatus")?.addEventListener("change", (e) => {
+    byId("bulkStatus")?.addEventListener("change", e => {
       const status = e.target.value;
       e.target.value = "";
       if (status) this.bulkSetStatus(status);
     });
     byId("bulkPaid")?.addEventListener("click", () => this.bulkMarkPaid());
-    byId("bulkClear")?.addEventListener("click", () => {
-      this.selectedOrders.clear();
-      this.renderOrders();
-    });
+    byId("bulkClear")?.addEventListener("click", () => { this.selectedOrders.clear(); this.renderOrders(); });
 
     /* ----- Quick cost editing (Restocks → Stock & cost) ----- */
-    byId("invRows")?.addEventListener("click", (e) => {
+    byId("invRows")?.addEventListener("click", e => {
       const cell = e.target.closest("[data-cost-edit]");
       if (cell && !cell.querySelector("input")) this.startCostEdit(cell);
     });
-    byId("invCards")?.addEventListener("click", (e) => {
+    byId("invCards")?.addEventListener("click", e => {
       if (e.target.closest(".stat.warn")) this.focusMissingCost();
     });
 
     /* ----- Remember filters ----- */
-    document.addEventListener("change", (e) => {
+    document.addEventListener("change", e => {
       const id = e.target?.id;
       if (REMEMBER_FIELDS.includes(id)) {
         const filters = readAdminState().filters || {};
@@ -6603,7 +6748,7 @@ Object.assign(AdminApp.prototype, {
         writeAdminState({ filters });
       }
     });
-    this.dom.orderTabs?.addEventListener("click", (e) => {
+    this.dom.orderTabs?.addEventListener("click", e => {
       const tab = e.target.closest("[data-tab]");
       if (tab) writeAdminState({ orderTab: tab.dataset.tab });
     });
@@ -6613,104 +6758,66 @@ Object.assign(AdminApp.prototype, {
       if (deferredInstall) {
         deferredInstall.prompt();
         const choice = await deferredInstall.userChoice.catch(() => null);
-        if (choice?.outcome === "accepted")
-          this.toast("Installed — find “A&E Admin” on your home screen");
+        if (choice?.outcome === "accepted") this.toast("Installed — find “A&E Admin” on your home screen");
         deferredInstall = null;
-        ["installBtn", "mInstallBtn"].forEach((id) => {
-          const b = byId(id);
-          if (b) b.hidden = true;
-        });
+        ["installBtn", "mInstallBtn"].forEach(id => { const b = byId(id); if (b) b.hidden = true; });
       }
     };
     byId("installBtn")?.addEventListener("click", install);
-    this.dom.moreSheet?.addEventListener("click", (e) => {
-      if (e.target.closest('[data-more-action="install"]')) {
-        this.dom.moreSheet.classList.add("hidden");
-        install();
-      }
+    this.dom.moreSheet?.addEventListener("click", e => {
+      if (e.target.closest('[data-more-action="install"]')) { this.dom.moreSheet.classList.add("hidden"); install(); }
     });
     // iPhone/iPad: no install prompt — show how once, in the More menu
-    const ios =
-      /iphone|ipad|ipod/i.test(navigator.userAgent) &&
-      !window.navigator.standalone;
+    const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) && !window.navigator.standalone;
     if (ios && byId("mInstallBtn")) {
       byId("mInstallBtn").hidden = false;
       byId("mInstallBtn").addEventListener("click", () =>
-        this.ask({
-          title: "Add to Home Screen",
-          message:
-            "In Safari, tap the Share button (square with an arrow), then “Add to Home Screen”. The admin will open like an app.",
-          okText: "Got it",
-          cancelText: "Close",
-        }),
-      );
+        this.ask({ title: "Add to Home Screen", message: "In Safari, tap the Share button (square with an arrow), then “Add to Home Screen”. The admin will open like an app.", okText: "Got it", cancelText: "Close" }));
     }
 
     if ("serviceWorker" in navigator && location.protocol === "https:") {
-      navigator.serviceWorker
-        .register("admin-sw.js", { scope: "./admin" })
-        .catch(() => {});
+      navigator.serviceWorker.register("admin-sw.js", { scope: "./admin" }).catch(() => {});
     }
   },
+
 
   async openApp() {
     await _orig4.openApp.call(this);
     this.restoreAdminState();
   },
 
+
   restoreAdminState() {
     const state = readAdminState();
     const filters = state.filters || {};
     let touched = false;
-    REMEMBER_FIELDS.forEach((id) => {
+    REMEMBER_FIELDS.forEach(id => {
       const el = byId(id);
       if (!el || filters[id] == null) return;
-      if (
-        el.tagName === "SELECT" &&
-        ![...el.options].some((o) => o.value === filters[id])
-      )
-        return;
-      if (el.value !== filters[id]) {
-        el.value = filters[id];
-        touched = true;
-      }
+      if (el.tagName === "SELECT" && ![...el.options].some(o => o.value === filters[id])) return;
+      if (el.value !== filters[id]) { el.value = filters[id]; touched = true; }
     });
     if (state.orderTab) this.orderTab = state.orderTab;
 
     if (touched || state.orderTab) {
       // let each screen re-render with the remembered filters
-      [
-        "rangePreset",
-        "filterCat",
-        "orderPayFilter",
-        "reportRange",
-        "voucherFilter",
-        "auditFilter",
-      ].forEach((id) => {
-        if (filters[id] != null)
-          byId(id)?.dispatchEvent(new Event("change", { bubbles: true }));
+      ["rangePreset", "filterCat", "orderPayFilter", "reportRange", "voucherFilter", "auditFilter"].forEach(id => {
+        if (filters[id] != null) byId(id)?.dispatchEvent(new Event("change", { bubbles: true }));
       });
-      if (filters.rangePreset === "custom")
-        byId("rangeFrom")?.dispatchEvent(
-          new Event("change", { bubbles: true }),
-        );
+      if (filters.rangePreset === "custom") byId("rangeFrom")?.dispatchEvent(new Event("change", { bubbles: true }));
       this.renderOrders?.();
     }
 
-    if (
-      state.view &&
-      state.view !== "dashboard" &&
-      this.views.includes(state.view)
-    )
-      this.showView(state.view);
+    if (state.view && state.view !== "dashboard" && this.views.includes(state.view)) this.showView(state.view);
   },
+
 
   showView(view) {
     _orig4.showView.call(this, view);
-    if (view === "homepage" && this.dom.viewTitle)
-      this.dom.viewTitle.textContent = "Homepage & Payment";
+    if (view === "homepage" && this.dom.viewTitle) this.dom.viewTitle.textContent = "Homepage & Payment";
     writeAdminState({ view });
   },
+
 
   /* ---------------------------------------------------
      Pop-ups: max 3 at a time, repeats are merged ("×2")
@@ -6721,9 +6828,7 @@ Object.assign(AdminApp.prototype, {
     if (!stack || !message) return;
 
     const key = `${type}|${options.title || ""}|${message}`;
-    const same = [...stack.children].find(
-      (el) => el.dataset.key === key && !el.classList.contains("out"),
-    );
+    const same = [...stack.children].find(el => el.dataset.key === key && !el.classList.contains("out"));
     if (same) {
       const n = Number(same.dataset.count || 1) + 1;
       same.dataset.count = n;
@@ -6735,10 +6840,7 @@ Object.assign(AdminApp.prototype, {
       }
       badge.textContent = ` ×${n}`;
       clearTimeout(same._timer);
-      same._timer = setTimeout(
-        () => same.querySelector("button")?.click(),
-        options.timeout || (type === "error" ? 7000 : 3500),
-      );
+      same._timer = setTimeout(() => same.querySelector("button")?.click(), options.timeout || (type === "error" ? 7000 : 3500));
       stack.prepend(same);
       return;
     }
@@ -6757,26 +6859,15 @@ Object.assign(AdminApp.prototype, {
       item.classList.add("out");
       setTimeout(() => item.remove(), 200);
     };
-    item.querySelector("button").addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      remove();
-    });
-    if (options.onClick)
-      item.addEventListener("click", () => {
-        options.onClick();
-        remove();
-      });
+    item.querySelector("button").addEventListener("click", ev => { ev.stopPropagation(); remove(); });
+    if (options.onClick) item.addEventListener("click", () => { options.onClick(); remove(); });
 
     stack.prepend(item);
-    const live = [...stack.children].filter(
-      (el) => !el.classList.contains("out"),
-    );
-    live.slice(3).forEach((el) => el.remove());
-    item._timer = setTimeout(
-      remove,
-      options.timeout || (type === "error" ? 7000 : 3500),
-    );
+    const live = [...stack.children].filter(el => !el.classList.contains("out"));
+    live.slice(3).forEach(el => el.remove());
+    item._timer = setTimeout(remove, options.timeout || (type === "error" ? 7000 : 3500));
   },
+
 
   /* ---------------------------------------------------
      Ctrl+K search
@@ -6794,177 +6885,86 @@ Object.assign(AdminApp.prototype, {
     if (!this.vouchers?.length && !this._vouchersRequested) {
       this._vouchersRequested = true;
       this.request("GET", { action: "adminVouchers" })
-        .then((res) => {
-          this.vouchers = res.vouchers || [];
-          if (!pal.classList.contains("hidden")) this.renderPalette();
-        })
+        .then(res => { this.vouchers = res.vouchers || []; if (!pal.classList.contains("hidden")) this.renderPalette(); })
         .catch(() => {});
     }
   },
+
 
   closePalette() {
     byId("palette")?.classList.add("hidden");
   },
 
+
   paletteResults(q) {
     const query = normalize(q || "");
     const digits = String(q || "").replace(/\D/g, "");
-    const has = (text) => normalize(text).includes(query);
+    const has = text => normalize(text).includes(query);
     const out = [];
 
     const pages = [
-      ["dashboard", "Dashboard", "Sales"],
-      ["orders", "Orders", "Sales"],
-      ["reports", "Profit & Reports", "Sales"],
-      ["products", "Products", "Catalog"],
-      ["inventory", "Restocks & cost", "Catalog"],
-      ["promotions", "Promotions", "Catalog"],
-      ["vouchers", "Vouchers", "Catalog"],
-      ["homepage", "Homepage & Payment settings", "Site"],
-      ["reviews", "Reviews", "Site"],
-      ["audit", "Audit Log", "Site"],
+      ["dashboard", "Dashboard", "Sales"], ["orders", "Orders", "Sales"], ["reports", "Profit & Reports", "Sales"],
+      ["products", "Products", "Catalog"], ["inventory", "Restocks & cost", "Catalog"], ["promotions", "Promotions", "Catalog"],
+      ["vouchers", "Vouchers", "Catalog"], ["homepage", "Homepage & Payment settings", "Site"], ["subscribers", "Welcome list", "Site"], ["reviews", "Reviews", "Site"], ["audit", "Audit Log", "Site"]
     ];
     const actions = [
-      [
-        "New product",
-        "Add a perfume",
-        () => {
-          this.showView("products");
-          this.editProduct(null);
-        },
-      ],
-      [
-        "New voucher",
-        "Create a discount code",
-        () => {
-          this.showView("vouchers");
-          this.editVoucher(null);
-        },
-      ],
-      [
-        "Record a restock",
-        "Add bottles + cost",
-        () => {
-          this.showView("inventory");
-          setTimeout(() => byId("rProduct")?.focus(), 80);
-        },
-      ],
-      [
-        "Download PDF report",
-        "This month's sales & profit",
-        () => {
-          this.showView("reports");
-          this.downloadReportPdf();
-        },
-      ],
+      ["New product", "Add a perfume", () => { this.showView("products"); this.editProduct(null); }],
+      ["New voucher", "Create a discount code", () => { this.showView("vouchers"); this.editVoucher(null); }],
+      ["Record a restock", "Add bottles + cost", () => { this.showView("inventory"); setTimeout(() => byId("rProduct")?.focus(), 80); }],
+      ["Download PDF report", "This month's sales & profit", () => { this.showView("reports"); this.downloadReportPdf(); }],
       ["Download backup", "Everything as Excel", () => this.downloadBackup()],
-      [
-        "Open customer site",
-        "In a new tab",
-        () => window.open("index.html", "_blank", "noopener"),
-      ],
+      ["Open customer site", "In a new tab", () => window.open("index.html", "_blank", "noopener")]
     ];
 
     if (!query) {
-      const fresh = (this.orders || [])
-        .filter((o) => o.status === "New")
-        .slice(0, 5);
-      fresh.forEach((o) => out.push(this.paletteOrderItem(o)));
-      actions
-        .slice(0, 4)
-        .forEach(([t, s, run]) =>
-          out.push({ group: "Actions", icon: "＋", title: t, sub: s, run }),
-        );
-      pages.forEach(([v, t, g]) =>
-        out.push({
-          group: "Go to",
-          icon: "→",
-          title: t,
-          sub: g,
-          run: () => this.showView(v),
-        }),
-      );
+      const fresh = (this.orders || []).filter(o => o.status === "New").slice(0, 5);
+      fresh.forEach(o => out.push(this.paletteOrderItem(o)));
+      actions.slice(0, 4).forEach(([t, s, run]) => out.push({ group: "Actions", icon: "＋", title: t, sub: s, run }));
+      pages.forEach(([v, t, g]) => out.push({ group: "Go to", icon: "→", title: t, sub: g, run: () => this.showView(v) }));
       return out;
     }
 
     (this.orders || [])
-      .filter(
-        (o) =>
-          has(o.orderId) ||
-          has(o.fullname) ||
-          (digits.length >= 4 &&
-            String(o.contact || "")
-              .replace(/\D/g, "")
-              .includes(digits)) ||
-          (Array.isArray(o.items) && o.items.some((i) => has(i.name))),
-      )
+      .filter(o => has(o.orderId) || has(o.fullname) || (digits.length >= 4 && String(o.contact || "").replace(/\D/g, "").includes(digits)) ||
+                   (Array.isArray(o.items) && o.items.some(i => has(i.name))))
       .slice(0, 8)
-      .forEach((o) => out.push(this.paletteOrderItem(o)));
+      .forEach(o => out.push(this.paletteOrderItem(o)));
 
     (this.products || [])
-      .filter((p) => has(p.name) || has(p.id))
+      .filter(p => has(p.name) || has(p.id))
       .slice(0, 6)
-      .forEach((p) =>
-        out.push({
-          group: "Products",
-          icon: "◇",
-          title: p.name,
-          sub: `${p.stock == null ? "unlimited" : p.stock + " in stock"} · ${formatCurrency(p.price)}${p.cost == null ? " · no cost yet" : ""}`,
-          run: () => {
-            this.showView("products");
-            this.editProduct(p);
-          },
-        }),
-      );
+      .forEach(p => out.push({
+        group: "Products", icon: "◇", title: p.name,
+        sub: `${p.stock == null ? "unlimited" : p.stock + " in stock"} · ${formatCurrency(p.price)}${p.cost == null ? " · no cost yet" : ""}`,
+        run: () => { this.showView("products"); this.editProduct(p); }
+      }));
 
     (this.vouchers || [])
-      .filter((v) => has(v.code) || has(v.note))
+      .filter(v => has(v.code) || has(v.note))
       .slice(0, 4)
-      .forEach((v) =>
-        out.push({
-          group: "Vouchers",
-          icon: "%",
-          title: v.code,
-          sub: voucherRulesText(v),
-          run: () => {
-            this.showView("vouchers");
-            this.editVoucher(v);
-          },
-        }),
-      );
+      .forEach(v => out.push({
+        group: "Vouchers", icon: "%", title: v.code, sub: voucherRulesText(v),
+        run: () => { this.showView("vouchers"); this.editVoucher(v); }
+      }));
 
-    actions
-      .filter(([t, s]) => has(t) || has(s))
-      .forEach(([t, s, run]) =>
-        out.push({ group: "Actions", icon: "＋", title: t, sub: s, run }),
-      );
-    pages
-      .filter(([, t, g]) => has(t) || has(g))
-      .forEach(([v, t, g]) =>
-        out.push({
-          group: "Go to",
-          icon: "→",
-          title: t,
-          sub: g,
-          run: () => this.showView(v),
-        }),
-      );
+    actions.filter(([t, s]) => has(t) || has(s))
+      .forEach(([t, s, run]) => out.push({ group: "Actions", icon: "＋", title: t, sub: s, run }));
+    pages.filter(([, t, g]) => has(t) || has(g))
+      .forEach(([v, t, g]) => out.push({ group: "Go to", icon: "→", title: t, sub: g, run: () => this.showView(v) }));
 
     return out;
   },
 
+
   paletteOrderItem(o) {
     return {
-      group: "Orders",
-      icon: "☰",
+      group: "Orders", icon: "☰",
       title: `${o.fullname} · ${formatCurrency(o.total)}`,
       sub: `${o.orderId} · ${o.status} · ${o.paymentStatus || "Unpaid"}`,
-      run: () => {
-        this.showView("orders");
-        this.openOrder(o.orderId);
-      },
+      run: () => { this.showView("orders"); this.openOrder(o.orderId); }
     };
   },
+
 
   renderPalette() {
     const list = byId("paletteList");
@@ -6979,21 +6979,17 @@ Object.assign(AdminApp.prototype, {
     }
 
     let group = "";
-    list.innerHTML = items
-      .map((it, i) => {
-        const head =
-          it.group !== group
-            ? `<p class="palette-group">${escapeHTML(it.group)}</p>`
-            : "";
-        group = it.group;
-        return `${head}<button type="button" class="palette-item${i === this.paletteIndex ? " active" : ""}" data-pi="${i}" role="option" aria-selected="${i === this.paletteIndex}">
+    list.innerHTML = items.map((it, i) => {
+      const head = it.group !== group ? `<p class="palette-group">${escapeHTML(it.group)}</p>` : "";
+      group = it.group;
+      return `${head}<button type="button" class="palette-item${i === this.paletteIndex ? " active" : ""}" data-pi="${i}" role="option" aria-selected="${i === this.paletteIndex}">
         <span class="pi-icon">${escapeHTML(it.icon)}</span><span class="pi-text"><b>${escapeHTML(it.title)}</b><small>${escapeHTML(it.sub || "")}</small></span></button>`;
-      })
-      .join("");
+    }).join("");
   },
 
+
   highlightPalette() {
-    document.querySelectorAll("#paletteList [data-pi]").forEach((el) => {
+    document.querySelectorAll("#paletteList [data-pi]").forEach(el => {
       const on = Number(el.dataset.pi) === this.paletteIndex;
       el.classList.toggle("active", on);
       el.setAttribute("aria-selected", String(on));
@@ -7001,12 +6997,14 @@ Object.assign(AdminApp.prototype, {
     });
   },
 
+
   runPaletteItem(i) {
     const item = (this.paletteItems || [])[i];
     if (!item) return;
     this.closePalette();
     item.run();
   },
+
 
   /* ---------------------------------------------------
      Bulk order actions
@@ -7016,7 +7014,7 @@ Object.assign(AdminApp.prototype, {
     _orig4.renderOrders.call(this);
     const rows = document.querySelectorAll("#ordersRows tr[data-order]");
     const visible = new Set();
-    rows.forEach((tr) => {
+    rows.forEach(tr => {
       const id = tr.dataset.order;
       visible.add(id);
       const td = document.createElement("td");
@@ -7025,24 +7023,20 @@ Object.assign(AdminApp.prototype, {
       tr.prepend(td);
       tr.classList.toggle("selected", Boolean(this.selectedOrders?.has(id)));
     });
-    document.querySelectorAll("#ordersRows td[colspan]").forEach((td) => {
-      td.colSpan = 8;
-    });
+    document.querySelectorAll("#ordersRows td[colspan]").forEach(td => { td.colSpan = 8; });
     // forget selections that are no longer on screen (other tab / search)
-    [...(this.selectedOrders || [])].forEach((id) => {
-      if (!visible.has(id)) this.selectedOrders.delete(id);
-    });
+    [...(this.selectedOrders || [])].forEach(id => { if (!visible.has(id)) this.selectedOrders.delete(id); });
     this.updateBulkBar();
   },
+
 
   toggleOrderSelection(id, on, skipBar) {
     if (!this.selectedOrders) this.selectedOrders = new Set();
     on ? this.selectedOrders.add(id) : this.selectedOrders.delete(id);
-    document
-      .querySelector(`#ordersRows tr[data-order="${CSS.escape(id)}"]`)
-      ?.classList.toggle("selected", on);
+    document.querySelector(`#ordersRows tr[data-order="${CSS.escape(id)}"]`)?.classList.toggle("selected", on);
     if (!skipBar) this.updateBulkBar();
   },
+
 
   updateBulkBar() {
     const bar = byId("bulkBar");
@@ -7058,91 +7052,66 @@ Object.assign(AdminApp.prototype, {
     }
   },
 
+
   selectedOrderList() {
     const ids = this.selectedOrders || new Set();
-    return (this.orders || []).filter((o) => ids.has(o.orderId));
+    return (this.orders || []).filter(o => ids.has(o.orderId));
   },
 
+
   async bulkSetStatus(status) {
-    const list = this.selectedOrderList().filter((o) => o.status !== status);
-    if (!list.length)
-      return this.toast(`Selected orders are already ${status}.`, "info");
+    const list = this.selectedOrderList().filter(o => o.status !== status);
+    if (!list.length) return this.toast(`Selected orders are already ${status}.`, "info");
 
     const ok = await this.ask({
       title: `Set ${list.length} order${list.length === 1 ? "" : "s"} to ${status}?`,
-      message:
-        status === "Cancelled"
-          ? "Cancelled orders put their bottles back in stock. Customers see “Cancelled” in Track Order."
-          : `Customers will see “${status}” when they track their order.`,
-      okText: `Set ${status}`,
-      danger: status === "Cancelled",
+      message: status === "Cancelled"
+        ? "Cancelled orders put their bottles back in stock. Customers see “Cancelled” in Track Order."
+        : `Customers will see “${status}” when they track their order.`,
+      okText: `Set ${status}`, danger: status === "Cancelled"
     });
     if (!ok) return;
 
-    let done = 0,
-      failed = 0;
+    let done = 0, failed = 0;
     for (const o of list) {
       try {
-        await this.request("POST", {
-          action: "adminUpdateOrderStatus",
-          orderId: o.orderId,
-          status,
-        });
+        await this.request("POST", { action: "adminUpdateOrderStatus", orderId: o.orderId, status });
         done++;
-      } catch {
-        failed++;
-      }
+      } catch { failed++; }
     }
     this.selectedOrders.clear();
     await this.loadOrders(true);
-    this.toast(
-      `${done} order${done === 1 ? "" : "s"} set to ${status}${failed ? ` · ${failed} failed` : ""}`,
-      failed ? "error" : "ok",
-    );
+    this.toast(`${done} order${done === 1 ? "" : "s"} set to ${status}${failed ? ` · ${failed} failed` : ""}`, failed ? "error" : "ok");
   },
 
+
   async bulkMarkPaid() {
-    const list = this.selectedOrderList().filter(
-      (o) => o.paymentStatus !== "Paid" && o.status !== "Cancelled",
-    );
-    if (!list.length)
-      return this.toast(
-        "Selected orders are already paid (or cancelled).",
-        "info",
-      );
+    const list = this.selectedOrderList().filter(o => o.paymentStatus !== "Paid" && o.status !== "Cancelled");
+    if (!list.length) return this.toast("Selected orders are already paid (or cancelled).", "info");
     const sum = list.reduce((s, o) => s + Number(o.total || 0), 0);
 
     const ok = await this.ask({
       title: `Mark ${list.length} order${list.length === 1 ? "" : "s"} as paid?`,
       message: `Records the full order total as received (${formatCurrency(sum)} in all). If someone paid a different amount, open that order and enter it there.`,
-      okText: "Mark as paid",
+      okText: "Mark as paid"
     });
     if (!ok) return;
 
-    let done = 0,
-      failed = 0;
+    let done = 0, failed = 0;
     for (const o of list) {
       try {
         await this.request("POST", {
-          action: "adminSavePayment",
-          orderId: o.orderId,
-          paymentStatus: "Paid",
-          amountPaid: o.total,
-          paymentRef: o.paymentRef || "",
-          paymentNote: o.paymentNote || "",
+          action: "adminSavePayment", orderId: o.orderId, paymentStatus: "Paid", amountPaid: o.total,
+          paymentRef: o.paymentRef || "", paymentNote: o.paymentNote || ""
         });
         done++;
-      } catch {
-        failed++;
-      }
+      } catch { failed++; }
     }
     this.selectedOrders.clear();
     await this.loadOrders(true);
-    this.toast(
-      `${done} order${done === 1 ? "" : "s"} marked as paid${failed ? ` · ${failed} failed` : ""}`,
-      failed ? "error" : "ok",
-    );
+    this.toast(`${done} order${done === 1 ? "" : "s"} marked as paid${failed ? ` · ${failed} failed` : ""}`, failed ? "error" : "ok");
   },
+
 
   /* ---------------------------------------------------
      Quick cost editing
@@ -7150,23 +7119,21 @@ Object.assign(AdminApp.prototype, {
 
   renderInventory() {
     _orig4.renderInventory.call(this);
-    document.querySelectorAll("#invRows tr").forEach((tr) => {
+    document.querySelectorAll("#invRows tr").forEach(tr => {
       const id = tr.querySelector("[data-restock]")?.dataset.restock;
       const cell = tr.querySelector('td[data-label="Avg. cost"]');
       if (!id || !cell) return;
       cell.dataset.costEdit = id;
       cell.classList.add("cost-cell");
       cell.title = "Click to edit the cost";
-      cell.insertAdjacentHTML(
-        "beforeend",
-        ` <span class="edit-hint" aria-hidden="true">✎</span>`,
-      );
+      cell.insertAdjacentHTML("beforeend", ` <span class="edit-hint" aria-hidden="true">✎</span>`);
     });
   },
 
+
   startCostEdit(cell) {
     const id = cell.dataset.costEdit;
-    const p = (this.products || []).find((x) => x.id === id);
+    const p = (this.products || []).find(x => x.id === id);
     if (!p) return;
     cell.innerHTML = `<input type="number" min="0" step="0.01" inputmode="decimal" class="cost-input" value="${p.cost ?? ""}" placeholder="₱ cost" aria-label="Cost per bottle for ${escapeHTML(p.name)}">`;
     const input = cell.querySelector("input");
@@ -7174,21 +7141,14 @@ Object.assign(AdminApp.prototype, {
     input.select();
 
     let finished = false;
-    const finish = async (save) => {
+    const finish = async save => {
       if (finished) return;
       finished = true;
       const text = input.value.trim();
       const next = text === "" ? null : Math.max(0, Number(text));
-      if (!save || next === p.cost || (text !== "" && !Number.isFinite(next))) {
-        this.renderInventory();
-        return;
-      }
+      if (!save || next === p.cost || (text !== "" && !Number.isFinite(next))) { this.renderInventory(); return; }
       try {
-        await this.request("POST", {
-          action: "adminSaveProduct",
-          ...this.productForSave(p),
-          cost: text,
-        });
+        await this.request("POST", { action: "adminSaveProduct", ...this.productForSave(p), cost: text });
         p.cost = next;
         this.toast(`${p.name}: cost ${next == null ? "cleared" : peso2(next)}`);
       } catch (error) {
@@ -7199,70 +7159,43 @@ Object.assign(AdminApp.prototype, {
       if (save === "next") this.focusMissingCost(id);
     };
 
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        finish("next");
-      }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        e.stopPropagation();
-        finish(false);
-      }
+    input.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); finish("next"); }
+      if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); finish(false); }
     });
     input.addEventListener("blur", () => finish(true));
   },
 
+
   // Same fields the product editor sends, so nothing else changes
   productForSave(p) {
     return {
-      originalId: p.id,
-      id: p.id,
-      name: p.name,
-      cat: p.cat,
-      price: p.price,
-      stock: p.stock ?? "",
-      sortOrder: p.sortOrder ?? 0,
-      img: p.img || "",
-      desc: p.desc || "",
-      descLong: p.descLong || "",
-      topNotes: (p.topNotes || []).join(", "),
-      heartNotes: (p.heartNotes || []).join(", "),
-      baseNotes: (p.baseNotes || []).join(", "),
-      application: p.application || "",
-      profiles: (p.profiles || []).join(", "),
-      longevity: p.longevity ?? 7,
-      projection: p.projection ?? 7,
-      strength: p.strength || "moderate",
-      time: (p.time || []).join(", "),
-      occasion: p.occasion || "",
-      badges: (p.badges || []).join(", "),
-      active: p.active !== false,
+      originalId: p.id, id: p.id, name: p.name, cat: p.cat, price: p.price,
+      stock: p.stock ?? "", sortOrder: p.sortOrder ?? 0, img: p.img || "",
+      desc: p.desc || "", descLong: p.descLong || "",
+      topNotes: (p.topNotes || []).join(", "), heartNotes: (p.heartNotes || []).join(", "), baseNotes: (p.baseNotes || []).join(", "),
+      application: p.application || "", profiles: (p.profiles || []).join(", "),
+      longevity: p.longevity ?? 7, projection: p.projection ?? 7, strength: p.strength || "moderate",
+      time: (p.time || []).join(", "), occasion: p.occasion || "",
+      badges: (p.badges || []).join(", "), active: p.active !== false
     };
   },
 
+
   focusMissingCost(afterId) {
     const cells = [...document.querySelectorAll("#invRows [data-cost-edit]")];
-    const missing = cells.filter(
-      (c) =>
-        (this.products || []).find((p) => p.id === c.dataset.costEdit)?.cost ==
-        null,
-    );
-    if (!missing.length) {
-      if (!afterId) this.toast("All products have a cost ✓");
-      return;
-    }
+    const missing = cells.filter(c => (this.products || []).find(p => p.id === c.dataset.costEdit)?.cost == null);
+    if (!missing.length) { if (!afterId) this.toast("All products have a cost ✓"); return; }
     let target = missing[0];
     if (afterId) {
-      const idx = cells.findIndex((c) => c.dataset.costEdit === afterId);
-      target = missing.find((c) => cells.indexOf(c) > idx) || missing[0];
+      const idx = cells.findIndex(c => c.dataset.costEdit === afterId);
+      target = missing.find(c => cells.indexOf(c) > idx) || missing[0];
     }
-    target
-      .closest("tr")
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.closest("tr")?.scrollIntoView({ behavior: "smooth", block: "center" });
     this.startCostEdit(target);
-  },
+  }
 });
+
 
 /* =========================================================
    MAISON LOOK (v5)
@@ -7276,7 +7209,7 @@ const _orig5 = {
   renderOrders: AdminApp.prototype.renderOrders,
   openOrder: AdminApp.prototype.openOrder,
   renderProducts: AdminApp.prototype.renderProducts,
-  showView: AdminApp.prototype.showView,
+  showView: AdminApp.prototype.showView
 };
 
 function bottleThumb(src, size = "") {
@@ -7286,69 +7219,44 @@ function bottleThumb(src, size = "") {
 }
 
 Object.assign(AdminApp.prototype, {
+
   productFor(idOrName) {
-    const key = String(idOrName || "")
-      .trim()
-      .toLowerCase();
-    return (
-      (this.products || []).find(
-        (p) =>
-          String(p.id).toLowerCase() === key ||
-          String(p.name || "")
-            .trim()
-            .toLowerCase() === key,
-      ) || null
-    );
+    const key = String(idOrName || "").trim().toLowerCase();
+    return (this.products || []).find(p =>
+      String(p.id).toLowerCase() === key || String(p.name || "").trim().toLowerCase() === key) || null;
   },
+
 
   renderDashboard(response) {
     _orig5.renderDashboard.call(this, response);
 
-    document
-      .querySelectorAll("#topProducts .top-row > span")
-      .forEach((span) => {
-        if (span.querySelector(".bottle")) return;
-        const name = span.textContent.replace(/^\s*\d+\.\s*/, "").trim();
-        span.insertAdjacentHTML(
-          "afterbegin",
-          bottleThumb(this.productFor(name)?.img),
-        );
-      });
-    document
-      .querySelectorAll("#lowStock .mini[data-product] > span")
-      .forEach((span) => {
-        if (span.querySelector(".bottle")) return;
-        span.insertAdjacentHTML(
-          "afterbegin",
-          bottleThumb(
-            this.productFor(span.closest("[data-product]").dataset.product)
-              ?.img,
-          ),
-        );
-      });
-  },
-
-  renderOrders() {
-    _orig5.renderOrders.call(this);
-    document.querySelectorAll("#ordersRows tr[data-order]").forEach((tr) => {
-      const cell = tr.querySelector('td[data-label="Items"]');
-      const order = (this.orders || []).find(
-        (o) => o.orderId === tr.dataset.order,
-      );
-      if (!cell || !order || !Array.isArray(order.items) || !order.items.length)
-        return;
-      cell.innerHTML = `<div class="item-lines">${order.items
-        .map(
-          (i) => `
-        <span class="item-line">${bottleThumb((this.productFor(i.id) || this.productFor(i.name))?.img, "sm")}<span>${escapeHTML(i.name || i.id)} <em>× ${escapeHTML(i.qty)}</em></span></span>`,
-        )
-        .join("")}</div>`;
+    document.querySelectorAll("#topProducts .top-row > span").forEach(span => {
+      if (span.querySelector(".bottle")) return;
+      const name = span.textContent.replace(/^\s*\d+\.\s*/, "").trim();
+      span.insertAdjacentHTML("afterbegin", bottleThumb(this.productFor(name)?.img));
+    });
+    document.querySelectorAll("#lowStock .mini[data-product] > span").forEach(span => {
+      if (span.querySelector(".bottle")) return;
+      span.insertAdjacentHTML("afterbegin", bottleThumb(this.productFor(span.closest("[data-product]").dataset.product)?.img));
     });
   },
 
+
+  renderOrders() {
+    _orig5.renderOrders.call(this);
+    document.querySelectorAll("#ordersRows tr[data-order]").forEach(tr => {
+      const cell = tr.querySelector('td[data-label="Items"]');
+      const order = (this.orders || []).find(o => o.orderId === tr.dataset.order);
+      if (!cell || !order || !Array.isArray(order.items) || !order.items.length) return;
+      cell.innerHTML = `<div class="item-lines">${order.items.map(i => `
+        <span class="item-line">${bottleThumb((this.productFor(i.id) || this.productFor(i.name))?.img, "sm")}<span>${escapeHTML(i.name || i.id)} <em>× ${escapeHTML(i.qty)}</em></span></span>`).join("")}</div>`;
+    });
+  },
+
+
   openOrder(orderId) {
     _orig5.openOrder.call(this, orderId);
-    const order = (this.orders || []).find((o) => o.orderId === orderId);
+    const order = (this.orders || []).find(o => o.orderId === orderId);
     const rows = document.querySelectorAll("#drawerBody table.items tbody tr");
     if (!order || !Array.isArray(order.items)) return;
     rows.forEach((tr, i) => {
@@ -7360,47 +7268,37 @@ Object.assign(AdminApp.prototype, {
     });
   },
 
+
   renderProducts() {
     _orig5.renderProducts.call(this);
-    document.querySelectorAll("#productsRows .thumb").forEach((t) => {
-      if (!t.querySelector("img")) {
-        t.classList.add("ph");
-        t.textContent = "";
-      }
+    document.querySelectorAll("#productsRows .thumb").forEach(t => {
+      if (!t.querySelector("img")) { t.classList.add("ph"); t.textContent = ""; }
       const img = t.querySelector("img");
-      if (img)
-        img.addEventListener(
-          "error",
-          () => {
-            t.classList.add("ph");
-          },
-          { once: true },
-        );
+      if (img) img.addEventListener("error", () => { t.classList.add("ph"); }, { once: true });
     });
   },
+
 
   showView(view) {
     _orig5.showView.call(this, view);
     this.updateGreeting();
   },
 
+
   updateGreeting() {
     const el = byId("topGreeting");
     if (!el) return;
     const now = new Date();
     const h = now.getHours();
-    const part =
-      h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
+    const part = h < 12 ? "Good morning" : h < 18 ? "Good afternoon" : "Good evening";
     const narrow = window.innerWidth < 600;
-    const day = now.toLocaleDateString(
-      undefined,
-      narrow
-        ? { weekday: "short", month: "short", day: "numeric" }
-        : { weekday: "long", month: "long", day: "numeric" },
-    );
+    const day = now.toLocaleDateString(undefined, narrow
+      ? { weekday: "short", month: "short", day: "numeric" }
+      : { weekday: "long", month: "long", day: "numeric" });
     el.textContent = `${part} · ${day}`;
-  },
+  }
 });
+
 
 /* =========================================================
    MAISON DETAILS (v6)
@@ -7416,74 +7314,23 @@ const _orig6 = {
   renderOrders: AdminApp.prototype.renderOrders,
   renderReports: AdminApp.prototype.renderReports,
   renderPalette: AdminApp.prototype.renderPalette,
-  renderNotifications: AdminApp.prototype.renderNotifications,
+  renderNotifications: AdminApp.prototype.renderNotifications
 };
 
 // Scent families: first matching profile decides the family
 const SCENT_FAMILIES = [
-  {
-    key: "fresh",
-    label: "Fresh",
-    color: "#8fb59a",
-    words: [
-      "fresh",
-      "citrus",
-      "aquatic",
-      "marine",
-      "aromatic",
-      "minty",
-      "mint",
-      "green",
-      "clean",
-    ],
-  },
-  {
-    key: "floral",
-    label: "Floral",
-    color: "#d79aa3",
-    words: ["floral", "rose", "powdery", "jasmine", "white floral"],
-  },
-  {
-    key: "sweet",
-    label: "Sweet",
-    color: "#e2c48a",
-    words: ["sweet", "vanilla", "fruity", "gourmand", "coffee", "caramel"],
-  },
-  {
-    key: "spicy",
-    label: "Spicy",
-    color: "#c97a4a",
-    words: ["spicy", "warm", "pepper", "cinnamon"],
-  },
-  {
-    key: "woody",
-    label: "Woody",
-    color: "#a98458",
-    words: [
-      "woody",
-      "amber",
-      "chestnut",
-      "musky",
-      "musk",
-      "leather",
-      "oud",
-      "earthy",
-    ],
-  },
+  { key: "fresh",  label: "Fresh",  color: "#8fb59a", words: ["fresh", "citrus", "aquatic", "marine", "aromatic", "minty", "mint", "green", "clean"] },
+  { key: "floral", label: "Floral", color: "#d79aa3", words: ["floral", "rose", "powdery", "jasmine", "white floral"] },
+  { key: "sweet",  label: "Sweet",  color: "#e2c48a", words: ["sweet", "vanilla", "fruity", "gourmand", "coffee", "caramel"] },
+  { key: "spicy",  label: "Spicy",  color: "#c97a4a", words: ["spicy", "warm", "pepper", "cinnamon"] },
+  { key: "woody",  label: "Woody",  color: "#a98458", words: ["woody", "amber", "chestnut", "musky", "musk", "leather", "oud", "earthy"] }
 ];
 
 function scentFamilyOf(product) {
-  const profiles = (
-    Array.isArray(product?.profiles)
-      ? product.profiles
-      : String(product?.profiles || "").split(",")
-  )
-    .map((p) => String(p).trim().toLowerCase())
-    .filter(Boolean);
+  const profiles = (Array.isArray(product?.profiles) ? product.profiles : String(product?.profiles || "").split(","))
+    .map(p => String(p).trim().toLowerCase()).filter(Boolean);
   for (const prof of profiles) {
-    const fam = SCENT_FAMILIES.find((f) =>
-      f.words.some((w) => prof.includes(w)),
-    );
+    const fam = SCENT_FAMILIES.find(f => f.words.some(w => prof.includes(w)));
     if (fam) return fam;
   }
   return null;
@@ -7501,41 +7348,41 @@ function stockGauge(stock, low) {
   }
   const n = Math.max(0, Number(stock) || 0);
   const full = Math.max(low * 3, 10);
-  const level =
-    n === 0 ? 0 : Math.max(12, Math.min(100, Math.round((n / full) * 100)));
+  const level = n === 0 ? 0 : Math.max(12, Math.min(100, Math.round((n / full) * 100)));
   const state = n === 0 ? "out" : n <= low ? "low" : "ok";
   return `<span class="gauge ${state}" style="--level:${level}%" title="${n === 0 ? "Sold out" : `${n} in stock`}">
     <span class="g-neck"></span><span class="g-body"><span class="g-liquid"></span></span></span>`;
 }
 
 Object.assign(AdminApp.prototype, {
+
   lowLimit() {
     return Number(this.settings?.lowStockThreshold) || DEFAULT_LOW_STOCK;
   },
+
 
   /* ----- Products: gauge + family under the name ----- */
   renderProducts() {
     _orig6.renderProducts.call(this);
     const low = this.lowLimit();
-    document.querySelectorAll("#productsRows tr").forEach((tr) => {
+    document.querySelectorAll("#productsRows tr").forEach(tr => {
       const id = tr.querySelector("[data-edit]")?.dataset.edit;
       const p = id && this.productFor(id);
       if (!p) return;
       const cell = tr.querySelector(".stock-cell");
-      if (cell && !cell.querySelector(".gauge"))
-        cell.insertAdjacentHTML("afterbegin", stockGauge(p.stock, low));
+      if (cell && !cell.querySelector(".gauge")) cell.insertAdjacentHTML("afterbegin", stockGauge(p.stock, low));
       const small = tr.querySelector(".prod-cell small");
       const fam = scentFamilyOf(p);
-      if (small && fam && !small.querySelector(".fam"))
-        small.insertAdjacentHTML("afterbegin", familyDot(fam, true) + " · ");
+      if (small && fam && !small.querySelector(".fam")) small.insertAdjacentHTML("afterbegin", familyDot(fam, true) + " · ");
     });
   },
+
 
   /* ----- Restocks → Stock & cost: gauge beside the number ----- */
   renderInventory() {
     _orig6.renderInventory.call(this);
     const low = this.lowLimit();
-    document.querySelectorAll("#invRows tr").forEach((tr) => {
+    document.querySelectorAll("#invRows tr").forEach(tr => {
       const id = tr.querySelector("[data-restock]")?.dataset.restock;
       const p = id && this.productFor(id);
       const cell = tr.querySelector('td[data-label="Stock"]');
@@ -7543,36 +7390,33 @@ Object.assign(AdminApp.prototype, {
       cell.innerHTML = `<span class="gauge-cell">${stockGauge(p.stock, low)}<span>${p.stock == null ? "∞" : p.stock}</span></span>`;
       const name = tr.querySelector("[data-restock]");
       const fam = scentFamilyOf(p);
-      if (name && fam && !name.querySelector(".fam"))
-        name.insertAdjacentHTML("afterbegin", familyDot(fam));
+      if (name && fam && !name.querySelector(".fam")) name.insertAdjacentHTML("afterbegin", familyDot(fam));
     });
   },
+
 
   /* ----- Orders: family dot beside each scent ----- */
   renderOrders() {
     _orig6.renderOrders.call(this);
-    document.querySelectorAll("#ordersRows .item-line").forEach((line) => {
+    document.querySelectorAll("#ordersRows .item-line").forEach(line => {
       if (line.querySelector(".fam")) return;
-      const name = line
-        .querySelector("span:last-child")
-        ?.childNodes[0]?.textContent?.trim();
+      const name = line.querySelector("span:last-child")?.childNodes[0]?.textContent?.trim();
       const fam = scentFamilyOf(this.productFor(name));
-      if (fam)
-        line
-          .querySelector("span:last-child")
-          ?.insertAdjacentHTML("afterbegin", familyDot(fam));
+      if (fam) line.querySelector("span:last-child")?.insertAdjacentHTML("afterbegin", familyDot(fam));
     });
   },
+
 
   /* ----- Reports: family dot on each product row ----- */
   renderReports() {
     _orig6.renderReports.call(this);
-    document.querySelectorAll("#profitRows td.td-main b").forEach((b) => {
+    document.querySelectorAll("#profitRows td.td-main b").forEach(b => {
       if (b.querySelector(".fam")) return;
       const fam = scentFamilyOf(this.productFor(b.textContent.trim()));
       if (fam) b.insertAdjacentHTML("afterbegin", familyDot(fam));
     });
   },
+
 
   /* ----- Dashboard: best-seller hero, family breakdown, gauges ----- */
   renderDashboard(response) {
@@ -7580,73 +7424,59 @@ Object.assign(AdminApp.prototype, {
     const low = this.lowLimit();
 
     // low stock: bottle gauges instead of plain text
-    document
-      .querySelectorAll("#lowStock .mini[data-product]")
-      .forEach((row) => {
-        const p = this.productFor(row.dataset.product);
-        const b = row.querySelector("b");
-        if (!p || !b || b.querySelector(".gauge")) return;
-        b.insertAdjacentHTML("afterbegin", stockGauge(p.stock, low));
-        b.classList.add("gauge-cell");
-      });
+    document.querySelectorAll("#lowStock .mini[data-product]").forEach(row => {
+      const p = this.productFor(row.dataset.product);
+      const b = row.querySelector("b");
+      if (!p || !b || b.querySelector(".gauge")) return;
+      b.insertAdjacentHTML("afterbegin", stockGauge(p.stock, low));
+      b.classList.add("gauge-cell");
+    });
 
     // top products: family dots
-    document
-      .querySelectorAll("#topProducts .top-row > span")
-      .forEach((span) => {
-        if (span.querySelector(".fam")) return;
-        const name = span.textContent.replace(/^\s*\d+\.\s*/, "").trim();
-        const fam = scentFamilyOf(this.productFor(name));
-        if (fam) span.insertAdjacentHTML("beforeend", familyDot(fam));
-      });
+    document.querySelectorAll("#topProducts .top-row > span").forEach(span => {
+      if (span.querySelector(".fam")) return;
+      const name = span.textContent.replace(/^\s*\d+\.\s*/, "").trim();
+      const fam = scentFamilyOf(this.productFor(name));
+      if (fam) span.insertAdjacentHTML("beforeend", familyDot(fam));
+    });
 
     this.renderHeroCard();
     this.renderFamilyBreakdown();
   },
 
+
   // Units sold per product in the dashboard's current date range
   unitsInRange() {
-    const range =
-      typeof this.dashboardRange === "function" ? this.dashboardRange() : null;
+    const range = typeof this.dashboardRange === "function" ? this.dashboardRange() : null;
     const units = new Map();
-    (this.orders || []).forEach((o) => {
+    (this.orders || []).forEach(o => {
       if (o.status === "Cancelled") return;
       const t = new Date(o.timestamp);
       if (range && (t < range.from || t > range.to)) return;
-      (o.items || []).forEach((i) => {
+      (o.items || []).forEach(i => {
         const p = this.productFor(i.id) || this.productFor(i.name);
-        const key = p ? p.id : i.name || i.id;
-        const row = units.get(key) || {
-          product: p,
-          name: p?.name || i.name || i.id,
-          units: 0,
-          sales: 0,
-        };
+        const key = p ? p.id : (i.name || i.id);
+        const row = units.get(key) || { product: p, name: p?.name || i.name || i.id, units: 0, sales: 0 };
         row.units += Number(i.qty || 0);
         row.sales += Number(i.price || p?.price || 0) * Number(i.qty || 0);
         units.set(key, row);
       });
     });
-    return [...units.values()].sort(
-      (a, b) => b.units - a.units || b.sales - a.sales,
-    );
+    return [...units.values()].sort((a, b) => b.units - a.units || b.sales - a.sales);
   },
+
 
   renderHeroCard() {
     let box = byId("heroCard");
     if (!box) {
       const cards = byId("statsCards");
       if (!cards) return;
-      cards.insertAdjacentHTML(
-        "beforebegin",
-        `<div class="hero-card" id="heroCard"></div>`,
-      );
+      cards.insertAdjacentHTML("beforebegin", `<div class="hero-card" id="heroCard"></div>`);
       box = byId("heroCard");
     }
     const list = this.unitsInRange();
     const top = list[0];
-    const label =
-      byId("rangePreset")?.selectedOptions?.[0]?.textContent || "All time";
+    const label = byId("rangePreset")?.selectedOptions?.[0]?.textContent || "All time";
 
     if (!top || !top.units) {
       box.innerHTML = `
@@ -7675,83 +7505,62 @@ Object.assign(AdminApp.prototype, {
         </div>
       </div>
       ${p ? `<button type="button" class="btn hc-btn" data-hero-edit="${escapeHTML(p.id)}">View product</button>` : ""}`;
-    if (!p && !box.querySelector(".hc-photo img"))
-      box.querySelector(".hc-photo")?.classList.add("ph");
+    if (!p && !box.querySelector(".hc-photo img")) box.querySelector(".hc-photo")?.classList.add("ph");
     if (p && !p.img) box.querySelector(".hc-photo")?.classList.add("ph");
-    box.querySelector("[data-hero-edit]")?.addEventListener("click", (e) => {
+    box.querySelector("[data-hero-edit]")?.addEventListener("click", e => {
       this.showView("products");
       this.editProduct(this.productFor(e.currentTarget.dataset.heroEdit));
     });
   },
+
 
   renderFamilyBreakdown() {
     let panel = byId("familyPanel");
     if (!panel) {
       const grid = byId("topProducts")?.closest(".grid-2");
       if (!grid) return;
-      grid.insertAdjacentHTML(
-        "afterend",
-        `
+      grid.insertAdjacentHTML("afterend", `
         <div class="panel family-panel" id="familyPanel">
           <div class="panel-head"><h3>By scent family</h3><span>Bottles sold in this period</span></div>
           <div class="fam-bar" id="famBar"></div>
           <div class="fam-legend" id="famLegend"></div>
-        </div>`,
-      );
+        </div>`);
       panel = byId("familyPanel");
     }
-    const totals = new Map(SCENT_FAMILIES.map((f) => [f.key, 0]));
+    const totals = new Map(SCENT_FAMILIES.map(f => [f.key, 0]));
     let other = 0;
-    this.unitsInRange().forEach((r) => {
+    this.unitsInRange().forEach(r => {
       const fam = scentFamilyOf(r.product);
-      if (fam) totals.set(fam.key, totals.get(fam.key) + r.units);
-      else other += r.units;
+      if (fam) totals.set(fam.key, totals.get(fam.key) + r.units); else other += r.units;
     });
     const sum = [...totals.values()].reduce((a, b) => a + b, 0) + other;
-    const rows = SCENT_FAMILIES.map((f) => ({ ...f, units: totals.get(f.key) }))
-      .concat(
-        other
-          ? [{ key: "other", label: "Other", color: "#6f685c", units: other }]
-          : [],
-      )
-      .filter((r) => r.units > 0)
+    const rows = SCENT_FAMILIES.map(f => ({ ...f, units: totals.get(f.key) }))
+      .concat(other ? [{ key: "other", label: "Other", color: "#6f685c", units: other }] : [])
+      .filter(r => r.units > 0)
       .sort((a, b) => b.units - a.units);
 
     byId("famBar").innerHTML = sum
-      ? rows
-          .map(
-            (r) =>
-              `<span style="--fam:${r.color};flex:${r.units}" title="${escapeHTML(r.label)} · ${r.units}"></span>`,
-          )
-          .join("")
+      ? rows.map(r => `<span style="--fam:${r.color};flex:${r.units}" title="${escapeHTML(r.label)} · ${r.units}"></span>`).join("")
       : `<span class="empty" style="flex:1"></span>`;
     byId("famLegend").innerHTML = sum
-      ? rows
-          .map(
-            (r) =>
-              `<div class="fam-row"><span class="fam" style="--fam:${r.color}"><i></i>${escapeHTML(r.label)}</span><b>${r.units}</b><small>${Math.round((r.units / sum) * 100)}%</small></div>`,
-          )
-          .join("")
+      ? rows.map(r => `<div class="fam-row"><span class="fam" style="--fam:${r.color}"><i></i>${escapeHTML(r.label)}</span><b>${r.units}</b><small>${Math.round(r.units / sum * 100)}%</small></div>`).join("")
       : `<p class="empty-note">No bottles sold in this period yet.</p>`;
   },
+
 
   /* ----- Ctrl+K: bottle thumbnails for products and orders ----- */
   renderPalette() {
     _orig6.renderPalette.call(this);
     (this.paletteItems || []).forEach((it, i) => {
-      const el = document.querySelector(
-        `#paletteList [data-pi="${i}"] .pi-icon`,
-      );
+      const el = document.querySelector(`#paletteList [data-pi="${i}"] .pi-icon`);
       if (!el) return;
       let p = null;
       if (it.group === "Products") p = this.productFor(it.title);
       if (it.group === "Orders") {
         const id = String(it.sub || "").split(" · ")[0];
-        const o = (this.orders || []).find((x) => x.orderId === id);
+        const o = (this.orders || []).find(x => x.orderId === id);
         const first = o?.items?.[0];
-        p = first
-          ? this.productFor(first.id) || this.productFor(first.name)
-          : null;
+        p = first ? (this.productFor(first.id) || this.productFor(first.name)) : null;
       }
       if (p || it.group === "Products" || it.group === "Orders") {
         el.classList.add("pi-bottle");
@@ -7760,20 +7569,18 @@ Object.assign(AdminApp.prototype, {
     });
   },
 
+
   /* ----- Notifications: bottle thumbnails for orders and stock ----- */
   renderNotifications() {
     _orig6.renderNotifications.call(this);
-    document.querySelectorAll("#notifList [data-notif]").forEach((btn) => {
+    document.querySelectorAll("#notifList [data-notif]").forEach(btn => {
       const id = btn.dataset.notif;
       let p = null;
-      if (id.startsWith("stock:"))
-        p = this.productFor(id.slice(6, id.lastIndexOf(":")));
+      if (id.startsWith("stock:")) p = this.productFor(id.slice(6, id.lastIndexOf(":")));
       if (id.startsWith("order-new:")) {
-        const o = (this.orders || []).find((x) => x.orderId === id.slice(10));
+        const o = (this.orders || []).find(x => x.orderId === id.slice(10));
         const first = o?.items?.[0];
-        p = first
-          ? this.productFor(first.id) || this.productFor(first.name)
-          : null;
+        p = first ? (this.productFor(first.id) || this.productFor(first.name)) : null;
       }
       if (!p) return;
       const icon = btn.querySelector(".notif-icon");
@@ -7782,8 +7589,349 @@ Object.assign(AdminApp.prototype, {
         icon.innerHTML = bottleThumb(p.img);
       }
     });
-  },
+  }
 });
+
+
+/* =========================================================
+   v7 — HOMEPAGE EXTRAS
+   Scent of the Week · trust strip · welcome offer + list ·
+   shop-by-weather overrides · first-order vouchers
+========================================================= */
+
+const _orig7 = {
+  bind: AdminApp.prototype.bind,
+  showView: AdminApp.prototype.showView,
+  applySettingsToForm: AdminApp.prototype.applySettingsToForm,
+  editVoucher: AdminApp.prototype.editVoucher,
+  voucherFormData: AdminApp.prototype.voucherFormData,
+  renderVouchers: AdminApp.prototype.renderVouchers
+};
+
+MORE_VIEWS.push("subscribers");
+
+// Same rules as the website (assets/js/app.js → weatherOf)
+const WEATHER_HOT_W = { fresh: 2, citrus: 2, aquatic: 2, marine: 2, minty: 2, green: 2, aromatic: 1, fruity: 1, floral: 0.5 };
+const WEATHER_COLD_W = { warm: 2, amber: 2, vanilla: 2, coffee: 2, chestnut: 2, smoky: 2, leather: 2, oud: 2,
+                         spicy: 1.5, sweet: 1, musky: 1, powdery: 1, woody: 0.5 };
+const WEATHER_LABEL = { hot: "Heat", cold: "Cool evenings", any: "Any weather" };
+
+function autoWeather(p) {
+  const list = v => (Array.isArray(v) ? v : String(v || "").split(",")).map(x => String(x).trim().toLowerCase()).filter(Boolean);
+  let hot = 0, cold = 0;
+  list(p.profiles).forEach(w => { hot += WEATHER_HOT_W[w] || 0; cold += WEATHER_COLD_W[w] || 0; });
+  list(p.time).forEach(t => {
+    if (/day|morning|office|summer/.test(t)) hot += 1;
+    if (/night|evening|date|winter/.test(t)) cold += 1;
+  });
+  const d = hot - cold;
+  return d >= 1.5 ? "hot" : d <= -1.5 ? "cold" : "any";
+}
+
+function readWeatherMap(raw) {
+  try {
+    const m = typeof raw === "string" ? JSON.parse(raw || "{}") : (raw || {});
+    return m && typeof m === "object" ? m : {};
+  } catch { return {}; }
+}
+
+Object.assign(AdminApp.prototype, {
+
+  bind() {
+    _orig7.bind.call(this);
+    if (!this.views.includes("subscribers")) this.views.push("subscribers");
+    this.subscribers = [];
+
+    byId("subSearch")?.addEventListener("input", debounce(() => this.renderSubscribers(), 150));
+    byId("subFilter")?.addEventListener("change", () => this.renderSubscribers());
+    byId("subCopy")?.addEventListener("click", () => this.copySubscribers());
+    byId("subCsv")?.addEventListener("click", () => this.downloadSubscribersCsv());
+    byId("subRows")?.addEventListener("click", e => {
+      const del = e.target.closest("[data-subdel]");
+      if (del) this.deleteSubscriber(del.dataset.subdel);
+    });
+
+    ["setTrust", "setSoldOffset"].forEach(id => byId(id)?.addEventListener("input", () => this.updateTrustPreview()));
+    byId("setWelcomeCode")?.addEventListener("change", () => this.updateWelcomeHint());
+    byId("setWelcome")?.addEventListener("change", () => this.updateWelcomeHint());
+    byId("vFirst")?.addEventListener("change", () => this.updateVoucherPreview());
+  },
+
+  showView(view) {
+    _orig7.showView.call(this, view);
+    if (view === "subscribers") {
+      if (this.dom.viewTitle) this.dom.viewTitle.textContent = "Welcome List";
+      this.loadSubscribers();
+    }
+    if (view === "homepage") {
+      this.fillHomepageExtras();
+      if (!this.vouchersLoadedForSettings) {
+        this.vouchersLoadedForSettings = true;
+        this.request("GET", { action: "adminVouchers" })
+          .then(res => { this.vouchers = res.vouchers || []; this.fillHomepageExtras(); })
+          .catch(() => { this.vouchersLoadedForSettings = false; });
+      }
+      this.loadPublicStats();
+    }
+  },
+
+  applySettingsToForm() {
+    _orig7.applySettingsToForm.call(this);
+    this.fillHomepageExtras();
+  },
+
+  /* ----- settings form ----- */
+
+  fillHomepageExtras() {
+    const st = this.settings || {};
+    const on = (key, fallback) => (st[key] === undefined || st[key] === "" ? fallback : String(st[key]) !== "false");
+    const check = (id, value) => { const el = byId(id); if (el) el.checked = value; };
+    const val = (id, value) => { const el = byId(id); if (el && document.activeElement !== el) el.value = value ?? ""; };
+
+    check("setEveryday", on("showEveryday", true));
+    check("setHiddenGems", on("showHiddenGems", true));
+    check("setTrust", on("showTrust", true));
+    check("setWelcome", on("welcomeEnabled", false));
+    val("setSoldOffset", st.soldOffset ?? 0);
+    val("setSotwNote", st.scentOfWeekNote || "");
+    val("setWelcomeHeadline", st.welcomeHeadline || "");
+
+    const products = (this.products || []).filter(p => p.active !== false)
+      .slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+
+    // Scent of the Week choices
+    const sotw = byId("setSotw");
+    if (sotw) {
+      const current = st.scentOfWeek === undefined ? "auto" : String(st.scentOfWeek);
+      sotw.innerHTML = `<option value="auto">Automatic — this week's best seller</option><option value="">Off — hide the spotlight</option>` +
+        `<optgroup label="Choose a scent">${products.map(p =>
+          `<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)}${Number(p.stock) === 0 ? " (sold out)" : ""}</option>`).join("")}</optgroup>`;
+      sotw.value = current;
+      if (sotw.value !== current) sotw.value = "auto";
+    }
+
+    // Welcome voucher choices
+    const wc = byId("setWelcomeCode");
+    if (wc) {
+      const current = String(st.welcomeCode || "");
+      const list = (this.vouchers || []).slice().sort((a, b) => Number(b.firstOrderOnly) - Number(a.firstOrderOnly) || a.code.localeCompare(b.code));
+      const codes = new Set(list.map(v => v.code));
+      wc.innerHTML = `<option value="">Choose a voucher…</option>` +
+        list.map(v => `<option value="${escapeHTML(v.code)}">${escapeHTML(v.code)} — ${escapeHTML(voucherDiscountText(v))}${v.firstOrderOnly ? " · first order" : ""}${v.active ? "" : " (off)"}</option>`).join("") +
+        (current && !codes.has(current) ? `<option value="${escapeHTML(current)}">${escapeHTML(current)}</option>` : "");
+      wc.value = current;
+    }
+
+    this.renderWeatherList(products);
+    this.updateTrustPreview();
+    this.updateWelcomeHint();
+  },
+
+  renderWeatherList(products) {
+    const box = byId("weatherList");
+    if (!box) return;
+    const map = readWeatherMap((this.settings || {}).weatherMap);
+    // keep what the admin picked but hasn't saved yet
+    box.querySelectorAll("select[data-weather]").forEach(s => { map[s.dataset.weather] = s.value || undefined; });
+    if (!products.length) { box.innerHTML = `<p class="muted">No products yet.</p>`; return; }
+    box.innerHTML = products.map(p => {
+      const auto = autoWeather(p);
+      const pick = map[p.id] || "";
+      const shown = pick || auto;
+      return `<label class="weather-row">
+        <span class="wr-name">${typeof bottleThumb === "function" ? bottleThumb(p.img) : ""}<b>${escapeHTML(p.name)}</b></span>
+        <span class="wr-chip wr-${shown}">${escapeHTML(WEATHER_LABEL[shown])}</span>
+        <select class="w-${shown}" data-weather="${escapeHTML(p.id)}" aria-label="Weather for ${escapeHTML(p.name)}">
+          <option value="">Auto (${escapeHTML(WEATHER_LABEL[auto])})</option>
+          <option value="hot"${pick === "hot" ? " selected" : ""}>Heat</option>
+          <option value="cold"${pick === "cold" ? " selected" : ""}>Cool evenings</option>
+          <option value="any"${pick === "any" ? " selected" : ""}>Any weather</option>
+        </select>
+      </label>`;
+    }).join("");
+    box.querySelectorAll("select[data-weather]").forEach(sel => sel.addEventListener("change", () => {
+      const p = products.find(x => x.id === sel.dataset.weather);
+      const shown = sel.value || (p ? autoWeather(p) : "any");
+      const chip = sel.parentElement.querySelector(".wr-chip");
+      if (chip) { chip.className = `wr-chip wr-${shown}`; chip.textContent = WEATHER_LABEL[shown]; }
+      sel.className = `w-${shown}`;
+    }));
+  },
+
+  extraSettings() {
+    const map = {};
+    document.querySelectorAll("#weatherList select[data-weather]").forEach(s => { if (s.value) map[s.dataset.weather] = s.value; });
+    const st = this.settings || {};
+    const hasList = !!document.querySelector("#weatherList select[data-weather]");
+    return {
+      showEveryday: byId("setEveryday")?.checked ?? true,
+      showHiddenGems: byId("setHiddenGems")?.checked ?? true,
+      showTrust: byId("setTrust")?.checked ?? true,
+      soldOffset: byId("setSoldOffset")?.value || 0,
+      scentOfWeek: byId("setSotw") ? byId("setSotw").value : (st.scentOfWeek ?? "auto"),
+      scentOfWeekNote: byId("setSotwNote")?.value.trim() || "",
+      weatherMap: hasList ? JSON.stringify(map) : (st.weatherMap || "{}"),
+      welcomeEnabled: byId("setWelcome")?.checked ?? false,
+      welcomeCode: byId("setWelcomeCode")?.value || "",
+      welcomeHeadline: byId("setWelcomeHeadline")?.value.trim() || ""
+    };
+  },
+
+  async loadPublicStats() {
+    try {
+      const res = await this.request("GET", { action: "storeStats" });
+      this.publicStats = res.stats || {};
+      this.updateTrustPreview();
+    } catch { /* schema not updated yet */ }
+  },
+
+  updateTrustPreview() {
+    const el = byId("trustPreview");
+    if (!el) return;
+    const s = this.publicStats;
+    if (!s) { el.textContent = ""; return; }
+    const sold = Number(s.bottlesSold || 0) + Math.max(0, parseInt(byId("setSoldOffset")?.value, 10) || 0);
+    const parts = [`${sold.toLocaleString()} bottles sold`];
+    if (Number(s.reviewCount) > 0) parts.push(`${Number(s.avgRating).toFixed(1)}★ from ${s.reviewCount} reviews`);
+    if (Number(s.customers) >= 10) parts.push(`${s.customers} customers`);
+    el.textContent = (byId("setTrust")?.checked ? "Customers see: " : "Hidden. Would show: ") + parts.join(" · ");
+  },
+
+  updateWelcomeHint() {
+    const hint = byId("welcomeHint");
+    if (!hint) return;
+    const code = byId("setWelcomeCode")?.value || "";
+    const v = (this.vouchers || []).find(x => x.code === code);
+    hint.classList.remove("warn");
+    if (byId("setWelcome")?.checked && !code) {
+      hint.innerHTML = "Choose a voucher — the popup only shows once one is picked.";
+      hint.classList.add("warn");
+    } else if (v && !v.active) {
+      hint.innerHTML = `<b>${escapeHTML(v.code)}</b> is turned off — turn it on in Vouchers or customers will get an error.`;
+      hint.classList.add("warn");
+    } else if (v && !v.firstOrderOnly) {
+      hint.innerHTML = `Heads up: <b>${escapeHTML(v.code)}</b> isn't set to <b>First order only</b>, so repeat customers can use it too.`;
+      hint.classList.add("warn");
+    } else if (v) {
+      hint.innerHTML = `Visitors get <b>${escapeHTML(v.code)}</b> (${escapeHTML(voucherRulesText(v))}).`;
+    } else {
+      hint.innerHTML = "Tip: create a voucher (e.g. WELCOME10, 10% off) and turn on <b>First order only</b>.";
+    }
+  },
+
+  /* ----- vouchers: first order only ----- */
+
+  editVoucher(v) {
+    _orig7.editVoucher.call(this, v);
+    const el = byId("vFirst");
+    if (el) el.checked = !!v?.firstOrderOnly;
+  },
+
+  voucherFormData() {
+    return { ..._orig7.voucherFormData.call(this), firstOrderOnly: byId("vFirst")?.checked ?? false };
+  },
+
+  /* ----- welcome list ----- */
+
+  async loadSubscribers() {
+    const rows = byId("subRows");
+    if (rows && !this.subscribers.length) rows.innerHTML = `<tr><td colspan="5" class="muted">Loading…</td></tr>`;
+    try {
+      const res = await this.request("GET", { action: "adminSubscribers" });
+      this.subscribers = res.subscribers || [];
+      this.renderSubscribers();
+    } catch (error) {
+      if (rows) rows.innerHTML = `<tr><td colspan="5" class="muted">Couldn't load the welcome list. If you just updated the site, run <b>supabase/schema.sql</b> again in Supabase → SQL Editor.</td></tr>`;
+    }
+  },
+
+  subscriberOrdered(sub) {
+    if (sub.kind !== "mobile") return null;
+    const key = String(sub.contact).replace(/\D/g, "").slice(-10);
+    return (this.orders || []).some(o => o.status !== "Cancelled" && String(o.contact || "").replace(/\D/g, "").slice(-10) === key);
+  },
+
+  filteredSubscribers() {
+    const q = String(byId("subSearch")?.value || "").trim().toLowerCase();
+    const kind = byId("subFilter")?.value || "";
+    return (this.subscribers || []).filter(s => (!kind || s.kind === kind) && (!q || String(s.contact).toLowerCase().includes(q)));
+  },
+
+  renderSubscribers() {
+    const rows = byId("subRows");
+    if (!rows) return;
+    const all = this.subscribers || [];
+    const weekAgo = Date.now() - 7 * 864e5;
+    const mobiles = all.filter(s => s.kind === "mobile");
+    const converted = mobiles.filter(s => this.subscriberOrdered(s)).length;
+    const stats = byId("subStats");
+    if (stats) {
+      stats.innerHTML = [
+        ["On the list", all.length.toLocaleString()],
+        ["Joined this week", all.filter(s => new Date(s.createdAt).getTime() > weekAgo).length.toLocaleString()],
+        ["Mobile / email", `${mobiles.length} / ${all.length - mobiles.length}`],
+        ["Have ordered", mobiles.length ? `${Math.round(converted / mobiles.length * 100)}%` : "—"]
+      ].map(([k, v]) => `<div class="stat"><small>${k}</small><strong>${v}</strong></div>`).join("");
+    }
+    const list = this.filteredSubscribers();
+    if (!list.length) {
+      rows.innerHTML = `<tr><td colspan="5" class="muted">${all.length ? "No match." : "No one yet. Turn on the welcome offer in Homepage &amp; Payment."}</td></tr>`;
+      return;
+    }
+    rows.innerHTML = list.map(s => {
+      const ordered = this.subscriberOrdered(s);
+      return `<tr>
+        <td class="td-main"><b>${escapeHTML(s.contact)}</b></td>
+        <td>${s.kind === "mobile" ? "Mobile" : "Email"}</td>
+        <td>${escapeHTML(new Date(s.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }))}</td>
+        <td>${ordered === null ? '<span class="muted">—</span>' : ordered ? '<span class="pill ok">Ordered</span>' : '<span class="muted">Not yet</span>'}</td>
+        <td><button class="btn ghost btn-sm" type="button" data-subdel="${escapeHTML(String(s.id))}">Remove</button></td>
+      </tr>`;
+    }).join("");
+  },
+
+  async copySubscribers() {
+    const text = this.filteredSubscribers().map(s => s.contact).join("\n");
+    if (!text) return this.setStatus("Nothing to copy", true);
+    try { await navigator.clipboard.writeText(text); this.setStatus(`Copied ${this.filteredSubscribers().length} contacts`); }
+    catch { this.setStatus("Couldn't copy — use CSV instead", true); }
+  },
+
+  downloadSubscribersCsv() {
+    const list = this.filteredSubscribers();
+    if (!list.length) return this.setStatus("Nothing to download", true);
+    const esc = v => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const csv = ["Contact,Type,Joined,Ordered"].concat(list.map(s => {
+      const o = this.subscriberOrdered(s);
+      return [esc(s.contact), s.kind, esc(new Date(s.createdAt).toISOString().slice(0, 10)), o === null ? "" : o ? "Yes" : "No"].join(",");
+    })).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `aura-essence-welcome-list-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  },
+
+  async deleteSubscriber(id) {
+    const sub = (this.subscribers || []).find(s => String(s.id) === String(id));
+    if (!sub) return;
+    const ok = await this.ask({
+      title: `Remove ${sub.contact}?`,
+      message: "They'll be taken off the welcome list. Their welcome code still works if they already have it.",
+      okText: "Remove", danger: true
+    });
+    if (!ok) return;
+    try {
+      await this.request("POST", { action: "adminDeleteSubscriber", id: sub.id });
+      this.subscribers = this.subscribers.filter(s => s !== sub);
+      this.renderSubscribers();
+      this.setStatus("Removed from the welcome list");
+    } catch (error) {
+      this.setStatus(error.message || "Couldn't remove", true);
+    }
+  }
+});
+
 
 /* =========================================================
    START ADMIN APP
