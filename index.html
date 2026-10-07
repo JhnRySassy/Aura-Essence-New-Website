@@ -5,6 +5,8 @@
     <script>
       /* Light/dark: apply the saved choice before the page paints (no flash). Dark is the default. */
       try { if (localStorage.getItem("aeTheme") === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+      // Shop page (index.html?line=men / ?line=women): hide the homepage sections before first paint
+      if (/[?&]line=(men|women)\b/.test(location.search)) document.documentElement.classList.add("shop-mode");
     </script>
     <meta
       name="viewport"
@@ -169,11 +171,40 @@
 
     <section class="collection" id="collection">
       <div class="wrap">
-        <p class="sec-eyebrow">The Collection</p>
-        <h2 class="sec-title">Find your signature</h2>
-        <p class="sec-lede">
-          Explore each line, or search by name or note.
+        <nav class="shop-crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span id="shopCrumb">For Him</span></nav>
+        <p class="sec-eyebrow" id="collectionEyebrow">The Collection</p>
+        <h2 class="sec-title" id="collectionTitle">Find your signature</h2>
+        <p class="sec-lede" id="collectionLede">
+          Two lines, one house. Choose yours — or start with what customers love most.
         </p>
+        <div class="line-cards" id="lineCards">
+          <a class="line-card" href="index.html?line=men" data-line="men">
+            <img src="assets/images/invictus2.jpg" alt="" loading="lazy" decoding="async">
+            <span class="line-card-body">
+              <span class="line-eyebrow">For Him</span>
+              <span class="line-title">The black cap line</span>
+              <span class="line-meta" data-line-count="men">Signature extraits</span>
+              <span class="line-cta">Shop For Him <i aria-hidden="true">→</i></span>
+            </span>
+          </a>
+          <a class="line-card" href="index.html?line=women" data-line="women">
+            <img src="assets/images/selena.jpg" alt="" loading="lazy" decoding="async">
+            <span class="line-card-body">
+              <span class="line-eyebrow">For Her</span>
+              <span class="line-title">The gold cap line</span>
+              <span class="line-meta" data-line-count="women">Signature extraits</span>
+              <span class="line-cta">Shop For Her <i aria-hidden="true">→</i></span>
+            </span>
+          </a>
+        </div>
+        <div class="tabs">
+          <button class="tab active" data-cat="men">
+            For Him <span class="count"></span>
+          </button>
+          <button class="tab" data-cat="women">
+            For Her <span class="count"></span>
+          </button>
+        </div>
         <div class="collection-tools">
           <input id="productSearch" class="collection-search" type="search" placeholder="Search by name or note…" aria-label="Search fragrances">
           <select id="profileFilter" class="collection-filter" aria-label="Filter by scent character">
@@ -199,17 +230,25 @@
   <option value="musky">Musky</option>
   <option value="fruity">Fruity</option>
           </select>
+          <select id="weatherFilter" class="collection-filter" aria-label="Filter by weather">
+            <option value="all">Any weather</option>
+            <option value="hot">For the heat</option>
+            <option value="cold">For cool evenings</option>
+            <option value="any">Wear any time</option>
+          </select>
+          <select id="sortSelect" class="collection-filter" aria-label="Sort">
+            <option value="featured">Sort: Featured</option>
+            <option value="best">Best sellers</option>
+            <option value="rating">Top rated</option>
+            <option value="name">Name A–Z</option>
+            <option value="priceAsc">Price: low to high</option>
+            <option value="priceDesc">Price: high to low</option>
+          </select>
           <button type="button" class="ghost-btn" id="wishlistToggle">♡ Favorites</button>
         </div>
+        <p class="shop-count" id="shopCount" aria-live="polite"></p>
         <div id="featuredRows" class="featured-rows"></div>
-        <div class="tabs">
-          <button class="tab active" data-cat="men">
-            For Him <span class="count"></span>
-          </button>
-          <button class="tab" data-cat="women">
-            For Her <span class="count"></span>
-          </button>
-        </div>
+        <a class="shop-all-link" href="index.html?line=men" id="shopAllLink">See all fragrances <i aria-hidden="true">→</i></a>
         <div class="carousel-wrap">
           <button
             type="button"
@@ -228,6 +267,10 @@
             aria-label="Next perfumes"
             title="Next"
           >&#10095;</button>
+        </div>
+        <div class="shop-help">
+          <p>Can't decide? Answer three quick questions and we'll suggest one.</p>
+          <a class="ghost-btn" href="index.html#scentFinder">Find your scent</a>
         </div>
       </div>
     </section>

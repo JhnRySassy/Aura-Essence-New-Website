@@ -195,6 +195,7 @@ After updating the files, **run `supabase/schema.sql` again** in Supabase → SQ
 - **Trust strip** — real bottles sold, rating and customers. Add sales from before the website in *Bottles sold before the website*.
 - **Welcome offer** — create a voucher (e.g. WELCOME10) with **First order only** on, then choose it in *Welcome offer*. People who ask for the code appear in Admin → **Welcome List** (copy or download as CSV).
 - **Brand film** — `assets/video/` (wide 16:9 for desktop, 4:5 for phones; WebM + MP4). Plays muted when scrolled into view, tap to pause. Replace the files with the same names to change it.
+- **For Him / For Her pages** — the homepage shows two line cards plus best sellers; the full list (search, scent and weather filters, sort) opens at `index.html?line=men` and `index.html?line=women`.
 - **Collections** — the new *Everyday* and *Hidden Gem* badges get their own homepage rows.
 
 ## Day-to-day

@@ -985,17 +985,32 @@ function getVisibleProducts(cat) {
         return false;
       }
 
+      // Shop page: weather filter (same rules as Shop by Feel)
+      const weather = document.getElementById("weatherFilter")?.value || "all";
+      if (weather !== "all" && typeof weatherOf === "function" && weatherOf(p) !== weather) {
+        return false;
+      }
+
       return true;
     })
-    .sort(
-      (a, b) =>
-        Number(
-          a.sortOrder || 0,
-        ) -
-        Number(
-          b.sortOrder || 0,
-        ),
-    );
+    .sort(shopSorter());
+}
+
+// Shop page sort (Featured = the order set in admin)
+function shopSorter() {
+  const mode = document.getElementById("sortSelect")?.value || "featured";
+  const order = (a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0);
+  const best = (p) => ((PRODUCT_META[p.id]?.badges || p.badges || []).map((b) => String(b).toUpperCase()).includes("BEST SELLER") ? 1 : 0);
+  const stats = (p) => reviewStats[p.id] || { avg: 0, count: 0 };
+  const price = (p) => Number(p.price || PRODUCT_PRICE);
+  switch (mode) {
+    case "best": return (a, b) => best(b) - best(a) || stats(b).count - stats(a).count || order(a, b);
+    case "rating": return (a, b) => stats(b).avg - stats(a).avg || stats(b).count - stats(a).count || order(a, b);
+    case "name": return (a, b) => String(a.name).localeCompare(String(b.name));
+    case "priceAsc": return (a, b) => price(a) - price(b) || order(a, b);
+    case "priceDesc": return (a, b) => price(b) - price(a) || order(a, b);
+    default: return order;
+  }
 }
 
 // ============================================================
@@ -1148,6 +1163,8 @@ function renderCarousel(cat) {
       buildProductCard(p),
     );
   });
+
+  if (typeof updateShopMeta === "function") updateShopMeta(products.length);
 
   if (!products.length) {
     carousel.innerHTML =
@@ -1357,6 +1374,12 @@ wishlistItems?.addEventListener(
       );
 
     if (!p) {
+      return;
+    }
+
+    // On the homepage the full list lives on the shop page: show the scent itself
+    if (!document.documentElement.classList.contains("shop-mode")) {
+      openFragranceDetails(p.id);
       return;
     }
 
@@ -4501,6 +4524,7 @@ function renderStoreContent() {
   renderDuo();
   renderFeaturedRows();
   renderHomeExtras();
+  if (typeof updateLineCards === "function") updateLineCards();
 }
 
 renderStoreContent();
@@ -6222,4 +6246,108 @@ renderHomeExtras();
       });
     }, { threshold: [0, 0.55] }).observe(box);
   }
+})();
+
+
+// ============================================================
+// SHOP PAGE (For Him / For Her)
+// index.html?line=men  ·  index.html?line=women
+// The homepage shows two line cards + best sellers; the full list,
+// search, filters and sort live on the shop page.
+// ============================================================
+
+var SHOP_COPY = {
+  men:   { label: "For Him", title: "For Him", lede: "The black cap line — bold, fresh and warm extraits made to last from day into night." },
+  women: { label: "For Her", title: "For Her", lede: "The gold cap line — floral, sweet and luminous extraits with a trail that lingers." },
+};
+
+function isShopMode() {
+  return document.documentElement.classList.contains("shop-mode");
+}
+
+function shopLineFromUrl() {
+  const m = location.search.match(/[?&]line=(men|women)\b/);
+  return m ? m[1] : null;
+}
+
+function updateShopMeta(count) {
+  const el = document.getElementById("shopCount");
+  if (el) el.textContent = isShopMode() ? `${count} ${count === 1 ? "fragrance" : "fragrances"}` : "";
+}
+
+function updateLineCards() {
+  if (typeof isCatalogReady !== "function" || !isCatalogReady()) return;
+  const products = activeProducts();
+  ["men", "women"].forEach((cat) => {
+    const list = products.filter((p) => p.cat === cat);
+    const el = document.querySelector(`[data-line-count="${cat}"]`);
+    if (!el || !list.length) return;
+    const low = Math.min(...list.map((p) => Number(p.price || PRODUCT_PRICE)));
+    el.textContent = `${list.length} ${list.length === 1 ? "extrait" : "extraits"} · from ₱${low.toLocaleString()}`;
+  });
+}
+
+function applyShopLine(cat, push) {
+  if (!SHOP_COPY[cat]) return;
+  const copy = SHOP_COPY[cat];
+  activeCat = cat;
+  document.querySelectorAll(".tabs .tab").forEach((t) => {
+    const on = t.dataset.cat === cat;
+    t.classList.toggle("active", on);
+    t.setAttribute("aria-selected", on ? "true" : "false");
+  });
+  const set = (id, text) => { const el = document.getElementById(id); if (el) el.textContent = text; };
+  set("shopCrumb", copy.label);
+  set("collectionEyebrow", "Shop the collection");
+  set("collectionTitle", copy.title);
+  set("collectionLede", copy.lede);
+  document.title = `${copy.label} — Aura & Essence`;
+  if (push) history.pushState({ line: cat }, "", `${location.pathname}?line=${cat}`);
+  renderCarousel(cat);
+}
+
+(function shopPage() {
+  const line = shopLineFromUrl();
+  if (line) {
+    document.documentElement.classList.add("shop-mode");
+    applyShopLine(line, false);
+    window.scrollTo(0, 0);
+  }
+
+  // Switching lines on the shop page keeps you on the page (and in history)
+  document.querySelector(".tabs")?.addEventListener("click", (e) => {
+    const tab = e.target.closest(".tab");
+    if (!tab || !isShopMode()) return;
+    if (shopLineFromUrl() !== tab.dataset.cat) applyShopLine(tab.dataset.cat, true);
+  });
+
+  // Back/forward between lines. (Plain #hash links also fire popstate — ignore those.)
+  window.addEventListener("popstate", () => {
+    const l = shopLineFromUrl();
+    if (l) {
+      if (l !== activeCat || !isShopMode()) {
+        document.documentElement.classList.add("shop-mode");
+        applyShopLine(l, false);
+      }
+    } else if (isShopMode()) {
+      location.reload();   // went back from the shop page to the homepage
+    }
+  });
+
+  ["weatherFilter", "sortSelect"].forEach((id) =>
+    document.getElementById(id)?.addEventListener("change", () => renderCarousel(activeCat)));
+
+  // On the shop page, homepage links (#order, #tracking, #reviews…) go back to the homepage
+  document.addEventListener("click", (e) => {
+    if (!isShopMode()) return;
+    const a = e.target.closest('a[href^="#"]');
+    if (!a) return;
+    const hash = a.getAttribute("href");
+    if (hash === "#" || hash === "#top" || hash.startsWith("#scent-")) return;
+    if (hash === "#collection") { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    e.preventDefault();
+    location.href = "index.html" + hash;
+  }, true);
+
+  updateLineCards();
 })();
