@@ -315,3 +315,42 @@ html[data-theme="light"] section.order.bag-sheet { box-shadow: 0 40px 100px rgba
 @media (max-width: 520px) { .how-steps { grid-template-columns: minmax(0, 1fr); } .how-steps li { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; } .how-steps li .how-num { grid-row: span 2; } .faq-item summary { font-size: 15px; } }
 .bag-sheet .cart-head h4 { display: none; }
 .bag-sheet .cart-head { justify-content: flex-end; }
+
+/* =========================================================
+   Customer performance ratings (reviews)
+========================================================= */
+.rv-extra > label small { color: var(--parchment-dim); font-weight: 400; letter-spacing: 0; text-transform: none; }
+.sim-select { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; margin-top: 8px; }
+.sim-select button { height: 36px; min-width: 0; padding: 0; background: transparent; border: 1px solid var(--line); color: var(--parchment-dim); cursor: pointer;
+  font-family: "Jost", sans-serif; font-size: 13px; font-variant-numeric: lining-nums tabular-nums; transition: background .2s, color .2s, border-color .2s; }
+.sim-select button:hover { border-color: var(--brass-bright); color: var(--parchment); }
+.sim-select button.on { background: color-mix(in srgb, var(--brass-bright) 22%, transparent); border-color: color-mix(in srgb, var(--brass-bright) 55%, transparent); color: var(--parchment); }
+.sim-select button.pick { background: var(--brass-bright); border-color: var(--brass-bright); color: var(--ink); }
+.sim-scale { display: flex; justify-content: space-between; margin-top: 6px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--parchment-dim); }
+.chip-select { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip-select button { padding: 8px 14px; background: transparent; border: 1px solid var(--line); color: var(--parchment-dim); cursor: pointer; font-size: 13px; font-variant-numeric: lining-nums; }
+.chip-select button:hover { border-color: var(--brass-bright); color: var(--parchment); }
+.chip-select button.on { background: var(--brass-bright); border-color: var(--brass-bright); color: var(--ink); }
+
+.review-perf { display: flex; flex-wrap: wrap; gap: 5px; margin: 8px 0 6px; }
+.perf-chip { display: inline-block; padding: 3px 8px; border: 1px solid var(--hair); font-size: 10.5px; letter-spacing: .04em; color: var(--parchment-dim); font-variant-numeric: lining-nums; }
+.perf-chip.sim { color: var(--brass-bright); border-color: color-mix(in srgb, var(--brass-bright) 45%, transparent); }
+.sim-mini { display: inline-block; margin-left: 8px; padding-left: 8px; border-left: 1px solid var(--hair); color: var(--brass-bright); font-variant-numeric: lining-nums; }
+
+.fd-says { margin: 0 0 18px; padding: 16px 18px; border: 1px solid var(--hair); background: color-mix(in srgb, var(--brass-bright) 4%, transparent); display: grid; gap: 14px; }
+.fd-says-title { margin: 0; font-size: 10.5px; letter-spacing: .26em; text-transform: uppercase; color: var(--brass-bright); }
+.say-row { display: grid; grid-template-columns: 140px minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; }
+.say-label { font-size: 13px; color: var(--parchment); }
+.say-bar { height: 6px; background: var(--hair); position: relative; overflow: hidden; }
+.say-bar i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, var(--brass), var(--brass-bright)); }
+.say-row b { font-family: "Jost", sans-serif; font-weight: 400; font-size: 15px; color: var(--parchment); font-variant-numeric: lining-nums tabular-nums; min-width: 64px; text-align: right; }
+.say-row small { grid-column: 2 / -1; font-size: 11.5px; color: var(--parchment-dim); font-variant-numeric: lining-nums; }
+.say-split { display: flex; gap: 3px; height: 6px; }
+.say-split span { background: var(--hair); min-width: 4px; }
+.say-split span.on { background: var(--brass-bright); }
+@media (max-width: 560px) {
+  .say-row { grid-template-columns: minmax(0, 1fr) auto; }
+  .say-label { grid-column: 1 / -1; }
+  .say-row small { grid-column: 1 / -1; }
+  .sim-select button { height: 32px; font-size: 12px; }
+}

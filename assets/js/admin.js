@@ -5510,7 +5510,11 @@ Object.assign(AdminApp.prototype, {
             </td>
             <td data-label="Customer"><b>${escapeHTML(r.name)}</b><small>${escapeHTML(r.scent || "")}</small></td>
             <td data-label="Rating">${"★".repeat(Number(r.rating) || 0)}</td>
-            <td data-label="Review" style="max-width:380px;white-space:normal">${escapeHTML(r.review)}</td>
+            <td data-label="Review" style="max-width:380px;white-space:normal">${[
+              r.similarity ? `<span class="badge">${r.similarity}/10 close</span>` : "",
+              r.wearHours ? `<span class="badge">${r.wearHours >= 10 ? "10+" : "~" + r.wearHours} hrs</span>` : "",
+              r.projection ? `<span class="badge">${escapeHTML(r.projection)}</span>` : ""
+            ].join("")}${r.similarity || r.wearHours || r.projection ? "<br>" : ""}${escapeHTML(r.review)}</td>
             <td data-label="Status">${r.approved ? `<span class="pill st-completed">Visible</span>` : `<span class="pill st-new">Pending</span>`}</td>
             <td>
               <div class="row-actions">

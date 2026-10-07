@@ -1046,7 +1046,8 @@ function buildProductCard(p) {
   // Stars only when there are reviews (no "No reviews yet")
   const ratingText =
     stats.count
-      ? `★ ${stats.avg.toFixed(1)} <span>(${stats.count})</span>`
+      ? `★ ${stats.avg.toFixed(1)} <span>(${stats.count})</span>` +
+        (stats.simCount ? `<span class="sim-mini" title="How close customers say it is to the original">${(stats.simSum / stats.simCount).toFixed(1)}/10 close</span>` : "")
       : "";
 
   const badges = (
@@ -2117,7 +2118,16 @@ function computeReviewStats() {
           sum: 0,
           count: 0,
           avg: 0,
+          simSum: 0, simCount: 0, simClose: 0,
+          wearSum: 0, wearCount: 0,
+          proj: { soft: 0, moderate: 0, strong: 0 }, projCount: 0,
         };
+
+      // customer performance ratings (optional fields)
+      const st = reviewStats[p.id];
+      if (r.similarity >= 1 && r.similarity <= 10) { st.simSum += Number(r.similarity); st.simCount += 1; if (r.similarity >= 8) st.simClose += 1; }
+      if ([4, 6, 8, 10].includes(Number(r.wearHours))) { st.wearSum += Number(r.wearHours); st.wearCount += 1; }
+      if (st.proj[r.projection] !== undefined) { st.proj[r.projection] += 1; st.projCount += 1; }
 
       reviewStats[p.id].sum +=
         Number(
@@ -2319,11 +2329,19 @@ function renderReviews(
         scent,
       );
 
-      body.append(
-        stars,
-        text,
-        meta,
-      );
+      const perf = reviewPerfChips(review);
+      if (perf) {
+        const chips = document.createElement("div");
+        chips.className = "review-perf";
+        chips.innerHTML = perf;
+        body.append(stars, chips, text, meta);
+      } else {
+        body.append(
+          stars,
+          text,
+          meta,
+        );
+      }
 
       card.append(
         photo,
@@ -2601,6 +2619,10 @@ reviewForm?.addEventListener(
             .value.trim(),
 
           photo: photoData,
+
+          similarity: document.getElementById("reviewSimilarity")?.value || "",
+          wearHours: document.getElementById("reviewWear")?.value || "",
+          projection: document.getElementById("reviewProjection")?.value || "",
         });
 
       const response =
@@ -2627,6 +2649,7 @@ reviewForm?.addEventListener(
       reviewForm.reset();
 
       setRating(5);
+      if (typeof resetPerfInputs === "function") resetPerfInputs();
 
       renderReviewScentOptions();
     } catch (err) {
@@ -5465,17 +5488,18 @@ function renderFragranceDetails(p) {
 
   /* ----- reviews ----- */
   const reviews = fdReviewsFor(p);
-  set("fdReviewList", reviews.length
+  set("fdReviewList", (reviews.length ? fdCustomerSays(reviewStats[p.id]) : "") + (reviews.length
     ? reviews.slice(0, 3).map((r) => `
         <div class="fd-review">
           ${r.photoUrl ? `<img src="${escapeHTML(r.photoUrl)}" alt="" loading="lazy" onerror="this.remove()">` : ""}
           <div>
             <div class="fd-review-head"><b>${escapeHTML(r.customerName || r.name || "Customer")}</b><span class="stars">${fdStars(r.rating)}</span></div>
+            ${reviewPerfChips(r) ? `<div class="review-perf">${reviewPerfChips(r)}</div>` : ""}
             <p>${escapeHTML(String(r.review || "").slice(0, 220))}${String(r.review || "").length > 220 ? "…" : ""}</p>
           </div>
         </div>`).join("") +
       `<a class="fd-link" href="#reviews" data-fd-goto="reviews">Read all reviews</a>`
-    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to share your thoughts</a></p>`);
+    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to share your thoughts</a></p>`));
 
   /* ----- you may also like ----- */
   set("fdSimilar", fdSimilar(p).map((x) => {
@@ -6471,3 +6495,101 @@ function renderFaq() {
 }
 
 renderFaq();
+
+
+// ============================================================
+// CUSTOMER PERFORMANCE RATINGS
+// "How close to the original?" (1–10), how long it lasted, projection.
+// Optional in the review form; shown on cards, in the scent popup
+// and on each review.
+// ============================================================
+
+var WEAR_LABEL = { 4: "~4 hrs", 6: "~6 hrs", 8: "~8 hrs", 10: "10+ hrs" };
+var PROJ_LABEL = { soft: "Soft trail", moderate: "Moderate trail", strong: "Strong trail" };
+
+function reviewPerfChips(r) {
+  if (!r || !WEAR_LABEL) return "";
+  const out = [];
+  if (r.similarity >= 1 && r.similarity <= 10) out.push(`<span class="perf-chip sim">${Number(r.similarity)}/10 close to the original</span>`);
+  if (WEAR_LABEL[r.wearHours]) out.push(`<span class="perf-chip">Lasted ${WEAR_LABEL[r.wearHours]}</span>`);
+  if (PROJ_LABEL[r.projection]) out.push(`<span class="perf-chip">${PROJ_LABEL[r.projection]}</span>`);
+  return out.join("");
+}
+
+function fdCustomerSays(st) {
+  if (!PROJ_LABEL || !st || !(st.simCount || st.wearCount || st.projCount)) return "";
+  const rows = [];
+  if (st.simCount) {
+    const avg = st.simSum / st.simCount;
+    const pct = Math.round(st.simClose / st.simCount * 100);
+    rows.push(`<div class="say-row">
+      <span class="say-label">Close to the original</span>
+      <span class="say-bar"><i style="width:${(avg / 10 * 100).toFixed(0)}%"></i></span>
+      <b>${avg.toFixed(1)}/10</b>
+      <small>${pct}% say it smells close · ${st.simCount} rating${st.simCount === 1 ? "" : "s"}</small>
+    </div>`);
+  }
+  if (st.wearCount) {
+    const avg = st.wearSum / st.wearCount;
+    const label = avg >= 9.5 ? "10+ hrs" : `~${Math.round(avg)} hrs`;
+    rows.push(`<div class="say-row">
+      <span class="say-label">Lasts</span>
+      <span class="say-bar"><i style="width:${Math.min(100, avg / 10 * 100).toFixed(0)}%"></i></span>
+      <b>${label}</b>
+      <small>average from ${st.wearCount} customer${st.wearCount === 1 ? "" : "s"}</small>
+    </div>`);
+  }
+  if (st.projCount) {
+    const keys = ["soft", "moderate", "strong"];
+    const top = keys.reduce((a, b) => (st.proj[b] > st.proj[a] ? b : a), "moderate");
+    rows.push(`<div class="say-row say-proj">
+      <span class="say-label">Scent trail</span>
+      <span class="say-split">${keys.map((k) => `<span class="${k === top ? "on" : ""}" style="flex:${Math.max(st.proj[k], 0.0001)}" title="${PROJ_LABEL[k]}: ${st.proj[k]}"></span>`).join("")}</span>
+      <b>${PROJ_LABEL[top].replace(" trail", "")}</b>
+      <small>${keys.map((k) => `${k[0].toUpperCase() + k.slice(1)} ${Math.round(st.proj[k] / st.projCount * 100)}%`).join(" · ")}</small>
+    </div>`);
+  }
+  return `<div class="fd-says"><p class="fd-says-title">What customers say</p>${rows.join("")}</div>`;
+}
+
+function resetPerfInputs() {
+  ["reviewSimilarity", "reviewWear", "reviewProjection"].forEach((id) => { const el = document.getElementById(id); if (el) el.value = ""; });
+  document.querySelectorAll("#simSelect button, .chip-select button").forEach((b) => {
+    b.classList.remove("on");
+    b.setAttribute("aria-checked", "false");
+  });
+}
+
+(function wirePerfInputs() {
+  document.querySelectorAll("#simSelect button, .chip-select button").forEach((b) => {
+    b.setAttribute("role", "radio");
+    b.setAttribute("aria-checked", "false");
+  });
+  document.getElementById("simSelect")?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-sim]");
+    if (!b) return;
+    const input = document.getElementById("reviewSimilarity");
+    const value = input.value === b.dataset.sim ? "" : b.dataset.sim;   // tap again to clear
+    input.value = value;
+    document.querySelectorAll("#simSelect button").forEach((x) => {
+      const on = value !== "" && Number(x.dataset.sim) <= Number(value);
+      x.classList.toggle("on", on);
+      x.classList.toggle("pick", x.dataset.sim === value);
+      x.setAttribute("aria-checked", x.dataset.sim === value ? "true" : "false");
+    });
+  });
+  document.querySelectorAll(".chip-select").forEach((group) => {
+    group.addEventListener("click", (e) => {
+      const b = e.target.closest("[data-value]");
+      if (!b) return;
+      const input = document.getElementById(group.dataset.target);
+      const value = input.value === b.dataset.value ? "" : b.dataset.value;
+      input.value = value;
+      group.querySelectorAll("button").forEach((x) => {
+        const on = x.dataset.value === value;
+        x.classList.toggle("on", on);
+        x.setAttribute("aria-checked", on ? "true" : "false");
+      });
+    });
+  });
+})();

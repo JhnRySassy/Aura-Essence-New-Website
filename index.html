@@ -591,6 +591,28 @@
                   value="5"
                 />
               </div>
+              <div class="rv-extra">
+                <label id="simLabel">How close is it to the original? <small>(optional)</small></label>
+                <div class="sim-select" id="simSelect" role="radiogroup" aria-labelledby="simLabel">
+                  <button type="button" data-sim="1">1</button><button type="button" data-sim="2">2</button><button type="button" data-sim="3">3</button><button type="button" data-sim="4">4</button><button type="button" data-sim="5">5</button><button type="button" data-sim="6">6</button><button type="button" data-sim="7">7</button><button type="button" data-sim="8">8</button><button type="button" data-sim="9">9</button><button type="button" data-sim="10">10</button>
+                </div>
+                <div class="sim-scale" aria-hidden="true"><span>Not close</span><span>Smells the same</span></div>
+                <input type="hidden" id="reviewSimilarity" value="">
+              </div>
+              <div class="rv-extra">
+                <label id="wearLabel">How long did it last on you? <small>(optional)</small></label>
+                <div class="chip-select" id="wearSelect" data-target="reviewWear" role="radiogroup" aria-labelledby="wearLabel">
+                  <button type="button" data-value="4">~4 hrs</button><button type="button" data-value="6">~6 hrs</button><button type="button" data-value="8">~8 hrs</button><button type="button" data-value="10">10+ hrs</button>
+                </div>
+                <input type="hidden" id="reviewWear" value="">
+              </div>
+              <div class="rv-extra">
+                <label id="projLabel">How strong was the scent trail? <small>(optional)</small></label>
+                <div class="chip-select" id="projSelect" data-target="reviewProjection" role="radiogroup" aria-labelledby="projLabel">
+                  <button type="button" data-value="soft">Soft</button><button type="button" data-value="moderate">Moderate</button><button type="button" data-value="strong">Strong</button>
+                </div>
+                <input type="hidden" id="reviewProjection" value="">
+              </div>
               <div>
                 <label for="reviewText">Your Review</label>
                 <textarea

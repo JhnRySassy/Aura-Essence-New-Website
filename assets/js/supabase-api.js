@@ -270,7 +270,10 @@ function reviewFromRow(r) {
     review: r.review,
     photoUrl: r.photo_url,
     approved: r.approved,
-    timestamp: r.created_at
+    timestamp: r.created_at,
+    similarity: r.similarity == null ? null : Number(r.similarity),
+    wearHours: r.wear_hours == null ? null : Number(r.wear_hours),
+    projection: r.projection || null
   };
 }
 
@@ -452,7 +455,10 @@ const actions = {
       p_scent_id: String(p.scentId || ""),
       p_rating: toInt(p.rating, 5),
       p_review: String(p.review || ""),
-      p_photo_url: photoUrl
+      p_photo_url: photoUrl,
+      p_similarity: String(p.similarity ?? "").trim() === "" ? null : clamp(toInt(p.similarity, 0), 1, 10),
+      p_wear_hours: [4, 6, 8, 10].includes(toInt(p.wearHours, 0)) ? toInt(p.wearHours, 0) : null,
+      p_projection: ["soft", "moderate", "strong"].includes(String(p.projection || "")) ? String(p.projection) : null
     }));
   },
 

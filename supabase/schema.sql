@@ -139,6 +139,17 @@ create table if not exists public.reviews (
 );
 create index if not exists reviews_approved_idx on public.reviews (approved, created_at desc);
 
+-- Customer ratings: how close to the original, how long it lasted, how strong it projected
+alter table public.reviews add column if not exists similarity smallint;
+alter table public.reviews add column if not exists wear_hours smallint;
+alter table public.reviews add column if not exists projection text;
+alter table public.reviews drop constraint if exists reviews_similarity_check;
+alter table public.reviews add constraint reviews_similarity_check check (similarity is null or similarity between 1 and 10);
+alter table public.reviews drop constraint if exists reviews_wear_hours_check;
+alter table public.reviews add constraint reviews_wear_hours_check check (wear_hours is null or wear_hours in (4, 6, 8, 10));
+alter table public.reviews drop constraint if exists reviews_projection_check;
+alter table public.reviews add constraint reviews_projection_check check (projection is null or projection in ('soft', 'moderate', 'strong'));
+
 create table if not exists public.audit_log (
   id         bigint generated always as identity primary key,
   actor      text not null default 'system',
@@ -814,13 +825,19 @@ end $$;
 -- SUBMIT REVIEW (customers) — saved hidden until an admin approves it
 -- ---------------------------------------------------------------------
 
+-- Older version without the similarity / longevity / projection ratings
+drop function if exists public.submit_review(text, text, text, integer, text, text);
+
 create or replace function public.submit_review(
-  p_name      text,
-  p_scent     text,
-  p_scent_id  text,
-  p_rating    integer,
-  p_review    text,
-  p_photo_url text
+  p_name       text,
+  p_scent      text,
+  p_scent_id   text,
+  p_rating     integer,
+  p_review     text,
+  p_photo_url  text,
+  p_similarity integer default null,
+  p_wear_hours integer default null,
+  p_projection text default null
 )
 returns jsonb
 language plpgsql security definer set search_path = public
@@ -846,8 +863,11 @@ begin
     return jsonb_build_object('success', false, 'message', 'Too many reviews right now. Please try again shortly.');
   end if;
 
-  insert into public.reviews (name, scent, scent_id, rating, review, photo_url)
-  values (trim(p_name), left(coalesce(p_scent, ''), 120), left(p_scent_id, 64), p_rating, trim(p_review), p_photo_url);
+  insert into public.reviews (name, scent, scent_id, rating, review, photo_url, similarity, wear_hours, projection)
+  values (trim(p_name), left(coalesce(p_scent, ''), 120), left(p_scent_id, 64), p_rating, trim(p_review), p_photo_url,
+          case when p_similarity between 1 and 10 then p_similarity end,
+          case when p_wear_hours in (4, 6, 8, 10) then p_wear_hours end,
+          case when lower(p_projection) in ('soft', 'moderate', 'strong') then lower(p_projection) end);
 
   return jsonb_build_object('success', true, 'type', 'review', 'message', 'Review submitted successfully.');
 end $$;
@@ -1066,14 +1086,14 @@ grant select on public.audit_log, public.admins to authenticated;
 revoke execute on function public.place_order(text, text, jsonb, text, text, text, text) from public;
 revoke execute on function public.check_voucher(text, jsonb, text) from public;
 revoke execute on function public.track_order(text, text) from public;
-revoke execute on function public.submit_review(text, text, text, integer, text, text) from public;
+revoke execute on function public.submit_review(text, text, text, integer, text, text, integer, integer, text) from public;
 revoke execute on function public.admin_dashboard() from public;
 revoke execute on function public.is_admin() from public;
 
 grant execute on function public.place_order(text, text, jsonb, text, text, text, text) to anon, authenticated;
 grant execute on function public.check_voucher(text, jsonb, text) to anon, authenticated;
 grant execute on function public.track_order(text, text) to anon, authenticated;
-grant execute on function public.submit_review(text, text, text, integer, text, text) to anon, authenticated;
+grant execute on function public.submit_review(text, text, text, integer, text, text, integer, integer, text) to anon, authenticated;
 grant execute on function public.is_admin() to anon, authenticated;
 grant execute on function public.admin_dashboard() to authenticated;
 
