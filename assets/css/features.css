@@ -163,3 +163,23 @@ html[data-theme="light"] .img-ph::before { background: #141210; opacity: .35; }
 .pimg.noimg::after { content: "" !important; width: 34%; aspect-ratio: 1.3; background: var(--brass-bright); opacity: .55;
   -webkit-mask: url("../images/ae-logo-black.svg") center / contain no-repeat; mask: url("../images/ae-logo-black.svg") center / contain no-repeat; }
 html[data-theme="light"] .pimg.noimg::after { background: #141210; opacity: .35; }
+
+/* ---------- Brand film ---------- */
+.house-film { position: relative; margin: clamp(48px, 7vw, 84px) 0 0; border: 1px solid var(--line); background: #0b0a09; overflow: hidden; aspect-ratio: 16 / 9; }
+.house-film.tall { aspect-ratio: 4 / 5; }
+.house-film video { display: block; width: 100%; height: 100%; object-fit: cover; cursor: pointer; background: #0b0a09; }
+.film-btn { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 78px; height: 78px; border-radius: 50%;
+  display: grid; place-items: center; cursor: pointer; color: #0e0d0c; background: rgba(212, 178, 106, .92); border: 0;
+  box-shadow: 0 0 0 10px rgba(212, 178, 106, .18); transition: opacity .35s, transform .35s, background .3s; }
+.film-btn:hover { background: #e2c483; transform: translate(-50%, -50%) scale(1.05); }
+.film-btn .i-pause { display: none; }
+.house-film.playing .film-btn { left: auto; top: 14px; right: 14px; bottom: auto; transform: none; width: 42px; height: 42px;
+  box-shadow: none; background: rgba(14, 13, 12, .6); color: #ede7da; border: 1px solid rgba(212, 178, 106, .35); opacity: 0; }
+.house-film.playing:hover .film-btn, .house-film.playing .film-btn:focus-visible { opacity: 1; }
+.house-film.playing .film-btn .i-play { display: none; }
+.house-film.playing .film-btn .i-pause { display: block; }
+.house-film figcaption { position: absolute; left: 18px; bottom: 14px; font-size: 10px; letter-spacing: .28em; text-transform: uppercase;
+  color: rgba(237, 231, 218, .7); pointer-events: none; transition: opacity .4s; }
+.house-film.playing figcaption { opacity: 0; }
+@media (hover: none) { .house-film.playing .film-btn { opacity: .85; } }
+@media (max-width: 700px) { .house-film { margin-left: -4px; margin-right: -4px; } }

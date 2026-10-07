@@ -6156,3 +6156,70 @@ async function submitWelcome(e) {
 })();
 
 renderHomeExtras();
+
+// ============================================================
+// BRAND FILM ("The House")
+// Wide film on desktop, 4:5 on phones. Plays muted when it comes
+// into view (not with reduced motion / data saver); tap to pause.
+// ============================================================
+
+(function brandFilm() {
+  const video = document.getElementById("filmVideo");
+  const btn = document.getElementById("filmBtn");
+  const box = document.getElementById("houseFilm");
+  if (!video || !btn || !box) return;
+
+  const tallQuery = window.matchMedia("(max-width: 700px)");
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+    (navigator.connection && navigator.connection.saveData);
+  let userPaused = false;
+  let loaded = "";
+
+  const pick = () => {
+    const tall = tallQuery.matches;
+    box.classList.toggle("tall", tall);
+    video.poster = tall ? video.dataset.tallPoster : video.dataset.widePoster;
+    const mp4 = tall ? video.dataset.tall : video.dataset.wide;
+    // WebM is smaller; Safari (and older iPhones) get the MP4
+    return video.canPlayType('video/webm; codecs="vp9"') ? mp4.replace(/\.mp4$/, ".webm") : mp4;
+  };
+
+  const load = () => {
+    const src = pick();
+    if (loaded === src) return;
+    const wasPlaying = !video.paused;
+    loaded = src;
+    video.src = src;
+    if (wasPlaying) video.play().catch(() => {});
+  };
+
+  const setState = () => {
+    const playing = !video.paused;
+    box.classList.toggle("playing", playing);
+    btn.setAttribute("aria-label", playing ? "Pause the film" : "Play the film");
+  };
+
+  const play = () => { load(); video.play().catch(() => {}); };
+
+  pick();
+  video.addEventListener("play", setState);
+  video.addEventListener("pause", setState);
+  btn.addEventListener("click", () => {
+    if (video.paused) { userPaused = false; play(); }
+    else { userPaused = true; video.pause(); }
+  });
+  video.addEventListener("click", () => btn.click());
+  tallQuery.addEventListener?.("change", () => { if (loaded) load(); else pick(); });
+
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting && e.intersectionRatio >= 0.55) {
+          if (!calm && !userPaused) play();
+        } else if (!video.paused) {
+          video.pause();
+        }
+      });
+    }, { threshold: [0, 0.55] }).observe(box);
+  }
+})();
