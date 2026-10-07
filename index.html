@@ -51,6 +51,7 @@
           <a href="#scentFinder">Find Your Scent</a>
           <a href="#reviews">Reviews</a>
           <a href="#tracking">Track Order</a>
+          <a href="#faq">FAQ</a>
         </nav>
         <div class="nav-actions">
           <button type="button" class="cart-btn theme-btn" id="themeToggle" aria-label="Switch to light mode" title="Light mode">
@@ -644,14 +645,36 @@
       </div>
     </section>
 
-    <section class="order" id="order">
+    <section class="feature-section how-faq" id="faq">
       <div class="wrap">
-        <p class="sec-eyebrow">Checkout</p>
-        <h2 class="sec-title">Complete your order</h2>
-        <p class="sec-lede">
-          Review your bag, add your details, and place your order. We'll message
-          you personally to confirm payment and delivery.
-        </p>
+        <p class="sec-eyebrow">Help</p>
+        <h2 class="sec-title">How to order</h2>
+        <p class="sec-lede">Five simple steps — from choosing your scent to wearing it.</p>
+        <ol class="how-steps">
+          <li><span class="how-num">01</span><b>Choose your scent</b><p>Shop For Him or For Her, or take the scent finder if you can't decide.</p></li>
+          <li><span class="how-num">02</span><b>Add to bag</b><p>Tap <i>Add to bag</i>. Your bag is always one tap away at the top of the page.</p></li>
+          <li><span class="how-num">03</span><b>Check out</b><p>Open your bag, add your name, number and delivery or meetup location, then place your order.</p></li>
+          <li><span class="how-num">04</span><b>Pay</b><p>Cash on delivery / meetup, or GCash — send the screenshot on Messenger so we can confirm.</p></li>
+          <li><span class="how-num">05</span><b>Track &amp; enjoy</b><p>You get an Order ID right away. Use it in <a href="#tracking">Track Order</a> anytime.</p></li>
+        </ol>
+        <div class="faq-wrap">
+          <h3 class="faq-title">Frequently asked questions</h3>
+          <div class="faq-list" id="faqList"></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="bag-modal" id="bagModal" aria-hidden="true" hidden>
+    <div class="bag-backdrop" data-bag-close></div>
+    <section class="order bag-sheet" id="order" role="dialog" aria-modal="true" aria-labelledby="bagTitle">
+      <div class="wrap">
+        <div class="bag-head">
+          <div>
+            <p class="sec-eyebrow">Checkout</p>
+            <h2 class="bag-title" id="bagTitle">Your bag</h2>
+          </div>
+          <button type="button" class="bag-x" data-bag-close aria-label="Close">&times;</button>
+        </div>
 
         <ol class="co-steps" id="coSteps" aria-label="Checkout steps">
           <li data-step="1" class="active"><button type="button" data-go="1"><span>1</span>Bag</button></li>
@@ -677,7 +700,7 @@
               </div>
               <p class="co-error" id="coCartError" hidden>Add a fragrance to your bag to continue.</p>
               <div class="co-actions">
-                <a class="co-link" href="#collection">← Continue browsing</a>
+                <button type="button" class="co-link" data-bag-close>← Continue shopping</button>
                 <button type="button" class="submit co-next" data-go="2">Continue to details</button>
               </div>
             </div>
@@ -757,6 +780,7 @@
         </div>
       </div>
     </section>
+    </div>
 
     <div class="confirmation-modal" id="confirmationModal" aria-hidden="true">
       <div class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle">
@@ -867,6 +891,7 @@
         <a href="#scentFinder">Find Your Scent</a>
         <a href="#reviews">Reviews</a>
         <a href="#tracking">Track Order</a>
+        <a href="#faq">FAQ</a>
         <a href="#welcome" id="welcomeFootLink" hidden>First-order gift</a>
       </nav>
       <p class="foot-note">Inspired by iconic fragrances. Not affiliated with the original brands.</p>

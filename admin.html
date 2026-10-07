@@ -133,7 +133,9 @@
     <!-- ---------- Orders ---------- -->
     <section id="ordersView" class="view hidden">
       <div class="toolbar">
+        <button class="btn primary" id="newManualOrder" type="button">+ New order</button>
         <input id="orderSearch" placeholder="Search order, customer, contact, scent..." aria-label="Search orders">
+        <select id="orderSourceFilter" aria-label="Where the order came from"><option value="">All sources</option><option value="website">Website</option><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="shopee">Shopee</option><option value="lazada">Lazada</option><option value="walk-in">Walk-in</option><option value="reseller">Reseller</option><option value="other">Other</option></select>
         <select id="orderPayFilter" aria-label="Payment"><option value="">All payments</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option><option value="Paid">Paid</option><option value="Refunded">Refunded</option></select>
         <button class="btn" id="refreshOrders">Refresh</button>
         <button class="btn" id="exportOrders">Export CSV</button>
@@ -207,6 +209,11 @@
             <label>Voucher to give<select id="setWelcomeCode"><option value="">Choose a voucher…</option></select><small class="muted" id="welcomeHint">Tip: create a voucher (e.g. WELCOME10, 10% off) and turn on <b>First order only</b>.</small></label>
             <label>Headline <small class="muted">(optional)</small><input id="setWelcomeHeadline" maxlength="80" placeholder="A gift for your first order"></label>
           </div>
+        </div>
+        <div class="panel full faq-panel">
+          <div class="panel-head"><h3>FAQ</h3><span>Questions in the "How to order" section of the website</span></div>
+          <div class="faq-editor" id="faqEditor"></div>
+          <div class="faq-editor-actions"><button class="btn ghost" type="button" id="faqAdd">+ Add question</button><button class="btn ghost" type="button" id="faqReset">Reset to the default questions</button></div>
         </div>
         <div class="panel full weather-panel">
           <div class="panel-head"><h3>Shop by weather</h3><span>Worked out from each scent's profile — change any you disagree with</span></div>
@@ -431,6 +438,49 @@
 
 
   <!-- Voucher editor (side panel) -->
+  <div id="manualOrderEditor" class="drawer side-editor hidden" aria-hidden="true">
+    <div class="drawer-backdrop" data-close-editor></div>
+    <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="moTitle">
+      <div class="drawer-head"><div><p class="eyebrow">MANUAL ORDER</p><h3 id="moTitle">New order</h3></div><button class="btn ghost" type="button" id="closeManualOrder">Close</button></div>
+      <form id="manualOrderForm" class="editor-form" autocomplete="off">
+        <fieldset class="form-sec">
+          <legend>Where &amp; when</legend>
+          <div class="form-grid">
+            <label>Source<select id="moSource"><option value="facebook">Facebook</option><option value="instagram">Instagram</option><option value="tiktok">TikTok</option><option value="walk-in">Walk-in</option><option value="shopee">Shopee</option><option value="lazada">Lazada</option><option value="reseller">Reseller</option><option value="other">Other</option></select></label>
+            <label>Order date<input id="moDate" type="date"></label>
+          </div>
+        </fieldset>
+        <fieldset class="form-sec">
+          <legend>Customer</legend>
+          <div class="form-grid">
+            <label class="full">Name<input id="moName" maxlength="120" placeholder="e.g. Ana Santos (FB)"></label>
+            <label>Mobile number <small class="muted">(optional)</small><input id="moContact" type="tel" inputmode="tel" maxlength="20" placeholder="0917 123 4567"></label>
+            <label>Delivery / meetup <small class="muted">(optional)</small><input id="moAddress" maxlength="500" placeholder="City / landmark"></label>
+          </div>
+        </fieldset>
+        <fieldset class="form-sec">
+          <legend>Scents</legend>
+          <div class="mo-items" id="moItems"></div>
+          <button class="btn ghost" type="button" id="moAddItem">+ Add scent</button>
+          <label class="switch-row"><span><b>Take from stock</b><small>Turn off if these bottles were already counted (e.g. old orders)</small></span><input id="moTakeStock" type="checkbox" class="switch" checked></label>
+        </fieldset>
+        <fieldset class="form-sec">
+          <legend>Payment &amp; status</legend>
+          <div class="form-grid">
+            <label>Discount (₱)<input id="moDiscount" type="number" min="0" step="0.01" inputmode="decimal" value="0"></label>
+            <label>Payment method<select id="moPayment"><option>GCash</option><option>Cash</option><option>Cash on Delivery / Meetup</option><option>Bank transfer</option><option>Maya</option><option>Other</option></select></label>
+            <label>Payment<select id="moPayStatus"><option value="Paid">Paid</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option></select></label>
+            <label>Order status<select id="moStatus"><option>Completed</option><option>Confirmed</option><option>Preparing</option><option>Out for Delivery</option><option>New</option></select></label>
+            <label class="full">Notes <small class="muted">(only you see this)</small><input id="moNotes" maxlength="1000" placeholder="e.g. Pick-up Saturday, friend's price"></label>
+          </div>
+        </fieldset>
+        <div class="mo-summary" id="moSummary"></div>
+        <p class="status error" id="moError" role="alert"></p>
+        <div class="form-actions sticky-actions"><button class="btn ghost" type="button" id="cancelManualOrder">Cancel</button><button class="btn primary" type="submit" id="saveManualOrder">Save order</button></div>
+      </form>
+    </aside>
+  </div>
+
   <div id="voucherEditor" class="drawer side-editor hidden" aria-hidden="true">
     <div class="drawer-backdrop" data-close-editor></div>
     <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="voucherTitle">

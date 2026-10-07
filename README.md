@@ -198,6 +198,14 @@ After updating the files, **run `supabase/schema.sql` again** in Supabase → SQ
 - **For Him / For Her pages** — the homepage shows two line cards plus best sellers; the full list (search, scent and weather filters, sort) opens at `index.html?line=men` and `index.html?line=women`.
 - **Collections** — the new *Everyday* and *Hidden Gem* badges get their own homepage rows.
 
+## Manual orders, FAQ and the bag
+
+Run `supabase/schema.sql` again after updating (adds the order **source** and the manual-order function).
+
+- **Manual orders** — Admin → Orders → **+ New order** for Facebook, Instagram, TikTok, walk-in, reseller… sales. Price per bottle can be changed, a discount added, the date set in the past, and "Take from stock" turned off for bottles already counted. They appear in Orders (with a source badge and filter), the profit report, CSV and the Excel backup. No order email is sent for these.
+- **Bag** — the checkout now opens as a window from the bag icon, "View bag", the mobile checkout bar, or any `#order` link.
+- **How to order + FAQ** — new section near the bottom (also in the menu). Edit the questions in Admin → Homepage & Payment → **FAQ**; "Reset to the default questions" brings back the built-in ones. Check the delivery times there and change them to yours.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

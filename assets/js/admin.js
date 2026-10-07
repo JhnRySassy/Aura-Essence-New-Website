@@ -1783,7 +1783,9 @@ class AdminApp {
           item.search.includes(search)
         )
         .map(item => item.order)
-        .filter(order => !pay || (order.paymentStatus || "Unpaid") === pay);
+        .filter(order => !pay || (order.paymentStatus || "Unpaid") === pay)
+        .filter(order => !document.getElementById("orderSourceFilter")?.value ||
+          (order.source || "website") === document.getElementById("orderSourceFilter").value);
 
 
     /* ---------- tabs with counts ---------- */
@@ -1940,7 +1942,8 @@ class AdminApp {
       "Status",
       "Date",
       "Delivery / Meetup",
-      "Notes"
+      "Notes",
+      "Source"
     ];
 
 
@@ -1982,7 +1985,9 @@ class AdminApp {
 
           order.address || "",
 
-          order.notes || ""
+          order.notes || "",
+
+          order.source || "website"
         ]
       )
 
@@ -3870,6 +3875,7 @@ Object.assign(AdminApp.prototype, {
           "Order ID": o.order_id,
           "Date": when(o.created_at),
           "Status": o.status,
+          "Source": o.source || "website",
           "Full Name": o.fullname,
           "Contact": o.contact,
           "Items": (o.items || []).map(i => `${i.name} × ${i.qty}`).join(" | "),
@@ -7929,6 +7935,275 @@ Object.assign(AdminApp.prototype, {
     } catch (error) {
       this.setStatus(error.message || "Couldn't remove", true);
     }
+  }
+});
+
+
+/* =========================================================
+   v8 — MANUAL ORDERS (Facebook, Instagram, walk-in…)
+   Same orders table, so stock, payments and the profit
+   report include every sale.
+========================================================= */
+
+const _orig8 = {
+  bind: AdminApp.prototype.bind,
+  closeEditors: AdminApp.prototype.closeEditors,
+  renderOrders: AdminApp.prototype.renderOrders
+};
+
+const SOURCE_LABEL = { website: "Website", facebook: "Facebook", instagram: "Instagram", tiktok: "TikTok", shopee: "Shopee",
+  lazada: "Lazada", "walk-in": "Walk-in", reseller: "Reseller", other: "Other" };
+
+Object.assign(AdminApp.prototype, {
+
+  bind() {
+    _orig8.bind.call(this);
+    byId("newManualOrder")?.addEventListener("click", () => this.openManualOrder());
+    byId("closeManualOrder")?.addEventListener("click", () => this.closeEditors());
+    byId("cancelManualOrder")?.addEventListener("click", () => this.closeEditors());
+    byId("moAddItem")?.addEventListener("click", () => { this.addManualLine(); this.updateManualSummary(); });
+    byId("manualOrderForm")?.addEventListener("submit", e => { e.preventDefault(); this.saveManualOrder(); });
+    byId("manualOrderForm")?.addEventListener("input", () => this.updateManualSummary());
+    byId("manualOrderForm")?.addEventListener("change", () => this.updateManualSummary());
+    byId("moSource")?.addEventListener("change", e => this.applySourceDefaults(e.target.value));
+    byId("moItems")?.addEventListener("click", e => {
+      const del = e.target.closest("[data-mo-del]");
+      if (!del) return;
+      del.closest(".mo-line")?.remove();
+      if (!document.querySelector("#moItems .mo-line")) this.addManualLine();
+      this.updateManualSummary();
+    });
+    byId("moItems")?.addEventListener("change", e => {
+      if (!e.target.matches("select[data-mo-product]")) return;
+      const p = this.productFor(e.target.value);
+      const price = e.target.closest(".mo-line")?.querySelector("[data-mo-price]");
+      if (price) price.placeholder = p ? String(Number(p.price)) : "Price";
+    });
+    byId("orderSourceFilter")?.addEventListener("change", e => {
+      e.target.classList.toggle("on", Boolean(e.target.value));
+      this.renderOrders();
+    });
+  },
+
+  closeEditors() {
+    _orig8.closeEditors.call(this);
+    const el = byId("manualOrderEditor");
+    el?.classList.add("hidden");
+    el?.setAttribute("aria-hidden", "true");
+  },
+
+  /* ----- source badge on each order row ----- */
+  renderOrders() {
+    _orig8.renderOrders.call(this);
+    document.querySelectorAll("#ordersRows tr[data-order]").forEach(tr => {
+      const o = (this.orders || []).find(x => x.orderId === tr.dataset.order);
+      const src = o?.source || "website";
+      const cell = tr.querySelector("td.td-main");
+      if (!cell || cell.querySelector(".src-badge") || src === "website") return;
+      cell.querySelector("b")?.insertAdjacentHTML("afterend", ` <span class="src-badge src-${escapeHTML(src)}">${escapeHTML(SOURCE_LABEL[src] || src)}</span>`);
+    });
+  },
+
+  /* ----- the form ----- */
+  openManualOrder() {
+    const el = byId("manualOrderEditor");
+    if (!el) return;
+    byId("manualOrderForm")?.reset();
+    byId("moItems").innerHTML = "";
+    this.addManualLine();
+    byId("moDate").value = manilaDay(new Date());
+    byId("moDate").max = manilaDay(new Date());
+    byId("moError").textContent = "";
+    this.applySourceDefaults(byId("moSource").value);
+    this.updateManualSummary();
+    el.classList.remove("hidden");
+    el.setAttribute("aria-hidden", "false");
+    setTimeout(() => byId("moName")?.focus(), 50);
+  },
+
+  // Walk-in = paid in cash and done; online = confirmed, waiting for payment
+  applySourceDefaults(src) {
+    const walkIn = src === "walk-in";
+    byId("moStatus").value = walkIn ? "Completed" : "Confirmed";
+    byId("moPayStatus").value = walkIn ? "Paid" : "Unpaid";
+    byId("moPayment").value = walkIn ? "Cash" : "GCash";
+    const name = byId("moName");
+    if (name) name.placeholder = walkIn ? "Walk-in customer" : "e.g. Ana Santos (FB)";
+    this.updateManualSummary();
+  },
+
+  addManualLine() {
+    const box = byId("moItems");
+    if (!box) return;
+    const products = (this.products || []).slice()
+      .sort((a, b) => (a.active === false) - (b.active === false) || String(a.name).localeCompare(String(b.name)));
+    const options = products.map(p => {
+      const stock = p.stock == null ? "" : ` · ${p.stock} left`;
+      return `<option value="${escapeHTML(p.id)}">${escapeHTML(p.name)}${stock}${p.active === false ? " (hidden)" : ""}</option>`;
+    }).join("");
+    const first = products[0];
+    box.insertAdjacentHTML("beforeend", `
+      <div class="mo-line">
+        <select data-mo-product aria-label="Scent"><option value="">Choose a scent…</option>${options}</select>
+        <input data-mo-qty type="number" min="1" max="500" step="1" value="1" inputmode="numeric" aria-label="Quantity">
+        <input data-mo-price type="number" min="0" step="0.01" inputmode="decimal" placeholder="${first ? "Price" : ""}" aria-label="Price per bottle (blank = regular price)">
+        <button type="button" class="mini-btn" data-mo-del aria-label="Remove this scent">×</button>
+      </div>`);
+  },
+
+  manualLines() {
+    return [...document.querySelectorAll("#moItems .mo-line")].map(line => {
+      const id = line.querySelector("[data-mo-product]")?.value || "";
+      const p = this.productFor(id);
+      const qty = Math.max(0, parseInt(line.querySelector("[data-mo-qty]")?.value, 10) || 0);
+      const raw = line.querySelector("[data-mo-price]")?.value.trim() || "";
+      const price = raw === "" ? Number(p?.price || 0) : Math.max(0, Number(raw) || 0);
+      return { id, p, qty, price, custom: raw !== "" };
+    }).filter(l => l.id && l.qty > 0);
+  },
+
+  updateManualSummary() {
+    const box = byId("moSummary");
+    if (!box) return;
+    const lines = this.manualLines();
+    const subtotal = lines.reduce((s, l) => s + l.price * l.qty, 0);
+    const discount = Math.min(subtotal, Math.max(0, Number(byId("moDiscount")?.value) || 0));
+    const total = subtotal - discount;
+    const bottles = lines.reduce((s, l) => s + l.qty, 0);
+    const costKnown = lines.every(l => l.p && l.p.cost != null);
+    const cost = lines.reduce((s, l) => s + (l.p?.cost != null ? Number(l.p.cost) * l.qty : 0), 0);
+    const take = byId("moTakeStock")?.checked;
+    const short = take ? lines.filter(l => l.p && l.p.stock != null && Number(l.p.stock) < l.qty) : [];
+    box.innerHTML = `
+      <div><span>${bottles} bottle${bottles === 1 ? "" : "s"}</span><span>${formatCurrency(subtotal)}</span></div>
+      ${discount ? `<div><span>Discount</span><span>−${formatCurrency(discount)}</span></div>` : ""}
+      <div class="mo-total"><span>Total</span><b>${formatCurrency(total)}</b></div>
+      ${lines.length ? `<div class="muted"><span>Profit</span><span>${costKnown ? formatCurrency(total - cost) : "add product costs to see profit"}</span></div>` : ""}
+      ${short.length ? `<p class="mo-warn">Not enough stock: ${short.map(l => `${escapeHTML(l.p.name)} (${l.p.stock} left)`).join(", ")}. Restock first or turn off "Take from stock".</p>` : ""}`;
+  },
+
+  async saveManualOrder() {
+    const err = byId("moError");
+    const btn = byId("saveManualOrder");
+    const lines = this.manualLines();
+    const src = byId("moSource").value;
+    const name = byId("moName").value.trim() || (src === "walk-in" ? "Walk-in customer" : "");
+    err.textContent = "";
+    if (!name) { err.textContent = "Enter the customer's name."; byId("moName").focus(); return; }
+    if (!lines.length) { err.textContent = "Choose at least one scent."; return; }
+
+    btn.disabled = true; btn.textContent = "Saving…";
+    try {
+      const res = await this.request("POST", {
+        action: "adminCreateOrder",
+        fullname: name,
+        contact: byId("moContact").value.trim(),
+        address: byId("moAddress").value.trim(),
+        source: src,
+        date: byId("moDate").value,
+        items: JSON.stringify(lines.map(l => ({ id: l.id, qty: l.qty, price: l.custom ? l.price : "" }))),
+        discount: byId("moDiscount").value || 0,
+        payment: byId("moPayment").value,
+        paymentStatus: byId("moPayStatus").value,
+        status: byId("moStatus").value,
+        notes: byId("moNotes").value.trim(),
+        takeStock: byId("moTakeStock").checked
+      });
+      if (res && res.success === false) throw new Error(res.message || "Couldn't save the order.");
+      this.closeEditors();
+      this.setStatus(`Order ${res.orderId} saved · ${formatCurrency(res.total)}`);
+      await Promise.all([this.loadOrders(true), this.loadProducts()]);
+      if (typeof this.loadDashboard === "function") this.loadDashboard();
+    } catch (error) {
+      err.textContent = error.message || "Couldn't save the order. If you just updated the site, run supabase/schema.sql again.";
+    } finally {
+      btn.disabled = false; btn.textContent = "Save order";
+    }
+  }
+});
+
+
+/* =========================================================
+   v9 — FAQ editor (Homepage & Payment)
+========================================================= */
+
+const _orig9 = {
+  bind: AdminApp.prototype.bind,
+  fillHomepageExtras: AdminApp.prototype.fillHomepageExtras,
+  extraSettings: AdminApp.prototype.extraSettings
+};
+
+// Same as the website's built-in questions (assets/js/app.js → DEFAULT_FAQ)
+const ADMIN_DEFAULT_FAQ = [
+  { q: "How do I order?", a: "Choose a scent and tap Add to bag. Open your bag from the top of the page, add your name, mobile number and delivery or meetup location, then place your order. You'll get an Order ID right away." },
+  { q: "What payment methods do you accept?", a: "Cash on delivery / meetup, and GCash. For GCash, the number appears after you place your order — send your payment screenshot on our Messenger page so we can confirm it." },
+  { q: "How long does delivery take?", a: "Metro Manila: about 1–3 days. Luzon: about 2–5 days. Visayas & Mindanao: about 3–7 days, depending on the courier. We'll message you once your order is on its way." },
+  { q: "How much is shipping?", a: "It depends on your location and the courier. We'll confirm the exact fee when we message you about your order." },
+  { q: "How long does the scent last?", a: "Our perfumes are 25% extrait de parfum — more perfume oil than a typical eau de toilette — so they stay on the skin longer. How long exactly depends on your skin and the scent. Tip: spray on pulse points (wrists, neck) right after moisturising." },
+  { q: "What does “inspired by” mean?", a: "Each blend is our own take on the character of a well-loved designer fragrance. We are not affiliated with the original brands, and their names belong to their owners — we use them only so you know which scent family to expect." },
+  { q: "Can I track my order?", a: "Yes. Enter your Order ID and the mobile number you ordered with in Track Order." },
+  { q: "Is it ready to give as a gift?", a: "Yes — every bottle comes in the signature A&E bag, ready to give as it is." }
+];
+
+Object.assign(AdminApp.prototype, {
+
+  bind() {
+    _orig9.bind.call(this);
+    byId("faqAdd")?.addEventListener("click", () => {
+      this.renderFaqEditor([...this.readFaqEditor(), { q: "", a: "" }]);
+      document.querySelector("#faqEditor .faq-row:last-child input")?.focus();
+    });
+    byId("faqReset")?.addEventListener("click", () => this.renderFaqEditor(ADMIN_DEFAULT_FAQ.map(x => ({ ...x }))));
+    byId("faqEditor")?.addEventListener("click", e => {
+      const btn = e.target.closest("[data-faq-op]");
+      if (!btn) return;
+      const list = this.readFaqEditor();
+      const i = Number(btn.dataset.i);
+      if (btn.dataset.faqOp === "del") list.splice(i, 1);
+      if (btn.dataset.faqOp === "up" && i > 0) [list[i - 1], list[i]] = [list[i], list[i - 1]];
+      if (btn.dataset.faqOp === "down" && i < list.length - 1) [list[i + 1], list[i]] = [list[i], list[i + 1]];
+      this.renderFaqEditor(list);
+    });
+  },
+
+  fillHomepageExtras() {
+    _orig9.fillHomepageExtras.call(this);
+    if (document.activeElement && document.activeElement.closest?.("#faqEditor")) return;
+    let list = [];
+    try { list = JSON.parse((this.settings || {}).faq || "[]"); } catch { list = []; }
+    this.renderFaqEditor(Array.isArray(list) && list.length ? list : ADMIN_DEFAULT_FAQ.map(x => ({ ...x })));
+  },
+
+  extraSettings() {
+    const base = _orig9.extraSettings.call(this);
+    if (!byId("faqEditor")) return base;
+    const list = this.readFaqEditor().filter(x => x.q.trim() && x.a.trim());
+    const same = JSON.stringify(list) === JSON.stringify(ADMIN_DEFAULT_FAQ);
+    return { ...base, faq: same ? "" : JSON.stringify(list) };
+  },
+
+  readFaqEditor() {
+    return [...document.querySelectorAll("#faqEditor .faq-row")].map(row => ({
+      q: row.querySelector("input")?.value || "",
+      a: row.querySelector("textarea")?.value || ""
+    }));
+  },
+
+  renderFaqEditor(list) {
+    const box = byId("faqEditor");
+    if (!box) return;
+    box.innerHTML = list.length ? list.map((x, i) => `
+      <div class="faq-row">
+        <div class="faq-row-fields">
+          <input maxlength="200" placeholder="Question" value="${escapeHTML(x.q)}" aria-label="Question ${i + 1}">
+          <textarea maxlength="1500" rows="2" placeholder="Answer" aria-label="Answer ${i + 1}">${escapeHTML(x.a)}</textarea>
+        </div>
+        <div class="faq-row-ops">
+          <button type="button" class="mini-btn" data-faq-op="up" data-i="${i}" aria-label="Move up" ${i === 0 ? "disabled" : ""}>↑</button>
+          <button type="button" class="mini-btn" data-faq-op="down" data-i="${i}" aria-label="Move down" ${i === list.length - 1 ? "disabled" : ""}>↓</button>
+          <button type="button" class="mini-btn" data-faq-op="del" data-i="${i}" aria-label="Remove">×</button>
+        </div>
+      </div>`).join("") : `<p class="muted">No questions — the website will show the default ones.</p>`;
   }
 });
 

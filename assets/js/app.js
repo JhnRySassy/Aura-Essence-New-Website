@@ -3269,13 +3269,7 @@ document
 
       syncQuantity();
 
-      document
-        .getElementById(
-          "order",
-        )
-        ?.scrollIntoView({
-          behavior: "smooth",
-        });
+      if (typeof openBag === "function") openBag();
     },
   );
 
@@ -3801,6 +3795,8 @@ ${p.name} × ${item.qty} — ₱${(
         });
       }
       goCheckoutStep(1, { silent: true });
+
+      if (typeof closeBag === "function") closeBag();
 
       document
         .getElementById(
@@ -4512,6 +4508,7 @@ async function loadStoreSettings() {
       storeSettings = result.settings || {};
       renderFeaturedRows();
       renderHomeExtras();
+      if (typeof renderFaq === "function") renderFaq();
     }
   } catch {
     // keep defaults (all rows on)
@@ -5056,6 +5053,7 @@ function goCheckoutStep(n, opts) {
   });
 
   if (n === 3) renderReview();
+  if (typeof updateBagTitle === "function") updateBagTitle();
   document.body.classList.remove("co-step-1", "co-step-2", "co-step-3");
   document.body.classList.add(`co-step-${n}`);
 
@@ -6343,7 +6341,7 @@ function applyShopLine(cat, push) {
     const a = e.target.closest('a[href^="#"]');
     if (!a) return;
     const hash = a.getAttribute("href");
-    if (hash === "#" || hash === "#top" || hash.startsWith("#scent-")) return;
+    if (hash === "#" || hash === "#top" || hash === "#order" || hash.startsWith("#scent-")) return;
     if (hash === "#collection") { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     e.preventDefault();
     location.href = "index.html" + hash;
@@ -6351,3 +6349,125 @@ function applyShopLine(cat, push) {
 
   updateLineCards();
 })();
+
+
+// ============================================================
+// BAG / CHECKOUT AS A MODAL
+// The checkout used to sit at the very bottom of the page; now it
+// opens over whatever the customer is looking at (header bag icon,
+// "View bag" in the toast, the mobile bar, or any #order link).
+// ============================================================
+
+var bagLastFocus = null;
+
+function isBagOpen() {
+  return document.body.classList.contains("bag-open");
+}
+
+function openBag() {
+  const modal = document.getElementById("bagModal");
+  if (!modal) return;
+  if (!isBagOpen()) bagLastFocus = document.activeElement;
+  document.querySelector(".fav-drawer.open")?.classList.remove("open");
+  modal.hidden = false;
+  modal.setAttribute("aria-hidden", "false");
+  document.body.classList.add("bag-open", "order-in-view");
+  requestAnimationFrame(() => modal.classList.add("open"));
+  const sheet = document.getElementById("order");
+  if (sheet) sheet.scrollTop = 0;
+  updateBagTitle();
+  setTimeout(() => document.querySelector("#order .bag-x")?.focus({ preventScroll: true }), 60);
+}
+
+function closeBag() {
+  const modal = document.getElementById("bagModal");
+  if (!modal || !isBagOpen()) return;
+  modal.classList.remove("open");
+  modal.setAttribute("aria-hidden", "true");
+  document.body.classList.remove("bag-open", "order-in-view");
+  setTimeout(() => { if (!isBagOpen()) modal.hidden = true; }, 260);
+  if (bagLastFocus && document.contains(bagLastFocus)) bagLastFocus.focus({ preventScroll: true });
+}
+
+function updateBagTitle() {
+  const t = document.getElementById("bagTitle");
+  if (!t) return;
+  const step = typeof coStep === "number" ? coStep : 1;
+  t.textContent = step === 1 ? "Your bag" : step === 2 ? "Your details" : "Review & place order";
+}
+
+(function wireBag() {
+  // any link to #order opens the bag instead of jumping to the bottom
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest('a[href="#order"], a[href$="index.html#order"]');
+    if (a) {
+      if (!document.getElementById("bagModal")) return;
+      e.preventDefault();
+      openBag();
+      return;
+    }
+    if (e.target.closest("[data-bag-close]")) { closeBag(); return; }
+    // other in-page links inside the bag (e.g. Track Order) close it first
+    const inner = e.target.closest('#order a[href^="#"]');
+    if (inner && isBagOpen()) closeBag();
+  }, true);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && isBagOpen() && !document.querySelector(".fragrance-modal.open, .confirmation-modal.show")) closeBag();
+  });
+
+  // keep the title in step with the checkout steps
+  document.getElementById("order")?.addEventListener("click", (e) => {
+    if (e.target.closest("[data-go]")) setTimeout(updateBagTitle, 0);
+  });
+
+  // links like yoursite/#order (or ?voucher=…#order) open the bag on arrival
+  if (location.hash === "#order") {
+    history.replaceState(null, "", location.pathname + location.search);
+    setTimeout(openBag, 0);
+  }
+  window.addEventListener("hashchange", () => {
+    if (location.hash === "#order") {
+      history.replaceState(null, "", location.pathname + location.search);
+      openBag();
+    }
+  });
+})();
+
+// ============================================================
+// FAQ (edited in Admin → Homepage & Payment → FAQ)
+// ============================================================
+
+var DEFAULT_FAQ = [
+  { q: "How do I order?", a: "Choose a scent and tap Add to bag. Open your bag from the top of the page, add your name, mobile number and delivery or meetup location, then place your order. You'll get an Order ID right away." },
+  { q: "What payment methods do you accept?", a: "Cash on delivery / meetup, and GCash. For GCash, the number appears after you place your order — send your payment screenshot on our Messenger page so we can confirm it." },
+  { q: "How long does delivery take?", a: "Metro Manila: about 1–3 days. Luzon: about 2–5 days. Visayas & Mindanao: about 3–7 days, depending on the courier. We'll message you once your order is on its way." },
+  { q: "How much is shipping?", a: "It depends on your location and the courier. We'll confirm the exact fee when we message you about your order." },
+  { q: "How long does the scent last?", a: "Our perfumes are 25% extrait de parfum — more perfume oil than a typical eau de toilette — so they stay on the skin longer. How long exactly depends on your skin and the scent. Tip: spray on pulse points (wrists, neck) right after moisturising." },
+  { q: "What does “inspired by” mean?", a: "Each blend is our own take on the character of a well-loved designer fragrance. We are not affiliated with the original brands, and their names belong to their owners — we use them only so you know which scent family to expect." },
+  { q: "Can I track my order?", a: "Yes. Enter your Order ID and the mobile number you ordered with in Track Order." },
+  { q: "Is it ready to give as a gift?", a: "Yes — every bottle comes in the signature A&E bag, ready to give as it is." },
+];
+
+function faqItems() {
+  try {
+    const raw = (storeSettings || {}).faq;
+    const list = typeof raw === "string" ? JSON.parse(raw || "[]") : raw;
+    if (Array.isArray(list) && list.some((x) => x && x.q)) return list.filter((x) => x && x.q && x.a);
+  } catch { /* fall back */ }
+  return DEFAULT_FAQ;
+}
+
+function renderFaq() {
+  const box = document.getElementById("faqList");
+  if (!box) return;
+  const items = faqItems();
+  const esc = (t) => escapeHTML(String(t)).replace(/\n/g, "<br>");
+  box.innerHTML = items.map((x, i) => `
+    <details class="faq-item"${i === 0 ? " open" : ""}>
+      <summary><span>${escapeHTML(x.q)}</span><i aria-hidden="true"></i></summary>
+      <div class="faq-a">${esc(x.a)}</div>
+    </details>`).join("");
+}
+
+renderFaq();

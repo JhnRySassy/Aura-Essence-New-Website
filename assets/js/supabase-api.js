@@ -214,7 +214,8 @@ function orderFromRow(r) {
     paymentNote: r.payment_note || "",
     paidAt: r.paid_at,
     history: Array.isArray(r.status_history) ? r.status_history : [],
-    voucherCode: r.voucher_code || ""
+    voucherCode: r.voucher_code || "",
+    source: r.source || "website"
   };
 }
 
@@ -299,6 +300,7 @@ function settingsIn(data = {}) {
     })(),
     scentOfWeekNote: String(data.scentOfWeekNote ?? "").trim().slice(0, 160),
     weatherMap: weatherMapIn(data.weatherMap),
+    faq: faqIn(data.faq),
     // Welcome offer (mobile/email → first-order code)
     welcomeEnabled: toBool(data.welcomeEnabled, false),
     welcomeCode: String(data.welcomeCode ?? "").trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "").slice(0, 30),
@@ -310,6 +312,17 @@ function settingsIn(data = {}) {
       ? String(data.messengerUrl).trim().slice(0, 300)
       : ""
   };
+}
+
+// FAQ shown on the website: [{q, a}] stored as a JSON string ("" = use the built-in questions)
+function faqIn(value) {
+  const list = typeof value === "string" ? parseJSON(value, []) : (value || []);
+  if (!Array.isArray(list)) return "";
+  const clean = list
+    .map(x => ({ q: String(x?.q ?? "").trim().slice(0, 200), a: String(x?.a ?? "").trim().slice(0, 1500) }))
+    .filter(x => x.q && x.a)
+    .slice(0, 30);
+  return clean.length ? JSON.stringify(clean) : "";
 }
 
 // Weather overrides: {"productId": "hot" | "cold" | "any"} stored as a JSON string.
@@ -576,6 +589,28 @@ const actions = {
     const rows = must(await db.from("orders").select("*")
       .order("created_at", { ascending: false }).limit(2000));
     return ok({ orders: rows.map(orderFromRow) });
+  },
+
+  // Orders from Facebook, Instagram, walk-in… typed in the admin
+  async adminCreateOrder(db, p) {
+    const items = parseJSON(p.items, [])
+      .map(i => ({ id: String(i.id || ""), qty: toInt(i.qty, 0), price: String(i.price ?? "").trim() === "" ? null : Math.max(0, toNum(i.price, 0)) }))
+      .filter(i => i.id && i.qty > 0);
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(String(p.date || "")) ? String(p.date) : null;
+    return must(await db.rpc("admin_create_order", {
+      p_fullname: String(p.fullname || "").trim(),
+      p_contact: String(p.contact || "").trim(),
+      p_items: items,
+      p_address: String(p.address || "").trim(),
+      p_payment: String(p.payment || "Cash").trim(),
+      p_source: String(p.source || "facebook"),
+      p_status: String(p.status || "Confirmed"),
+      p_payment_status: String(p.paymentStatus || "Unpaid"),
+      p_discount: Math.max(0, toNum(p.discount, 0)),
+      p_notes: String(p.notes || ""),
+      p_date: date,
+      p_take_stock: toBool(p.takeStock, true)
+    }));
   },
 
   async adminUpdateOrderStatus(db, p) {

@@ -259,3 +259,59 @@ html.shop-mode .carousel-arrow { display: none !important; }
   html.shop-mode .collection-tools .collection-search { grid-column: 1 / -1; }
   html.shop-mode .collection-tools > * { min-width: 0; width: 100%; }
 }
+
+/* =========================================================
+   Bag / checkout modal
+========================================================= */
+.bag-modal { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 24px; }
+.bag-modal[hidden] { display: none !important; }
+.bag-backdrop { position: absolute; inset: 0; background: rgba(6, 5, 4, .7); backdrop-filter: blur(4px); opacity: 0; transition: opacity .25s; }
+.bag-modal.open .bag-backdrop { opacity: 1; }
+section.order.bag-sheet { position: relative; width: min(1120px, 100%); max-height: calc(100dvh - 48px); overflow-y: auto; overscroll-behavior: contain;
+  padding: 0 0 30px !important; margin: 0; border: 1px solid var(--line) !important; background: var(--ink) !important;
+  box-shadow: 0 40px 100px rgba(0, 0, 0, .5); opacity: 0; transform: translateY(16px) scale(.985); transition: opacity .25s, transform .3s var(--ease, ease); }
+.bag-modal.open section.order.bag-sheet { opacity: 1; transform: none; }
+.bag-sheet > .wrap { max-width: none; padding: 0 clamp(18px, 3vw, 36px); }
+.bag-head { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  margin: 0 calc(-1 * clamp(18px, 3vw, 36px)) 22px; padding: 18px clamp(18px, 3vw, 36px) 14px; background: var(--ink); border-bottom: 1px solid var(--hair); }
+.bag-head .sec-eyebrow { margin: 0 0 6px; }
+.bag-title { margin: 0; font-family: "Cormorant Garamond", serif; font-weight: 300; font-size: clamp(28px, 3.4vw, 40px); color: var(--parchment); line-height: 1.05; }
+.bag-x { width: 44px; height: 44px; flex: none; display: grid; place-items: center; background: none; border: 1px solid var(--line); color: var(--parchment); font-size: 26px; cursor: pointer; line-height: 1; }
+.bag-x:hover { border-color: var(--brass-bright); color: var(--brass-bright); }
+.bag-sheet .co-steps { margin-top: 0; }
+body.bag-open { overflow: hidden; }
+body.bag-open .co-bar, body.bag-open .bottom-bar { display: none !important; }
+html[data-theme="light"] .bag-backdrop { background: rgba(40, 30, 16, .4); }
+html[data-theme="light"] section.order.bag-sheet { box-shadow: 0 40px 100px rgba(70, 52, 25, .25); }
+@media (max-width: 760px) {
+  .bag-modal { padding: 0; place-items: stretch; }
+  section.order.bag-sheet { width: 100%; max-height: none; height: 100dvh; border: 0 !important; transform: translateY(24px); padding-bottom: calc(24px + env(safe-area-inset-bottom)) !important; }
+  .bag-head { padding-top: calc(14px + env(safe-area-inset-top)); }
+}
+
+/* =========================================================
+   How to order + FAQ
+========================================================= */
+.how-steps { list-style: none; margin: 38px 0 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; counter-reset: none; }
+.how-steps li { position: relative; padding: 22px 20px 20px; border: 1px solid var(--hair); background: var(--panel); display: grid; gap: 8px; align-content: start; }
+.how-num { font-family: "Jost", sans-serif; font-weight: 300; font-size: 28px; line-height: 1; color: var(--brass-bright); font-variant-numeric: lining-nums; }
+.how-steps b { font-family: "Cormorant Garamond", serif; font-weight: 400; font-size: 21px; color: var(--parchment); }
+.how-steps p { margin: 0; font-size: 13.5px; line-height: 1.6; color: var(--parchment-dim); }
+.how-steps a { color: var(--brass-bright); }
+.faq-wrap { margin-top: clamp(48px, 7vw, 80px); max-width: 860px; }
+.faq-title { margin: 0 0 18px; font-family: "Cormorant Garamond", serif; font-weight: 300; font-size: clamp(28px, 3vw, 36px); color: var(--parchment); }
+.faq-list { border-top: 1px solid var(--hair); }
+.faq-item { border-bottom: 1px solid var(--hair); }
+.faq-item summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 2px;
+  font-size: 16px; color: var(--parchment); }
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary i { position: relative; flex: none; width: 14px; height: 14px; }
+.faq-item summary i::before, .faq-item summary i::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--brass-bright); transition: transform .3s var(--ease, ease); }
+.faq-item summary i::after { transform: rotate(90deg); }
+.faq-item[open] summary i::after { transform: rotate(0deg); }
+.faq-item summary:hover span { color: var(--brass-bright); }
+.faq-a { padding: 0 2px 22px; max-width: 720px; color: var(--parchment-dim); font-size: 14.5px; line-height: 1.75; }
+@media (max-width: 1000px) { .how-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } .how-steps li:last-child { grid-column: 1 / -1; } }
+@media (max-width: 520px) { .how-steps { grid-template-columns: minmax(0, 1fr); } .how-steps li { grid-template-columns: 44px minmax(0, 1fr); column-gap: 12px; } .how-steps li .how-num { grid-row: span 2; } .faq-item summary { font-size: 15px; } }
+.bag-sheet .cart-head h4 { display: none; }
+.bag-sheet .cart-head { justify-content: flex-end; }

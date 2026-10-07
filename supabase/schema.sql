@@ -443,6 +443,8 @@ begin
   end if;
 
   for line in select * from jsonb_array_elements(new.items) loop
+    -- manual orders entered without touching stock are marked "stock": false
+    continue when coalesce(line ->> 'stock', 'true') = 'false';
     update public.products
        set stock = greatest(0, stock + dir * coalesce((line ->> 'qty')::int, 0))
      where id = line ->> 'id' and stock is not null;
@@ -946,6 +948,9 @@ begin
 
   if coalesce(v_url, '') = '' then
     return new;   -- email not set up yet
+  end if;
+  if coalesce(to_jsonb(new) ->> 'source', 'website') <> 'website' then
+    return new;   -- orders typed in the admin (FB, walk-in…) don't need an email
   end if;
 
   begin
@@ -1466,3 +1471,137 @@ grant execute on function public.join_welcome(text) to anon, authenticated;
 update public.site_settings
    set data = '{"showEveryday": true, "showHiddenGems": true, "showTrust": true, "scentOfWeek": "auto", "welcomeEnabled": false}'::jsonb || data
  where id = 1;
+
+-- =====================================================================
+-- MANUAL ORDERS (Facebook, Instagram, walk-in… typed in the admin)
+-- =====================================================================
+
+alter table public.orders add column if not exists source text not null default 'website';
+alter table public.orders drop constraint if exists orders_source_check;
+alter table public.orders add constraint orders_source_check
+  check (source in ('website', 'facebook', 'instagram', 'tiktok', 'shopee', 'lazada', 'walk-in', 'reseller', 'other'));
+create index if not exists orders_source_idx on public.orders (source);
+
+-- Admin-only. Prices can be set per line (e.g. a friend's price), stock is
+-- taken out unless p_take_stock is false, and the date can be in the past.
+create or replace function public.admin_create_order(
+  p_fullname       text,
+  p_contact        text,
+  p_items          jsonb,            -- [{id, qty, price?}]
+  p_address        text default '',
+  p_payment        text default 'Cash',
+  p_source         text default 'facebook',
+  p_status         text default 'Confirmed',
+  p_payment_status text default 'Unpaid',
+  p_discount       numeric default 0,
+  p_notes          text default '',
+  p_date           date default null,
+  p_take_stock     boolean default true
+)
+returns jsonb
+language plpgsql security definer set search_path = public
+as $$
+declare
+  v_line     record;
+  v_product  public.products%rowtype;
+  v_items    jsonb := '[]'::jsonb;
+  v_names    text[] := '{}';
+  v_qty      integer := 0;
+  v_subtotal numeric(10,2) := 0;
+  v_discount numeric(10,2) := greatest(0, coalesce(p_discount, 0));
+  v_total    numeric(10,2);
+  v_price    numeric(10,2);
+  v_status   text := coalesce(nullif(trim(p_status), ''), 'Confirmed');
+  v_pay      text := coalesce(nullif(trim(p_payment_status), ''), 'Unpaid');
+  v_source   text := lower(coalesce(nullif(trim(p_source), ''), 'other'));
+  v_take     boolean := coalesce(p_take_stock, true) and coalesce(nullif(trim(p_status), ''), 'Confirmed') <> 'Cancelled';
+  v_when     timestamptz;
+  v_order_id text;
+  v_actor    text := public.current_actor();
+begin
+  if not public.is_admin() then
+    raise exception 'Not authorized' using errcode = '42501';
+  end if;
+  if char_length(trim(coalesce(p_fullname, ''))) not between 1 and 120 then
+    return jsonb_build_object('success', false, 'message', 'Enter the customer''s name.');
+  end if;
+  if v_status not in ('New', 'Confirmed', 'Preparing', 'Out for Delivery', 'Completed', 'Cancelled') then
+    return jsonb_build_object('success', false, 'message', 'Unknown order status.');
+  end if;
+  if v_pay not in ('Unpaid', 'Partial', 'Paid', 'Refunded') then
+    return jsonb_build_object('success', false, 'message', 'Unknown payment status.');
+  end if;
+  if v_source = 'website' or v_source not in ('facebook', 'instagram', 'tiktok', 'shopee', 'lazada', 'walk-in', 'reseller', 'other') then
+    v_source := 'other';
+  end if;
+  if jsonb_typeof(p_items) <> 'array' or jsonb_array_length(p_items) = 0 then
+    return jsonb_build_object('success', false, 'message', 'Add at least one scent.');
+  end if;
+
+  -- the chosen day, at the current Manila time (keeps orders in a sensible order)
+  v_when := case when p_date is null then now()
+                 else (p_date + (now() at time zone 'Asia/Manila')::time) at time zone 'Asia/Manila' end;
+  if v_when > now() + interval '1 day' then
+    return jsonb_build_object('success', false, 'message', 'The order date can''t be in the future.');
+  end if;
+
+  begin
+    for v_line in
+      select x ->> 'id' as id,
+             sum(greatest(0, coalesce((x ->> 'qty')::int, 0)))::int as qty,
+             max(nullif(x ->> 'price', '')::numeric) as price
+        from jsonb_array_elements(p_items) x
+       group by x ->> 'id'
+       order by x ->> 'id'
+    loop
+      if v_line.qty < 1 or v_line.qty > 500 then
+        raise exception 'Quantity must be between 1 and 500.' using errcode = 'P0001';
+      end if;
+      select * into v_product from public.products where id = v_line.id for update;
+      if not found then
+        raise exception 'One of the scents no longer exists.' using errcode = 'P0001';
+      end if;
+      if v_take and v_product.stock is not null and v_product.stock < v_line.qty then
+        raise exception '%', format('%s has only %s bottle(s) in stock. Untick "Take from stock" or restock first.', v_product.name, v_product.stock)
+          using errcode = 'P0001';
+      end if;
+      if v_take and v_product.stock is not null then
+        update public.products set stock = stock - v_line.qty where id = v_product.id;
+      end if;
+
+      v_price    := greatest(0, coalesce(v_line.price, v_product.price));
+      v_items    := v_items || jsonb_build_object('id', v_product.id, 'name', v_product.name, 'qty', v_line.qty,
+                                                  'price', v_price, 'cost', v_product.cost, 'stock', v_take);
+      v_names    := v_names || v_product.name;
+      v_qty      := v_qty + v_line.qty;
+      v_subtotal := v_subtotal + v_price * v_line.qty;
+    end loop;
+
+    v_discount := least(v_discount, v_subtotal);
+    v_total    := v_subtotal - v_discount;
+
+    loop
+      v_order_id := 'AE-' || to_char(v_when at time zone 'Asia/Manila', 'YYYYMMDD-HH24MISS') || '-'
+                    || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 6));
+      exit when not exists (select 1 from public.orders where order_id = v_order_id);
+    end loop;
+
+    insert into public.orders (order_id, fullname, contact, items, scent, quantity, address, payment, notes,
+                               subtotal, discount, total, promotion_name, status, payment_status, amount_paid,
+                               source, created_at, status_history)
+    values (v_order_id, trim(p_fullname), trim(coalesce(p_contact, '')), v_items, array_to_string(v_names, ', '),
+            v_qty, trim(coalesce(p_address, '')), coalesce(nullif(trim(p_payment), ''), 'Cash'), left(coalesce(trim(p_notes), ''), 1000),
+            v_subtotal, v_discount, v_total, case when v_discount > 0 then 'Manual discount' end,
+            v_status, v_pay, case when v_pay = 'Paid' then v_total end,
+            v_source, v_when,
+            jsonb_build_array(jsonb_build_object('status', v_status, 'at', v_when, 'by', v_actor)));
+  exception
+    when sqlstate 'P0001' then
+      return jsonb_build_object('success', false, 'message', sqlerrm);
+  end;
+
+  return jsonb_build_object('success', true, 'orderId', v_order_id, 'total', v_total);
+end $$;
+
+revoke execute on function public.admin_create_order(text, text, jsonb, text, text, text, text, text, numeric, text, date, boolean) from public, anon;
+grant execute on function public.admin_create_order(text, text, jsonb, text, text, text, text, text, numeric, text, date, boolean) to authenticated;
