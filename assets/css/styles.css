@@ -403,8 +403,6 @@
       .quiz-result.show { display:block; }
       .quiz-result h4 { margin:0 0 5px; font-family:'Cormorant Garamond',serif; font-size:27px; font-weight:500; color:var(--brass-bright); }
       .quiz-result p { margin:0 0 12px; color:var(--parchment-dim); font-size:12px; line-height:1.6; }
-      .duo-selects { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:16px; }
-      .duo-total { margin-top:14px; font-size:13px; color:var(--parchment-dim); }
       .guide-list { display:grid; gap:10px; margin-top:18px; }
       .guide-item { display:flex; justify-content:space-between; gap:15px; border-bottom:1px solid var(--line); padding-bottom:10px; font-size:12px; }
       .guide-item span:last-child { color:var(--brass-bright); text-align:right; }
@@ -450,7 +448,6 @@
         .collection-tools { grid-template-columns:1fr; }
         .feature-grid { grid-template-columns:1fr; }
         .tracking-form { grid-template-columns:1fr; }
-        .duo-selects { grid-template-columns:1fr; }
         .carousel-arrow.left { left:4px; }
         .carousel-arrow.right { right:4px; }
       }

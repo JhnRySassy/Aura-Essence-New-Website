@@ -228,6 +228,7 @@ html:not(.shop-mode) .shop-crumbs { display: none !important; }
 
 /* Shop page: only the collection (plus header, footer, drawers and modals) */
 html.shop-mode body > section:not(#collection),
+html.shop-mode main > section:not(#collection),
 html.shop-mode #trustStrip,
 html.shop-mode #lineCards,
 html.shop-mode #featuredRows,
@@ -528,3 +529,116 @@ html.rv-lock, html.rv-lock body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .rv-card, .rv-photo img, .rv-dialog, .rv-lb-card { transition: none; }
 }
+.hero-shot picture { display: contents; }
+
+/* =========================================================
+   Fragrance details: smart sticky buy bar (all screens)
+========================================================= */
+.fragrance-dialog.fd { position: relative; }
+.fd .fd-buybar { display: flex; position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; align-items: center; gap: 12px;
+  padding: 10px clamp(14px, 3vw, 28px) calc(10px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--line); background: color-mix(in srgb, var(--ink) 94%, transparent); backdrop-filter: blur(12px);
+  transform: translateY(105%); transition: transform .32s cubic-bezier(.2, .7, .2, 1); }
+.fd.bar-on .fd-buybar { transform: none; box-shadow: 0 -18px 40px rgba(0, 0, 0, .25); }
+.fd.bar-on .fd-body { padding-bottom: 96px; }
+.fd-bar-thumb { width: 42px; height: 54px; flex: none; overflow: hidden; border: 1px solid var(--line); background: color-mix(in srgb, var(--parchment) 6%, var(--ink)); }
+.fd-bar-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fd-bar-thumb .img-ph { width: 100%; height: 100%; display: grid; place-items: center; font-size: 10px; }
+.fd-bar-info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.fd .fd-bar-info b { font-family: "Cormorant Garamond", serif; font-size: 19px; font-weight: 500; color: var(--parchment); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd .fd-bar-info small { font-size: 12px; color: var(--parchment-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd-bar-info em { font-style: normal; color: var(--brass-bright); font-weight: 500; font-variant-numeric: lining-nums; }
+.fd-bar-fav { width: 44px; height: 44px; flex: none; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: none; color: var(--brass-bright); font-size: 18px; cursor: pointer; }
+.fd-bar-fav:hover { border-color: var(--brass-bright); }
+.fd .fd-buybar .fd-add { flex: none; max-width: none; width: auto; padding: 14px 26px; }
+@media (max-width: 760px) {
+  .fd .fd-actions .fd-add { display: inline-block; }
+  .fd .fd-buybar .fd-add { padding: 13px 18px; }
+}
+@media (max-width: 380px) { .fd-bar-thumb { display: none; } }
+
+/* =========================================================
+   Loading skeletons
+========================================================= */
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.sk { display: block; background: linear-gradient(100deg,
+    color-mix(in srgb, var(--parchment) 5%, transparent) 30%,
+    color-mix(in srgb, var(--parchment) 11%, transparent) 50%,
+    color-mix(in srgb, var(--parchment) 5%, transparent) 70%);
+  background-size: 200% 100%; animation: shimmer 1.3s linear infinite; }
+.pcard.skeleton .pimg { background: linear-gradient(100deg,
+    color-mix(in srgb, var(--parchment) 4%, var(--ink)) 30%,
+    color-mix(in srgb, var(--parchment) 10%, var(--ink)) 50%,
+    color-mix(in srgb, var(--parchment) 4%, var(--ink)) 70%); background-size: 200% 100%; }
+.sk-title { width: 180px; height: 22px; }
+.sk-row h3 { margin-bottom: 18px; }
+.sk-pill { height: 72px; border: 1px solid var(--line); }
+.feel-weather .sk-pill { min-width: 0; }
+.reviews-loading:has(.rv-sk) { display: grid; grid-auto-flow: column; grid-auto-columns: clamp(280px, 30vw, 360px); gap: 20px; overflow: hidden; margin-top: 22px; padding: 0; text-align: left; border: 0; background: none; }
+.rv-sk { display: grid; gap: 12px; padding: 0 0 22px; border: 1px solid var(--line); background: color-mix(in srgb, var(--parchment) 3%, var(--ink)); }
+.rv-sk .sk-photo { aspect-ratio: 4 / 3; }
+.rv-sk .sk-line { height: 12px; margin: 0 22px; }
+.rv-sk .sk-line.short { width: 40%; }
+@media (max-width: 560px) { .reviews-loading:has(.rv-sk) { grid-auto-columns: 82vw; } }
+@media (prefers-reduced-motion: reduce) { .sk, .pcard.skeleton .pimg { animation: none; } }
+.line-card picture { display: contents; }
+
+/* =========================================================
+   Floating "Chat with us" button
+========================================================= */
+.chat-fab { position: fixed; right: clamp(16px, 2.5vw, 28px); bottom: clamp(16px, 2.5vw, 28px); z-index: 40; display: grid; justify-items: end; gap: 12px; }
+.chat-toggle { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--brass-bright) 60%, transparent);
+  background: linear-gradient(160deg, var(--brass-bright), var(--brass)); color: #120f0b;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .38); transition: transform .25s, box-shadow .25s; }
+.chat-toggle:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0, 0, 0, .45); }
+.chat-menu { width: min(290px, calc(100vw - 32px)); padding: 8px; border: 1px solid var(--line); background: var(--ink);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .45); transform-origin: bottom right;
+  opacity: 0; transform: translateY(8px) scale(.97); pointer-events: none; visibility: hidden; transition: opacity .2s, transform .2s, visibility 0s .2s; }
+.chat-fab.open .chat-menu { opacity: 1; transform: none; pointer-events: auto; visibility: visible; transition: opacity .2s, transform .2s; }
+.chat-head { margin: 0; padding: 10px 12px 12px; border-bottom: 1px solid var(--line); }
+.chat-head b { display: block; font-family: "Cormorant Garamond", serif; font-size: 20px; font-weight: 500; color: var(--parchment); }
+.chat-head small { color: var(--parchment-dim); font-size: 12px; }
+.chat-link { display: flex; align-items: center; gap: 12px; min-height: 56px; padding: 10px 12px; color: var(--parchment); text-decoration: none; transition: background .2s; }
+.chat-link:hover, .chat-link:focus-visible { background: color-mix(in srgb, var(--parchment) 6%, transparent); }
+.chat-link b { display: block; font-weight: 500; font-size: 14px; }
+.chat-link small { color: var(--parchment-dim); font-size: 12px; }
+.chat-ico { width: 38px; height: 38px; flex: none; display: grid; place-items: center; border-radius: 50%; color: #fff; }
+.chat-link.messenger .chat-ico { background: linear-gradient(135deg, #0a7cff, #a033ff); }
+.chat-link.viber .chat-ico { background: #7360f2; }
+/* stay out of the way of sheets, popups and the phone bars */
+body.bag-open .chat-fab, body.fav-open .chat-fab, body.welcome-open .chat-fab, html.rv-lock .chat-fab,
+body:has(.fragrance-modal.show) .chat-fab, body:has(.confirmation-modal.show) .chat-fab { display: none; }
+@media (max-width: 760px) {
+  .chat-fab { right: 14px; bottom: calc(74px + env(safe-area-inset-bottom, 0px)); }
+  body:has(.co-bar:not([hidden])):not(.order-in-view) .chat-fab { bottom: calc(140px + env(safe-area-inset-bottom, 0px)); }
+  .chat-toggle { width: 50px; height: 50px; }
+}
+@media print { .chat-fab { display: none; } }
+
+/* =========================================================
+   Accessibility: skip link, focus rings, tap targets
+========================================================= */
+.skip-link { position: fixed; left: 12px; top: -60px; z-index: 2000; padding: 12px 18px; background: var(--brass-bright); color: #120f0b; font-size: 13px; letter-spacing: .08em; text-decoration: none; transition: top .2s; }
+.skip-link:focus { top: 12px; }
+main:focus { outline: none; }
+:where(a[href], button, summary, [role="tab"], [tabindex]:not([tabindex="-1"]), .line-card):focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 3px; }
+:where(.collection-filter, .rv-selects select, input[type="file"]):focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+.foot-note { color: var(--parchment-dim) !important; }
+html[data-theme="light"] .foot-note { color: #6a6052 !important; }
+@media (max-width: 760px) {
+  #themeToggle, #headerFav, #headerCart, #menuBtn { min-width: 44px; min-height: 44px; }
+  .wishlist-btn { min-width: 40px; min-height: 40px; }
+  .pdetails { min-height: 40px; padding-block: 8px; }
+  .porder { min-height: 44px; }
+  #shopAllLink { display: inline-block; padding-block: 12px; }
+  #sotwMore, #sotwAdd { min-height: 44px; }
+  .quiz-option { min-height: 44px; }
+  .rv-bar { min-height: 32px; }
+  .rv-chips button { min-height: 40px; }
+  .foot-links a { display: inline-block; padding: 10px 4px; }
+  .fav-close { min-width: 44px; min-height: 44px; }
+}
+.fd .fd-buybar .fd-bar-info small span, .fd .fd-buybar .fd-bar-info small em { display: inline; }
+.fd .fd-buybar > .fd-bar-thumb { display: block; }
+.fd .fd-buybar > .fd-bar-info { display: grid; }

@@ -110,7 +110,6 @@ html[data-theme="light"] .toast { background: #f5eee8; box-shadow: 0 10px 30px r
 }
 html[data-theme="light"] .stock-note.low { color: #a4671d; }
 html[data-theme="light"] .stock-note.out { color: #9f2121; }
-html[data-theme="light"] .duo-total .save { color: #2f8a3f; }
 html[data-theme="light"] .review-form input[type="file"]::file-selector-button:hover { background: rgba(121, 96, 44, 0.115); }
 html[data-theme="light"] .review-photo.empty { background: radial-gradient(80% 80% at 30% 20%, rgba(121, 96, 44, 0.184), transparent 60%),
     var(--ink-2); }

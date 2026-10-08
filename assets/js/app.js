@@ -534,7 +534,6 @@ async function loadActivePromotions() {
     renderCart();
     syncQuantity();
     renderPromoBar();
-    renderDuo();
   } catch (error) {
     console.warn(
       "Promotions unavailable; using regular prices.",
@@ -799,10 +798,10 @@ function renderCart() {
 
         ${p.img
           ? `<img
-          src="${escapeHTML(p.img)}"
+          ${imgAttrs(p.img)}
           alt="${escapeHTML(p.name)}"
           decoding="async"
-          onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
+          onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
         >`
           : `<div class="img-ph" aria-hidden="true">A&amp;E</div>`}
 
@@ -1089,11 +1088,12 @@ function buildProductCard(p) {
         ${saved ? "♥" : "♡"}
       </button>
       <img
-        src="${escapeHTML(p.img || "")}"
+        ${imgAttrs(p.img || "")}
         alt="${name}"
         loading="lazy"
         decoding="async"
-        onerror="this.onerror=null;this.closest('.pimg').classList.add('noimg');this.remove();"
+        width="525" height="700"
+        onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;this.closest('.pimg').classList.add('noimg');this.remove();"
       >
     </div>
     <div class="pbody">
@@ -3297,58 +3297,6 @@ document
   );
 
 // ============================================================
-// BUILD YOUR DUO
-// ============================================================
-
-const duoOne =
-  document.getElementById(
-    "duoOne",
-  );
-
-const duoTwo =
-  document.getElementById(
-    "duoTwo",
-  );
-
-const duoTotal =
-  document.getElementById(
-    "duoTotal",
-  );
-
-[duoOne, duoTwo].forEach((select) =>
-  select?.addEventListener("change", () => {
-    select.dataset.touched = "1";   // keep the customer's choice when the list refreshes
-    updateDuoTotal();
-  }),
-);
-
-document
-  .getElementById(
-    "duoOrderBtn",
-  )
-  ?.addEventListener(
-    "click",
-    () => {
-      const a = duoOne?.value;
-      const b = duoTwo?.value;
-      if (!a || !b) return;
-
-      // Both bottles go straight into the cart (the same scent twice is fine)
-      const okA = addToCart(a, 1);
-      const okB = okA && addToCart(b, 1);
-
-      if (okA && okB) {
-        const names = [a, b].map((id) => getProductById(id)?.name || id);
-        showToast(
-          `<b>${escapeHTML(names.join(" & "))}</b> added to your bag`,
-          { link: true },
-        );
-      }
-    },
-  );
-
-
-// ============================================================
 // ORDER FORM
 // ============================================================
 
@@ -4208,7 +4156,7 @@ copyBtn?.addEventListener(
 // ============================================================
 // STOREFRONT UPGRADES
 // Header cart, toast, promo bar, menu, live counts, guide,
-// duo, featured rows (Best Sellers / New / Featured / Signature)
+// featured rows (Best Sellers / New / Featured / Signature)
 // (`var` on purpose: these are used by code that runs earlier in this file)
 // ============================================================
 
@@ -4429,69 +4377,6 @@ document.getElementById("guideList")?.addEventListener("click", (e) => {
   if (pick) openFragranceDetails(pick.dataset.guideId);
 });
 
-/* ---------- Build Your Duo ---------- */
-
-function renderDuo() {
-  if (!isCatalogReady()) return;
-  if (!duoOne || !duoTwo) return;
-
-  const products = activeProducts().slice().sort((a, b) => String(a.name).localeCompare(String(b.name)));
-  const inStock = products.filter((p) => Number(p.stock) !== 0);
-  const keepA = duoOne.value;
-  const keepB = duoTwo.value;
-
-  const options = products
-    .map((p) => {
-      const sold = Number(p.stock) === 0;
-      return `<option value="${escapeHTML(p.id)}" ${sold ? "disabled" : ""}>${escapeHTML(p.name)}${sold ? " — sold out" : ""}</option>`;
-    })
-    .join("");
-
-  duoOne.innerHTML = options;
-  duoTwo.innerHTML = options;
-
-  const valid = (id) => inStock.some((p) => p.id === id);
-  const isBest = (p) => (PRODUCT_META[p.id]?.badges || []).includes("BEST SELLER");
-  const preferred = inStock.slice().sort((a, b) => Number(isBest(b)) - Number(isBest(a)));
-
-  const keepOne = duoOne.dataset.touched && valid(keepA);
-  const keepTwo = duoTwo.dataset.touched && valid(keepB);
-
-  duoOne.value = keepOne ? keepA : (preferred[0]?.id || "");
-  duoTwo.value = keepTwo ? keepB : (preferred.find((p) => p.id !== duoOne.value)?.id || duoOne.value);
-
-  const lede = document.getElementById("duoLede");
-  const twoFor = (activePromotions || []).find((p) =>
-    p.type === "fixed_total" && Number(p.minQty) === 2 && Number(p.fixedTotal) > 0);
-
-  if (lede) {
-    lede.textContent = twoFor
-      ? `Choose any two extraits — one for day, one for night, or one to give. Both for ${peso(twoFor.fixedTotal)}.`
-      : `Choose any two extraits — one for day, one for night, or one to give.`;
-  }
-
-  updateDuoTotal();
-}
-
-function updateDuoTotal() {
-  if (!duoTotal) return;
-
-  const a = getProductById(duoOne?.value);
-  const b = getProductById(duoTwo?.value);
-
-  if (!a || !b) {
-    duoTotal.textContent = "Choose two scents.";
-    return;
-  }
-
-  const subtotal = Number(a.price || PRODUCT_PRICE) + Number(b.price || PRODUCT_PRICE);
-  const result = calculatePromotionDiscount(subtotal, 2);
-
-  duoTotal.innerHTML = result.discount > 0
-    ? `2 bottles • <b>${peso(result.total)}</b> <s>${peso(subtotal)}</s><span class="save">Save ${peso(result.discount)}</span>`
-    : `2 bottles • <b>${peso(subtotal)}</b>`;
-}
-
 /* ---------- Featured rows (follow the admin Homepage switches) ---------- */
 
 function renderFeaturedRows() {
@@ -4501,6 +4386,7 @@ function renderFeaturedRows() {
 
   const products = activeProducts();
   box.innerHTML = "";
+  box.removeAttribute("aria-busy");
 
   (FEATURED_ROWS || []).forEach((row) => {
     if (String((storeSettings || {})[row.setting] ?? "true") === "false") return;
@@ -4532,6 +4418,7 @@ async function loadStoreSettings() {
       renderFeaturedRows();
       renderHomeExtras();
       if (typeof renderFaq === "function") renderFaq();
+      if (typeof renderChatButton === "function") renderChatButton();
     }
   } catch {
     // keep defaults (all rows on)
@@ -4541,7 +4428,6 @@ async function loadStoreSettings() {
 function renderStoreContent() {
   renderCounts();
   renderGuide();
-  renderDuo();
   renderFeaturedRows();
   renderHomeExtras();
   if (typeof updateLineCards === "function") updateLineCards();
@@ -4824,7 +4710,7 @@ function renderFavorites() {
     return `
       <div class="fav-item">
         <button type="button" class="fav-thumb${p.img ? "" : " ph"}" data-fav-details="${id}" aria-label="Details of ${escapeHTML(p.name)}">
-          ${p.img ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;this.parentNode.classList.add('ph');this.remove()">` : ""}
+          ${p.img ? `<img ${imgAttrs(p.img)} alt="" loading="lazy" decoding="async" onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;this.parentNode.classList.add('ph');this.remove()">` : ""}
         </button>
         <div class="fav-info">
           <small>${tag}</small>
@@ -5101,7 +4987,7 @@ function cartLinesHTML(withThumbs) {
     const price = Number(p.price || PRODUCT_PRICE);
     const thumb = withThumbs
       ? (p.img
-          ? `<img src="${escapeHTML(p.img)}" alt="" loading="lazy" onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<span class=&quot;img-ph sm&quot;>A&amp;E</span>'">`
+          ? `<img ${imgAttrs(p.img)} alt="" loading="lazy" decoding="async" onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;if(this.parentNode)this.outerHTML='<span class=&quot;img-ph sm&quot;>A&amp;E</span>'">`
           : `<span class="img-ph sm">A&amp;E</span>`)
       : "";
     return `<div class="sum-line">${thumb}<span>${escapeHTML(p.name)} <small>× ${item.qty}</small></span><b>₱${(price * item.qty).toLocaleString()}</b></div>`;
@@ -5388,7 +5274,7 @@ function fdSimilar(p) {
 
 function fdPhotoHTML(p, cls) {
   return p.img
-    ? `<img src="${escapeHTML(p.img)}" alt="${escapeHTML(p.name)}" class="${cls || ""}" onerror="this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph ${cls || ""}&quot;>A&amp;E</div>'">`
+    ? `<img ${imgAttrs(p.img)} alt="${escapeHTML(p.name)}" class="${cls || ""}" decoding="async" onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph ${cls || ""}&quot;>A&amp;E</div>'">`
     : `<div class="img-ph ${cls || ""}">A&amp;E</div>`;
 }
 
@@ -5425,7 +5311,10 @@ function renderFragranceDetails(p) {
   });
   text("fdBarPrice", price);
   text("fdBarStock", info.text);
+  text("fdBarName", p.name || "");
+  set("fdBarThumb", fdPhotoHTML(p, ""));
   syncModalFav(p.id);
+  if (typeof fdBarSync === "function") fdBarSync();
 
   const promo = (activePromotions || [])
     .filter((x) => x.active !== false && x.type === "fixed_total" && Number(x.minQty) === 2)[0];
@@ -6671,7 +6560,7 @@ function rvCard(r, i) {
     ? `<button type="button" class="rv-photo" data-rv-open="${i}" aria-label="View review and photo"><img src="${escapeHTML(r.photoUrl)}" alt="Customer photo for ${scent}" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('noimg');this.remove()"></button>`
     : `<div class="rv-photo noimg" aria-hidden="true"></div>`;
   const chips = typeof reviewPerfChips === "function" ? reviewPerfChips(r) : "";
-  return `<article class="rv-card" role="listitem">
+  return `<div class="rv-card" role="listitem">
     ${photo}
     <div class="rv-body">
       <div class="rv-top">${rvStarsHtml(r.rating)}<time>${rvDate(r.timestamp)}</time></div>
@@ -6681,7 +6570,7 @@ function rvCard(r, i) {
       <div class="rv-who"><span class="rv-av" aria-hidden="true">${name.charAt(0).toUpperCase()}</span>
         <span><b>${name}</b><small>${scent}${line ? " · " + line : ""}</small></span></div>
     </div>
-  </article>`;
+  </div>`;
 }
 
 function rvCheckClamps(root) {
@@ -6904,3 +6793,127 @@ function closeReviewPhoto() {
   window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { rvCheckClamps(rail); rvUpdateNav(); }, 150); });
   if ((lastReviews || []).length) renderReviewWall();
 })();
+
+
+// ============================================================
+// IMAGES: serve the lighter WebP copy of our own bottle photos,
+// falling back to the original JPG if a WebP copy is missing.
+// ============================================================
+function webpOf(src) {
+  src = String(src || "");
+  return /(^|\/)assets\/images\/[^\/?#]+\.jpe?g$/i.test(src) ? src.replace(/\.jpe?g$/i, ".webp") : src;
+}
+function imgAttrs(src) {
+  const orig = String(src || "");
+  const w = webpOf(orig);
+  return w !== orig
+    ? `src="${escapeHTML(w)}" data-jpg="${escapeHTML(orig)}"`
+    : `src="${escapeHTML(orig)}"`;
+}
+
+
+// ============================================================
+// FRAGRANCE DETAILS: smart sticky "Add to bag" bar
+// Slides up once the main Add to bag button scrolls out of view.
+// ============================================================
+function fdBarSync() {
+  const fav = document.getElementById("fragranceFav");
+  const barFav = document.getElementById("fdBarFav");
+  if (!fav || !barFav) return;
+  const on = fav.getAttribute("aria-pressed") === "true";
+  barFav.setAttribute("aria-pressed", on ? "true" : "false");
+  barFav.textContent = on ? "♥" : "♡";
+  barFav.setAttribute("aria-label", on ? "Remove from favorites" : "Save to favorites");
+}
+
+(function fdStickyBar() {
+  const body = document.getElementById("fdBody");
+  const main = document.getElementById("fdAdd");
+  const bar = document.getElementById("fdBuybar");
+  const dialog = bar && bar.closest(".fragrance-dialog");
+  if (!body || !main || !bar || !dialog) return;
+  const show = (on) => {
+    dialog.classList.toggle("bar-on", on);
+    bar.setAttribute("aria-hidden", on ? "false" : "true");
+    bar.querySelectorAll("button").forEach((b) => (b.tabIndex = on ? 0 : -1));
+  };
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver((entries) => {
+      entries.forEach((e) => show(!e.isIntersecting && e.boundingClientRect.top < (e.rootBounds ? e.rootBounds.top + 10 : 80)));
+    }, { root: body, threshold: 0 }).observe(main);
+  }
+  document.getElementById("fdBarFav")?.addEventListener("click", () => {
+    document.getElementById("fragranceFav")?.click();
+    setTimeout(fdBarSync, 0);
+  });
+  const fav = document.getElementById("fragranceFav");
+  if (fav && "MutationObserver" in window) new MutationObserver(fdBarSync).observe(fav, { attributes: true, attributeFilter: ["aria-pressed"] });
+  // every new perfume opens at the top, so hide the bar again
+  const modal = document.getElementById("fragranceModal");
+  if (modal && "MutationObserver" in window) new MutationObserver(() => { if (!modal.classList.contains("show")) show(false); }).observe(modal, { attributes: true, attributeFilter: ["class"] });
+})();
+
+// Loading skeletons: if the catalogue never arrives (offline / error),
+// don't leave grey placeholders on the page forever.
+setTimeout(() => {
+  document.querySelectorAll("#featuredRows .sk-row, #feelWeather .sk, #feelRow .pcard.skeleton").forEach((el) => el.remove());
+  document.getElementById("featuredRows")?.removeAttribute("aria-busy");
+}, 15000);
+
+// ============================================================
+// FLOATING "CHAT WITH US" BUTTON (Messenger / Viber from admin Settings)
+// ============================================================
+function chatLinks() {
+  const st = storeSettings || {};
+  if (String(st.showChat ?? "true") === "false") return [];
+  const out = [];
+  const m = String(st.messengerUrl || "").trim();
+  if (/^https:\/\/(m\.me|(www\.)?messenger\.com|(www\.|m\.)?facebook\.com)\//i.test(m)) {
+    const url = /^https:\/\/m\.me\//i.test(m) ? `${m}${m.includes("?") ? "&" : "?"}text=${encodeURIComponent("Hi Aura & Essence! I have a question.")}` : m;
+    out.push({ key: "messenger", label: "Messenger", sub: "Send us a message", url });
+  }
+  let v = String(st.viberNumber || "").replace(/[^\d+]/g, "");
+  if (/^09\d{9}$/.test(v)) v = "+63" + v.slice(1);
+  else if (/^639\d{9}$/.test(v)) v = "+" + v;
+  if (/^\+\d{10,14}$/.test(v)) out.push({ key: "viber", label: "Viber", sub: v.replace(/^\+63/, "0"), url: `viber://chat?number=${encodeURIComponent(v)}` });
+  return out;
+}
+
+var CHAT_ICONS = {
+  chat: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" d="M4 5.5h16v10.5H9.5L5 19.5V16H4z"/><path stroke="currentColor" stroke-width="1.5" stroke-linecap="round" d="M8 9.5h8M8 12.5h5"/></svg>',
+  close: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>',
+  messenger: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M12 2.5C6.6 2.5 2.5 6.4 2.5 11.5c0 2.7 1.1 5 3 6.6v3.4l3.1-1.7c1.1.3 2.2.5 3.4.5 5.4 0 9.5-3.9 9.5-8.8S17.4 2.5 12 2.5Zm1 11.8-2.4-2.6-4.7 2.6 5.2-5.5 2.5 2.6 4.6-2.6Z"/></svg>',
+  viber: '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M7 4h10a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3h-4l-4 3.5V16H7a3 3 0 0 1-3-3V7a3 3 0 0 1 3-3Z"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M9.3 8.2c.4 2 1.8 3.6 3.8 4.3l.9-.9 1.5.7-.4 1.2c-3.3-.4-5.9-3-6.3-6.3l1.2-.4.7 1.5Z"/></svg>'
+};
+
+function renderChatButton() {
+  const links = chatLinks();
+  let box = document.getElementById("chatFab");
+  if (!links.length) { box?.remove(); return; }
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "chatFab";
+    box.className = "chat-fab";
+    document.body.appendChild(box);
+    box.addEventListener("click", (e) => {
+      const t = e.target.closest(".chat-toggle");
+      if (!t) return;
+      const open = !box.classList.contains("open");
+      box.classList.toggle("open", open);
+      t.setAttribute("aria-expanded", open ? "true" : "false");
+      t.innerHTML = open ? CHAT_ICONS.close : CHAT_ICONS.chat;
+      if (open) box.querySelector(".chat-menu a")?.focus({ preventScroll: true });
+    });
+    document.addEventListener("click", (e) => { if (box.classList.contains("open") && !e.composedPath().includes(box)) box.querySelector(".chat-toggle")?.click(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && box.classList.contains("open")) { box.querySelector(".chat-toggle")?.click(); box.querySelector(".chat-toggle")?.focus(); } });
+  }
+  box.classList.remove("open");
+  box.innerHTML = `
+    <div class="chat-menu" id="chatMenu" role="menu" aria-label="Chat with us">
+      <p class="chat-head"><b>Questions? Chat with us</b><small>Scent advice, orders and payment</small></p>
+      ${links.map((l) => `<a role="menuitem" class="chat-link ${l.key}" href="${escapeHTML(l.url)}" ${l.key === "messenger" ? 'target="_blank" rel="noopener"' : ""}>
+        <span class="chat-ico">${CHAT_ICONS[l.key]}</span><span><b>${l.label}</b><small>${escapeHTML(l.sub)}</small></span></a>`).join("")}
+    </div>
+    <button type="button" class="chat-toggle" aria-expanded="false" aria-controls="chatMenu" aria-label="Chat with us">${CHAT_ICONS.chat}</button>`;
+}
+

@@ -1263,11 +1263,13 @@ class AdminApp {
         this.settings.lowStockAlertAt ?? 1;
     }
 
-    [["setGcashNumber", "gcashNumber"], ["setGcashName", "gcashName"], ["setMessenger", "messengerUrl"]]
+    [["setGcashNumber", "gcashNumber"], ["setGcashName", "gcashName"], ["setMessenger", "messengerUrl"], ["setViber", "viberNumber"]]
       .forEach(([id, key]) => {
         const el = document.getElementById(id);
         if (el) el.value = this.settings[key] ?? "";
       });
+    const chatToggle = document.getElementById("setShowChat");
+    if (chatToggle) chatToggle.checked = String(this.settings.showChat ?? "true") !== "false";
 
 
     const signature =
@@ -3294,6 +3296,12 @@ class AdminApp {
 
       messengerUrl:
         document.getElementById("setMessenger")?.value.trim() || "",
+
+      viberNumber:
+        document.getElementById("setViber")?.value.trim() || "",
+
+      showChat:
+        document.getElementById("setShowChat") ? String(document.getElementById("setShowChat").checked) : "true",
 
       // Homepage extras (Scent of the Week, trust strip, welcome offer, weather)
       ...(typeof this.extraSettings === "function" ? this.extraSettings() : {})

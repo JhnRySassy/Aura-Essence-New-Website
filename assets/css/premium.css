@@ -182,7 +182,7 @@ h1.title em { font-weight: 300; margin-top: 4px; white-space: nowrap; }
 .wishlist-btn:hover { transform: scale(1.08); }
 .carousel-arrow { border-radius: 0; border-color: var(--hair); background: rgba(12, 11, 10, .7); }
 
-/* ---------- Scent finder, duo, guide ---------- */
+/* ---------- Scent finder, guide ---------- */
 .feature-grid { gap: clamp(28px, 4vw, 56px); margin-top: clamp(40px, 5vw, 64px); }
 .feature-card { border: 0 !important; background: none !important; padding: 26px 0 0 !important; border-top: 1px solid var(--hair) !important; }
 .feature-card h3 { color: var(--parchment); font-weight: 400; font-size: 25px; line-height: 1.2; margin-bottom: 18px; }
@@ -194,8 +194,6 @@ h1.title em { font-weight: 300; margin-top: 4px; white-space: nowrap; }
 .quiz-option:hover { border-color: rgba(212, 178, 106, .5); color: var(--parchment); }
 .quiz-option.active { border-color: var(--brass-bright); color: var(--parchment); background: rgba(212, 178, 106, .07); }
 .quiz-result { border: 0 !important; background: var(--panel) !important; padding: 26px !important; }
-.duo-selects select { background: transparent; border: 0; border-bottom: 1px solid var(--hair); border-radius: 0; padding: 12px 2px; }
-.duo-total { margin-top: 18px; font-size: 14px; letter-spacing: .04em; }
 
 .guide-list { margin-top: clamp(36px, 5vw, 56px); gap: 0 !important; }
 .guide-item { padding: 22px 0 !important; border-bottom: 1px solid var(--hair) !important; align-items: center; }
@@ -420,7 +418,7 @@ select option:checked { background-color: #2a2418; color: #d4b26a; }
 
 /* ---------- Prices & totals: clean lining figures ---------- */
 .pcard .pprice, .price-tag, .price-tag b, .cart-total strong, .fd-price, .fd-buybar b, .fav-price,
-.co-bar b, .sum-line b, .pay-row b, .duo-total, .cart-item-price, .fd-sim-open em {
+.co-bar b, .sum-line b, .pay-row b, .cart-item-price, .fd-sim-open em {
   font-family: "Jost", Arial, sans-serif !important;
   font-weight: 300;
   font-variant-numeric: lining-nums tabular-nums;

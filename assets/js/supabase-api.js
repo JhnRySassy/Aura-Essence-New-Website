@@ -313,7 +313,9 @@ function settingsIn(data = {}) {
     gcashName: String(data.gcashName ?? "").trim().slice(0, 80),
     messengerUrl: /^https:\/\/[^\s]+$/i.test(String(data.messengerUrl ?? "").trim())
       ? String(data.messengerUrl).trim().slice(0, 300)
-      : ""
+      : "",
+    viberNumber: String(data.viberNumber ?? "").replace(/[^\d+]/g, "").slice(0, 15),
+    showChat: toBool(data.showChat, true)
   };
 }
 
