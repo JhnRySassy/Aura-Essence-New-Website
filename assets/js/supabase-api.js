@@ -386,7 +386,7 @@ const actions = {
 
   async reviews(db) {
     const rows = must(await db.from("reviews").select("*")
-      .eq("approved", true).order("created_at", { ascending: false }).limit(30));
+      .eq("approved", true).order("created_at", { ascending: false }).limit(60));
     return ok({ reviews: rows.map(reviewFromRow) });
   },
 

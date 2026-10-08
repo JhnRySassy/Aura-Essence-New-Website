@@ -571,12 +571,21 @@
         <p class="rv-active" id="rvActive" hidden></p>
 
         <div id="reviewsLoading" class="reviews-loading">Gathering reviews…</div>
-        <div class="rv-wall" id="reviewsCarousel" style="display: none"></div>
+        <div class="rv-carousel" id="rvCarousel" hidden>
+          <div class="rv-rail" id="reviewsCarousel" role="list" tabindex="0" aria-label="Customer reviews, use arrow keys to scroll"></div>
+          <div class="rv-nav" id="rvNav">
+            <div class="rv-progress" aria-hidden="true"><i id="rvProgress"></i></div>
+            <span class="rv-counter" id="rvCounter" aria-live="polite"></span>
+            <div class="rv-arrows">
+              <button type="button" class="rv-arrow" id="rvPrev" aria-label="Previous reviews"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+              <button type="button" class="rv-arrow" id="rvNext" aria-label="Next reviews"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+            </div>
+          </div>
+        </div>
         <div id="reviewsEmpty" class="reviews-empty" style="display: none">
           No reviews yet. Be the first to share how yours wears.
         </div>
         <p class="rv-nomatch" id="rvNoMatch" hidden>No reviews match this filter yet.</p>
-        <div class="rv-more-wrap"><button type="button" class="ghost-btn" id="rvMore" hidden>Show more reviews</button></div>
       </div>
     </section>
 
@@ -586,7 +595,7 @@
         <button type="button" class="rv-x" data-rv-close aria-label="Close">&times;</button>
         <p class="sec-eyebrow">Your review</p>
         <h3 id="rvModalTitle">Share your experience</h3>
-        <p class="review-note">Takes a minute. Reviews appear once we've read them.</p>
+        <p class="review-note">Takes a minute. A photo is required; reviews appear once we've read them.</p>
         <form class="review-form" id="reviewForm">
           <div>
             <label>Your rating</label>
@@ -613,30 +622,36 @@
             <label for="reviewText">Your review</label>
             <textarea id="reviewText" name="reviewText" rows="4" maxlength="600" placeholder="How does it smell on you? How long did it last?" required></textarea>
           </div>
-          <details class="rv-extra-details">
-            <summary>Add a photo &amp; more details <small>(optional)</small></summary>
-            <div class="rv-extra-body">
-              <div>
-                <label for="reviewPhoto">Photo of your bottle or packaging</label>
-                <input id="reviewPhoto" name="reviewPhoto" type="file" accept="image/jpeg,image/png,image/webp" />
-                <small>JPG, PNG, or WebP. Max 5 MB. One photo per review.</small>
+          <div class="rv-photo-field">
+            <label for="reviewPhoto">Photo of your bottle or packaging</label>
+            <label class="rv-drop" id="rvPhotoDrop" for="reviewPhoto">
+              <input id="reviewPhoto" name="reviewPhoto" type="file" accept="image/jpeg,image/png,image/webp" required />
+              <img id="rvPhotoPreview" alt="" />
+              <span class="rv-drop-empty">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="1.5"/><circle cx="12" cy="12.5" r="3.6"/><path d="M8.5 5l1.3-2h4.4l1.3 2"/></svg>
+                <b>Tap to add a photo</b>
+                <small>JPG, PNG, or WebP · max 5 MB</small>
+              </span>
+              <span class="rv-drop-change"><span id="rvPhotoName"></span><em>Change photo</em></span>
+            </label>
+          </div>
+          <div class="rv-perf-fields">
+            <p class="rv-perf-title">How did it wear on you? <small>Optional, but it helps other customers</small></p>
+            <div class="rv-extra">
+              <label id="wearLabel">How long did it last?</label>
+              <div class="chip-select" id="wearSelect" data-target="reviewWear" role="radiogroup" aria-labelledby="wearLabel">
+                <button type="button" data-value="4">~4 hrs</button><button type="button" data-value="6">~6 hrs</button><button type="button" data-value="8">~8 hrs</button><button type="button" data-value="10">10+ hrs</button>
               </div>
-              <div class="rv-extra">
-                <label id="wearLabel">How long did it last on you?</label>
-                <div class="chip-select" id="wearSelect" data-target="reviewWear" role="radiogroup" aria-labelledby="wearLabel">
-                  <button type="button" data-value="4">~4 hrs</button><button type="button" data-value="6">~6 hrs</button><button type="button" data-value="8">~8 hrs</button><button type="button" data-value="10">10+ hrs</button>
-                </div>
-                <input type="hidden" id="reviewWear" value="">
-              </div>
-              <div class="rv-extra">
-                <label id="projLabel">How strong was the scent trail?</label>
-                <div class="chip-select" id="projSelect" data-target="reviewProjection" role="radiogroup" aria-labelledby="projLabel">
-                  <button type="button" data-value="soft">Soft</button><button type="button" data-value="moderate">Moderate</button><button type="button" data-value="strong">Strong</button>
-                </div>
-                <input type="hidden" id="reviewProjection" value="">
-              </div>
+              <input type="hidden" id="reviewWear" value="">
             </div>
-          </details>
+            <div class="rv-extra">
+              <label id="projLabel">How strong was the scent trail?</label>
+              <div class="chip-select" id="projSelect" data-target="reviewProjection" role="radiogroup" aria-labelledby="projLabel">
+                <button type="button" data-value="soft">Soft</button><button type="button" data-value="moderate">Moderate</button><button type="button" data-value="strong">Strong</button>
+              </div>
+              <input type="hidden" id="reviewProjection" value="">
+            </div>
+          </div>
           <button class="review-submit" id="reviewSubmit" type="submit">Submit review</button>
           <div id="reviewStatus" class="review-status" role="status" aria-live="polite"></div>
         </form>
@@ -645,10 +660,10 @@
 
     <div class="rv-lightbox" id="rvLightbox" aria-hidden="true" hidden>
       <div class="rv-backdrop" data-rv-lb-close></div>
-      <figure class="rv-lb-card" role="dialog" aria-modal="true" aria-label="Customer photo">
+      <figure class="rv-lb-card" role="dialog" aria-modal="true" aria-label="Customer review">
         <button type="button" class="rv-x" data-rv-lb-close aria-label="Close">&times;</button>
-        <img id="rvLbImg" alt="">
-        <figcaption id="rvLbText"></figcaption>
+        <div class="rv-lb-media"><img id="rvLbImg" alt=""></div>
+        <figcaption class="rv-lb-text" id="rvLbText"></figcaption>
       </figure>
     </div>
 

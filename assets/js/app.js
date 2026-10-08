@@ -2522,9 +2522,16 @@ reviewForm?.addEventListener(
         "reviewPhoto",
       )?.files?.[0];
 
-    // The photo is optional
+    if (!file) {
+      showReviewStatus(
+        "Please attach a photo with your review.",
+        "error",
+      );
+
+      return;
+    }
+
     if (
-      file &&
       !file.type.startsWith(
         "image/",
       )
@@ -2538,7 +2545,6 @@ reviewForm?.addEventListener(
     }
 
     if (
-      file &&
       file.size >
       5 * 1024 * 1024
     ) {
@@ -2562,14 +2568,12 @@ reviewForm?.addEventListener(
     );
 
     try {
-      const photoData = file
-        ? await compressReviewImage(
+      const photoData =
+        await compressReviewImage(
           file,
-        )
-        : "";
+        );
 
       if (
-        photoData &&
         photoData.length >
         1600000
       ) {
@@ -5611,7 +5615,7 @@ fragranceModal?.addEventListener("click", (e) => {
     e.preventDefault();
     closeFragranceDetails();
     if (go.dataset.rvScent !== undefined && typeof rvState !== "undefined") {
-      rvState.scent = go.dataset.rvScent; rvState.stars = 0; rvState.shown = RV_PAGE; renderReviewWall();
+      rvState.scent = go.dataset.rvScent; rvState.stars = 0; renderReviewWall();
       if (go.dataset.rvWrite) { setTimeout(openReviewModal, 250); return; }
     }
     document.getElementById(go.dataset.fdGoto)?.scrollIntoView({ behavior: "smooth" });
@@ -6573,11 +6577,11 @@ function resetPerfInputs() {
 
 
 // ============================================================
-// REVIEWS: summary + wall, popup form, Read more, photo lightbox
+// REVIEWS: summary + premium carousel, popup form, review viewer
 // ============================================================
 
-var RV_PAGE = 9;
-var rvState = { filter: "all", scent: "", sort: "new", stars: 0, shown: RV_PAGE };
+var rvState = { filter: "all", scent: "", sort: "new", stars: 0 };
+var rvList = [];
 
 function rvEl(id) { return document.getElementById(id); }
 
@@ -6589,7 +6593,7 @@ function rvProductFor(r) {
 }
 
 function rvStarsHtml(n) {
-  const v = Math.round(Number(n) || 0);
+  const v = Math.max(0, Math.min(5, Math.round(Number(n) || 0)));
   return `<span class="rv-st" aria-label="${v} out of 5 stars">${"★".repeat(v)}<i>${"★".repeat(5 - v)}</i></span>`;
 }
 
@@ -6598,6 +6602,11 @@ function rvDate(ts) {
   const d = new Date(ts);
   if (isNaN(d)) return "";
   return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function rvLine(r) {
+  const p = rvProductFor(r);
+  return p ? (p.cat === "men" ? "For Him" : p.cat === "women" ? "For Her" : "") : "";
 }
 
 function rvFiltered() {
@@ -6622,7 +6631,7 @@ function rvRenderSummary() {
   const avg = n ? all.reduce((s, r) => s + (Number(r.rating) || 0), 0) / n : 0;
   const avgEl = rvEl("rvAvg"), stars = rvEl("rvStars"), count = rvEl("rvCount"), dist = rvEl("rvDist"), perf = rvEl("rvPerf");
   if (avgEl) avgEl.textContent = n ? avg.toFixed(1) : "—";
-  if (stars) stars.innerHTML = n ? rvStarsHtml(avg) : rvStarsHtml(0);
+  if (stars) stars.innerHTML = rvStarsHtml(n ? avg : 0);
   if (count) count.textContent = n ? `Based on ${n} review${n === 1 ? "" : "s"}` : "No reviews yet";
   if (dist) {
     dist.innerHTML = [5, 4, 3, 2, 1].map((k) => {
@@ -6654,22 +6663,21 @@ function rvRenderScentFilter() {
   sel.value = rvState.scent;
 }
 
-function rvCard(r) {
-  const p = rvProductFor(r);
+function rvCard(r, i) {
   const name = escapeHTML(r.name || r.customerName || "Customer");
   const scent = escapeHTML(r.scent || "");
+  const line = rvLine(r);
   const photo = r.photoUrl
-    ? `<button type="button" class="rv-photo" data-rv-photo="${escapeHTML(r.photoUrl)}" aria-label="View photo"><img src="${escapeHTML(r.photoUrl)}" alt="Customer photo for ${scent}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></button>`
-    : "";
+    ? `<button type="button" class="rv-photo" data-rv-open="${i}" aria-label="View review and photo"><img src="${escapeHTML(r.photoUrl)}" alt="Customer photo for ${scent}" loading="lazy" decoding="async" onerror="this.parentNode.classList.add('noimg');this.remove()"></button>`
+    : `<div class="rv-photo noimg" aria-hidden="true"></div>`;
   const chips = typeof reviewPerfChips === "function" ? reviewPerfChips(r) : "";
-  const line = p ? (p.cat === "men" ? "For Him" : p.cat === "women" ? "For Her" : "") : "";
-  return `<article class="rv-card">
+  return `<article class="rv-card" role="listitem">
     ${photo}
     <div class="rv-body">
       <div class="rv-top">${rvStarsHtml(r.rating)}<time>${rvDate(r.timestamp)}</time></div>
       <p class="rv-text">${escapeHTML(r.review || "")}</p>
-      <button type="button" class="rv-readmore" hidden>Read more</button>
-      ${chips ? `<div class="rv-chips-perf">${chips}</div>` : ""}
+      <button type="button" class="rv-readmore" data-rv-open="${i}" hidden>Read full review</button>
+      <div class="rv-chips-perf">${chips}</div>
       <div class="rv-who"><span class="rv-av" aria-hidden="true">${name.charAt(0).toUpperCase()}</span>
         <span><b>${name}</b><small>${scent}${line ? " · " + line : ""}</small></span></div>
     </div>
@@ -6679,42 +6687,71 @@ function rvCard(r) {
 function rvCheckClamps(root) {
   (root || document).querySelectorAll(".rv-card").forEach((card) => {
     const t = card.querySelector(".rv-text"), b = card.querySelector(".rv-readmore");
-    if (!t || !b || card.classList.contains("open")) return;
-    b.hidden = !(t.scrollHeight > t.clientHeight + 2);
+    if (t && b) b.hidden = !(t.scrollHeight > t.clientHeight + 2);
   });
 }
 
+// ---- carousel controls ----
+function rvStep() {
+  const rail = rvEl("reviewsCarousel");
+  const card = rail && rail.querySelector(".rv-card");
+  if (!card) return 320;
+  return card.getBoundingClientRect().width + (parseFloat(getComputedStyle(rail).columnGap) || 18);
+}
+
+function rvUpdateNav() {
+  const rail = rvEl("reviewsCarousel");
+  if (!rail) return;
+  const max = rail.scrollWidth - rail.clientWidth;
+  const x = Math.abs(rail.scrollLeft);
+  const prev = rvEl("rvPrev"), next = rvEl("rvNext"), bar = rvEl("rvProgress"), counter = rvEl("rvCounter"), nav = rvEl("rvNav");
+  if (prev) prev.disabled = x <= 2;
+  if (next) next.disabled = x >= max - 2;
+  const total = rvList.length;
+  const per = Math.max(1, Math.round(rail.clientWidth / rvStep()));
+  const first = Math.min(total, Math.round(x / rvStep()) + 1);
+  const last = Math.min(total, first + per - 1);
+  if (counter) counter.textContent = total ? (first === last ? `${first} / ${total}` : `${first}–${last} / ${total}`) : "";
+  if (bar) {
+    const vis = rail.scrollWidth ? rail.clientWidth / rail.scrollWidth : 1;
+    bar.style.width = `${Math.max(8, vis * 100)}%`;
+    bar.style.transform = `translateX(${max > 0 ? (x / max) * ((1 / Math.max(vis, 0.01)) - 1) * 100 : 0}%)`;
+  }
+  if (nav) nav.hidden = max <= 2;
+}
+
 function renderReviewWall() {
-  const wall = rvEl("reviewsCarousel");
-  if (!wall) return;
+  const rail = rvEl("reviewsCarousel");
+  if (!rail) return;
   if (typeof reviewsLoading !== "undefined" && reviewsLoading) reviewsLoading.style.display = "none";
-  const empty = rvEl("reviewsEmpty"), noMatch = rvEl("rvNoMatch"), more = rvEl("rvMore"), active = rvEl("rvActive");
+  const wrap = rvEl("rvCarousel"), empty = rvEl("reviewsEmpty"), noMatch = rvEl("rvNoMatch"), active = rvEl("rvActive");
   rvRenderSummary();
   rvRenderScentFilter();
   const all = lastReviews || [];
   if (!all.length) {
-    wall.style.display = "none"; wall.innerHTML = "";
+    rvList = [];
+    if (wrap) wrap.hidden = true;
+    rail.innerHTML = "";
     if (empty) empty.style.display = "block";
     if (noMatch) noMatch.hidden = true;
-    if (more) more.hidden = true;
     if (active) active.hidden = true;
     return;
   }
   if (empty) empty.style.display = "none";
-  const list = rvFiltered();
-  const page = list.slice(0, rvState.shown);
-  wall.style.display = list.length ? "" : "none";
-  wall.innerHTML = page.map(rvCard).join("");
-  if (noMatch) noMatch.hidden = !!list.length;
-  if (more) { more.hidden = list.length <= rvState.shown; more.textContent = `Show more reviews (${list.length - page.length} left)`; }
+  rvList = rvFiltered();
+  if (wrap) wrap.hidden = !rvList.length;
+  rail.style.display = "";
+  rail.innerHTML = rvList.map(rvCard).join("");
+  rail.scrollLeft = 0;
+  if (noMatch) noMatch.hidden = !!rvList.length;
   if (active) {
     const parts = [];
     if (rvState.stars) parts.push(`${rvState.stars}-star`);
     if (rvState.scent) parts.push(escapeHTML(rvEl("rvScentFilter")?.selectedOptions[0]?.textContent || rvState.scent));
     active.hidden = !parts.length;
-    active.innerHTML = parts.length ? `Showing ${list.length} ${parts.join(" · ")} review${list.length === 1 ? "" : "s"} <button type="button" data-rv-clear>Clear</button>` : "";
+    active.innerHTML = parts.length ? `Showing ${rvList.length} ${parts.join(" · ")} review${rvList.length === 1 ? "" : "s"} <button type="button" data-rv-clear>Clear</button>` : "";
   }
-  requestAnimationFrame(() => rvCheckClamps(wall));
+  requestAnimationFrame(() => { rvCheckClamps(rail); rvUpdateNav(); });
 }
 
 // ---- popup form ----
@@ -6745,22 +6782,49 @@ function closeReviewModal() {
   rvLastFocus && rvLastFocus.focus && rvLastFocus.focus({ preventScroll: true });
 }
 
-function rvAfterSubmit() {
-  const d = document.querySelector(".rv-extra-details");
-  if (d) d.open = false;
+function rvSetPhotoPreview(file) {
+  const box = rvEl("rvPhotoDrop"), img = rvEl("rvPhotoPreview"), name = rvEl("rvPhotoName");
+  if (!box) return;
+  if (img && img.dataset.url) { URL.revokeObjectURL(img.dataset.url); delete img.dataset.url; }
+  if (file && file.type.startsWith("image/")) {
+    const url = URL.createObjectURL(file);
+    img.src = url; img.dataset.url = url;
+    box.classList.add("has-file");
+    if (name) name.textContent = file.name;
+  } else {
+    if (img) img.removeAttribute("src");
+    box.classList.remove("has-file");
+    if (name) name.textContent = "";
+  }
 }
 
-// ---- lightbox ----
-function openReviewPhoto(src, card) {
-  const lb = rvEl("rvLightbox");
-  if (!lb) return;
-  rvEl("rvLbImg").src = src;
-  const who = card ? card.querySelector(".rv-who")?.textContent.replace(/\s+/g, " ").trim() : "";
-  rvEl("rvLbText").textContent = who || "";
-  lb.hidden = false; lb.setAttribute("aria-hidden", "false");
-  requestAnimationFrame(() => lb.classList.add("open"));
-  rvLock(true);
-  lb.querySelector(".rv-x")?.focus({ preventScroll: true });
+function rvAfterSubmit() { rvSetPhotoPreview(null); }
+
+// ---- review viewer (photo + full text) ----
+var rvViewIndex = -1;
+function openReviewView(i) {
+  const r = rvList[i], lb = rvEl("rvLightbox");
+  if (!r || !lb) return;
+  rvViewIndex = i;
+  const img = rvEl("rvLbImg"), media = lb.querySelector(".rv-lb-media");
+  if (r.photoUrl) { img.src = r.photoUrl; img.alt = "Customer photo for " + (r.scent || ""); media.hidden = false; }
+  else { img.removeAttribute("src"); media.hidden = true; }
+  lb.querySelector(".rv-lb-card").classList.toggle("no-photo", !r.photoUrl);
+  const name = escapeHTML(r.name || r.customerName || "Customer"), line = rvLine(r);
+  const chips = typeof reviewPerfChips === "function" ? reviewPerfChips(r) : "";
+  rvEl("rvLbText").innerHTML = `
+    <div class="rv-top">${rvStarsHtml(r.rating)}<time>${rvDate(r.timestamp)}</time></div>
+    <p class="rv-lb-quote">${escapeHTML(r.review || "")}</p>
+    ${chips ? `<div class="rv-chips-perf">${chips}</div>` : ""}
+    <div class="rv-who"><span class="rv-av" aria-hidden="true">${name.charAt(0).toUpperCase()}</span>
+      <span><b>${name}</b><small>${escapeHTML(r.scent || "")}${line ? " · " + line : ""}</small></span></div>
+    ${rvList.length > 1 ? `<div class="rv-lb-nav"><button type="button" data-rv-view="-1" aria-label="Previous review">←</button><span>${i + 1} / ${rvList.length}</span><button type="button" data-rv-view="1" aria-label="Next review">→</button></div>` : ""}`;
+  if (lb.hidden) {
+    lb.hidden = false; lb.setAttribute("aria-hidden", "false");
+    requestAnimationFrame(() => lb.classList.add("open"));
+    rvLock(true);
+    lb.querySelector(".rv-x")?.focus({ preventScroll: true });
+  }
 }
 function closeReviewPhoto() {
   const lb = rvEl("rvLightbox");
@@ -6768,45 +6832,75 @@ function closeReviewPhoto() {
   lb.classList.remove("open"); lb.setAttribute("aria-hidden", "true");
   setTimeout(() => { lb.hidden = true; rvEl("rvLbImg").removeAttribute("src"); }, 200);
   if (!rvEl("rvModal") || rvEl("rvModal").hidden) rvLock(false);
+  // keep the carousel on the review that was being read
+  const rail = rvEl("reviewsCarousel"), card = rail && rail.children[rvViewIndex];
+  if (card) rail.scrollTo({ left: card.offsetLeft - rail.offsetLeft, behavior: "smooth" });
 }
-
-function rvReset(keep) { rvState.shown = RV_PAGE; if (!keep) renderReviewWall(); }
 
 (function wireReviewWall() {
   const sec = rvEl("reviews");
   if (!sec) return;
+  const rail = rvEl("reviewsCarousel");
   rvEl("rvWriteBtn")?.addEventListener("click", openReviewModal);
   rvEl("rvChips")?.addEventListener("click", (e) => {
     const b = e.target.closest("[data-rvf]");
     if (!b) return;
     rvState.filter = b.dataset.rvf;
-    rvEl("rvChips").querySelectorAll("[data-rvf]").forEach((x) => x.classList.toggle("on", x === b));
-    rvReset();
+    rvEl("rvChips").querySelectorAll("[data-rvf]").forEach((x) => { x.classList.toggle("on", x === b); x.setAttribute("aria-pressed", x === b); });
+    renderReviewWall();
   });
-  rvEl("rvScentFilter")?.addEventListener("change", (e) => { rvState.scent = e.target.value; rvReset(); });
-  rvEl("rvSort")?.addEventListener("change", (e) => { rvState.sort = e.target.value; rvReset(); });
-  rvEl("rvMore")?.addEventListener("click", () => { rvState.shown += RV_PAGE; renderReviewWall(); });
+  rvEl("rvScentFilter")?.addEventListener("change", (e) => { rvState.scent = e.target.value; renderReviewWall(); });
+  rvEl("rvSort")?.addEventListener("change", (e) => { rvState.sort = e.target.value; renderReviewWall(); });
+  rvEl("rvPrev")?.addEventListener("click", () => rail.scrollBy({ left: -rvStep(), behavior: "smooth" }));
+  rvEl("rvNext")?.addEventListener("click", () => rail.scrollBy({ left: rvStep(), behavior: "smooth" }));
+  let raf = 0;
+  rail?.addEventListener("scroll", () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(rvUpdateNav); }, { passive: true });
+  rail?.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") { e.preventDefault(); rail.scrollBy({ left: rvStep(), behavior: "smooth" }); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); rail.scrollBy({ left: -rvStep(), behavior: "smooth" }); }
+  });
+  // drag to scroll with a mouse (touch already scrolls natively)
+  let drag = null;
+  rail?.addEventListener("pointerdown", (e) => { if (e.pointerType !== "mouse" || e.button !== 0) return; drag = { x: e.clientX, left: rail.scrollLeft, moved: false }; });
+  window.addEventListener("pointermove", (e) => {
+    if (!drag) return;
+    const dx = e.clientX - drag.x;
+    if (Math.abs(dx) > 5) { drag.moved = true; rail.classList.add("dragging"); }
+    if (drag.moved) rail.scrollLeft = drag.left - dx;
+  });
+  window.addEventListener("pointerup", () => {
+    if (!drag) return;
+    const moved = drag.moved; drag = null;
+    rail.classList.remove("dragging");
+    if (moved) { rail.addEventListener("click", (ev) => { ev.stopPropagation(); ev.preventDefault(); }, { capture: true, once: true }); }
+  });
   sec.addEventListener("click", (e) => {
     const bar = e.target.closest("[data-rv-star]");
-    if (bar) { const k = Number(bar.dataset.rvStar); rvState.stars = rvState.stars === k ? 0 : k; rvReset(); return; }
-    if (e.target.closest("[data-rv-clear]")) { rvState.stars = 0; rvState.scent = ""; rvReset(); return; }
-    const rm = e.target.closest(".rv-readmore");
-    if (rm) { const c = rm.closest(".rv-card"); const open = c.classList.toggle("open"); rm.textContent = open ? "Show less" : "Read more"; return; }
-    const ph = e.target.closest("[data-rv-photo]");
-    if (ph) openReviewPhoto(ph.dataset.rvPhoto, ph.closest(".rv-card"));
+    if (bar) { const k = Number(bar.dataset.rvStar); rvState.stars = rvState.stars === k ? 0 : k; renderReviewWall(); return; }
+    if (e.target.closest("[data-rv-clear]")) { rvState.stars = 0; rvState.scent = ""; renderReviewWall(); return; }
+    const op = e.target.closest("[data-rv-open]");
+    if (op) openReviewView(Number(op.dataset.rvOpen));
   });
+  const photo = rvEl("reviewPhoto");
+  photo?.addEventListener("change", () => rvSetPhotoPreview(photo.files && photo.files[0]));
   document.addEventListener("click", (e) => {
     if (e.target.closest("[data-rv-close]")) closeReviewModal();
     if (e.target.closest("[data-rv-lb-close]")) closeReviewPhoto();
+    const v = e.target.closest("[data-rv-view]");
+    if (v && rvList.length) openReviewView((rvViewIndex + Number(v.dataset.rvView) + rvList.length) % rvList.length);
     const link = e.target.closest('a[href="#review"], a[href="#reviewForm"], [data-write-review]');
     if (link) { e.preventDefault(); openReviewModal(); }
   });
   document.addEventListener("keydown", (e) => {
+    const lb = rvEl("rvLightbox");
+    if (lb && !lb.hidden && rvList.length > 1 && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+      openReviewView((rvViewIndex + (e.key === "ArrowRight" ? 1 : -1) + rvList.length) % rvList.length); return;
+    }
     if (e.key !== "Escape") return;
-    if (rvEl("rvLightbox") && !rvEl("rvLightbox").hidden) closeReviewPhoto();
+    if (lb && !lb.hidden) closeReviewPhoto();
     else closeReviewModal();
   });
   let t;
-  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => rvCheckClamps(rvEl("reviewsCarousel")), 150); });
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => { rvCheckClamps(rail); rvUpdateNav(); }, 150); });
   if ((lastReviews || []).length) renderReviewWall();
 })();
