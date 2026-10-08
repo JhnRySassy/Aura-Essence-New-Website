@@ -204,7 +204,7 @@ Run `supabase/schema.sql` again after updating (adds the order **source** and th
 
 - **Manual orders** — Admin → Orders → **+ New order** for Facebook, Instagram, TikTok, walk-in, reseller… sales. Price per bottle can be changed, a discount added, the date set in the past, and "Take from stock" turned off for bottles already counted. They appear in Orders (with a source badge and filter), the profit report, CSV and the Excel backup. No order email is sent for these.
 - **Bag** — the checkout now opens as a window from the bag icon, "View bag", the mobile checkout bar, or any `#order` link.
-- **Customer ratings in reviews** — optional "How close to the original?" (1–10), how long it lasted and how strong the trail was. Shown on product cards (e.g. 8.6/10 close), in the scent popup ("What customers say") and on each review. Needs the latest `supabase/schema.sql`.
+- **Customer ratings in reviews** — optional "How long did it last?" and "How strong was the scent trail?". Shown in the scent popup ("What customers say") and on each review. Needs the latest `supabase/schema.sql`.
 - **How to order + FAQ** — new section near the bottom (also in the menu). Edit the questions in Admin → Homepage & Payment → **FAQ**; "Reset to the default questions" brings back the built-in ones. Check the delivery times there and change them to yours.
 
 ## Day-to-day

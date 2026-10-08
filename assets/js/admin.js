@@ -4622,7 +4622,11 @@ Object.assign(AdminApp.prototype, {
     this.dom.auditSearch?.addEventListener("input", debounce(() => this.renderAudit(), 150));
 
     /* Body class while a side panel is open (moves pop-ups out of the way) */
-    const drawers = ["orderDrawer", "productEditor", "promoEditor", "voucherEditor"].map(id => document.getElementById(id)).filter(Boolean);
+    // every side panel, including ones added later (e.g. the manual order form)
+    const drawers = [...new Set([
+      ...["orderDrawer", "productEditor", "promoEditor", "voucherEditor", "manualOrderEditor"].map(id => document.getElementById(id)),
+      ...document.querySelectorAll(".drawer.side-editor")
+    ])].filter(Boolean);
     const syncDrawerClass = () =>
       document.body.classList.toggle("has-drawer", drawers.some(d => !d.classList.contains("hidden")));
     const observer = new MutationObserver(syncDrawerClass);
@@ -5511,10 +5515,9 @@ Object.assign(AdminApp.prototype, {
             <td data-label="Customer"><b>${escapeHTML(r.name)}</b><small>${escapeHTML(r.scent || "")}</small></td>
             <td data-label="Rating">${"★".repeat(Number(r.rating) || 0)}</td>
             <td data-label="Review" style="max-width:380px;white-space:normal">${[
-              r.similarity ? `<span class="badge">${r.similarity}/10 close</span>` : "",
               r.wearHours ? `<span class="badge">${r.wearHours >= 10 ? "10+" : "~" + r.wearHours} hrs</span>` : "",
               r.projection ? `<span class="badge">${escapeHTML(r.projection)}</span>` : ""
-            ].join("")}${r.similarity || r.wearHours || r.projection ? "<br>" : ""}${escapeHTML(r.review)}</td>
+            ].join("")}${r.wearHours || r.projection ? "<br>" : ""}${escapeHTML(r.review)}</td>
             <td data-label="Status">${r.approved ? `<span class="pill st-completed">Visible</span>` : `<span class="pill st-new">Pending</span>`}</td>
             <td>
               <div class="row-actions">

@@ -385,3 +385,9 @@ input:focus, select:focus, textarea:focus { border-color: rgba(212, 178, 106, .7
 .faq-row-ops { display: grid; gap: 6px; align-content: start; }
 .faq-row-ops .mini-btn { width: 32px; height: 32px; }
 .faq-editor-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+/* Any open side panel hides the phone bottom nav, so Save stays tappable */
+@media (max-width: 760px) {
+  body:has(.drawer.side-editor:not(.hidden)) .mobile-nav,
+  body:has(#orderDrawer:not(.hidden)) .mobile-nav { display: none !important; }
+}
