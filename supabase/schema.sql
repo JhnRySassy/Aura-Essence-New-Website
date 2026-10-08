@@ -846,8 +846,8 @@ begin
   if char_length(trim(coalesce(p_name, ''))) not between 1 and 80 then
     return jsonb_build_object('success', false, 'message', 'Please enter your name.');
   end if;
-  if char_length(trim(coalesce(p_scent, ''))) = 0 or char_length(trim(coalesce(p_review, ''))) = 0 or p_photo_url is null then
-    return jsonb_build_object('success', false, 'message', 'Name, scent, rating, review, and photo are required.');
+  if char_length(trim(coalesce(p_scent, ''))) = 0 or char_length(trim(coalesce(p_review, ''))) = 0 then
+    return jsonb_build_object('success', false, 'message', 'Name, scent, rating and review are required.');
   end if;
   if char_length(trim(p_review)) > 600 then
     return jsonb_build_object('success', false, 'message', 'Review is too long. Maximum is 600 characters.');
@@ -856,7 +856,8 @@ begin
     return jsonb_build_object('success', false, 'message', 'Please choose a rating.');
   end if;
   -- Only accept photos stored in this project's review-photos bucket
-  if p_photo_url !~ '/storage/v1/object/public/review-photos/pending/[A-Za-z0-9._-]+$' then
+  -- (the photo is optional)
+  if p_photo_url is not null and p_photo_url !~ '/storage/v1/object/public/review-photos/pending/[A-Za-z0-9._-]+$' then
     return jsonb_build_object('success', false, 'message', 'Invalid photo upload.');
   end if;
   if (select count(*) from public.reviews where created_at > now() - interval '1 minute') >= 20 then

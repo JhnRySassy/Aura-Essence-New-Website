@@ -538,126 +538,119 @@
           to hear how it wears on you.
         </p>
 
-        <div class="reviews-grid">
-          <div class="review-form-box">
-            <h3>Share your experience</h3>
-            <p class="review-note">
-              Reviews appear once we've read them. Add a photo of your bottle
-              or packaging.
-            </p>
-            <form class="review-form" id="reviewForm">
+        <div class="rv-summary" id="rvSummary">
+          <div class="rv-score">
+            <b id="rvAvg">—</b>
+            <span class="rv-stars" id="rvStars" aria-hidden="true">★★★★★</span>
+            <small id="rvCount">No reviews yet</small>
+          </div>
+          <div class="rv-dist" id="rvDist" aria-label="Rating breakdown"></div>
+          <div class="rv-side">
+            <p class="rv-perf" id="rvPerf"></p>
+            <button type="button" class="btn-primary" id="rvWriteBtn">Write a review</button>
+          </div>
+        </div>
+
+        <div class="rv-toolbar">
+          <div class="rv-chips" id="rvChips" role="group" aria-label="Filter reviews">
+            <button type="button" class="on" data-rvf="all">All</button>
+            <button type="button" data-rvf="photos">With photos</button>
+            <button type="button" data-rvf="men">For Him</button>
+            <button type="button" data-rvf="women">For Her</button>
+          </div>
+          <div class="rv-selects">
+            <select id="rvScentFilter" class="collection-filter" aria-label="Filter by scent"><option value="">All scents</option></select>
+            <select id="rvSort" class="collection-filter" aria-label="Sort reviews">
+              <option value="new">Newest</option>
+              <option value="high">Highest rated</option>
+              <option value="low">Lowest rated</option>
+              <option value="photos">With photos first</option>
+            </select>
+          </div>
+        </div>
+        <p class="rv-active" id="rvActive" hidden></p>
+
+        <div id="reviewsLoading" class="reviews-loading">Gathering reviews…</div>
+        <div class="rv-wall" id="reviewsCarousel" style="display: none"></div>
+        <div id="reviewsEmpty" class="reviews-empty" style="display: none">
+          No reviews yet. Be the first to share how yours wears.
+        </div>
+        <p class="rv-nomatch" id="rvNoMatch" hidden>No reviews match this filter yet.</p>
+        <div class="rv-more-wrap"><button type="button" class="ghost-btn" id="rvMore" hidden>Show more reviews</button></div>
+      </div>
+    </section>
+
+    <div class="rv-modal" id="rvModal" aria-hidden="true" hidden>
+      <div class="rv-backdrop" data-rv-close></div>
+      <div class="rv-dialog review-form-box" role="dialog" aria-modal="true" aria-labelledby="rvModalTitle">
+        <button type="button" class="rv-x" data-rv-close aria-label="Close">&times;</button>
+        <p class="sec-eyebrow">Your review</p>
+        <h3 id="rvModalTitle">Share your experience</h3>
+        <p class="review-note">Takes a minute. Reviews appear once we've read them.</p>
+        <form class="review-form" id="reviewForm">
+          <div>
+            <label>Your rating</label>
+            <div class="star-select" id="starSelect" aria-label="Choose rating">
+              <button type="button" data-rating="1" aria-label="1 star">★</button>
+              <button type="button" data-rating="2" aria-label="2 stars">★</button>
+              <button type="button" data-rating="3" aria-label="3 stars">★</button>
+              <button type="button" data-rating="4" aria-label="4 stars">★</button>
+              <button type="button" data-rating="5" aria-label="5 stars">★</button>
+            </div>
+            <input type="hidden" id="reviewRating" name="reviewRating" value="5" />
+          </div>
+          <div class="rv-form-row">
+            <div>
+              <label for="reviewScent">Scent</label>
+              <select id="reviewScent" name="reviewScent" required></select>
+            </div>
+            <div>
+              <label for="reviewName">Your name</label>
+              <input id="reviewName" name="reviewName" type="text" maxlength="80" placeholder="e.g. Maria" required />
+            </div>
+          </div>
+          <div>
+            <label for="reviewText">Your review</label>
+            <textarea id="reviewText" name="reviewText" rows="4" maxlength="600" placeholder="How does it smell on you? How long did it last?" required></textarea>
+          </div>
+          <details class="rv-extra-details">
+            <summary>Add a photo &amp; more details <small>(optional)</small></summary>
+            <div class="rv-extra-body">
               <div>
-                <label for="reviewName">Your Name</label>
-                <input
-                  id="reviewName"
-                  name="reviewName"
-                  type="text"
-                  maxlength="80"
-                  placeholder="e.g. Maria"
-                  required
-                />
-              </div>
-              <div>
-                <label for="reviewScent">Scent</label>
-                <select id="reviewScent" name="reviewScent" required></select>
-              </div>
-              <div>
-                <label>Rating</label>
-                <div
-                  class="star-select"
-                  id="starSelect"
-                  aria-label="Choose rating"
-                >
-                  <button type="button" data-rating="1" aria-label="1 star">
-                    ★
-                  </button>
-                  <button type="button" data-rating="2" aria-label="2 stars">
-                    ★
-                  </button>
-                  <button type="button" data-rating="3" aria-label="3 stars">
-                    ★
-                  </button>
-                  <button type="button" data-rating="4" aria-label="4 stars">
-                    ★
-                  </button>
-                  <button type="button" data-rating="5" aria-label="5 stars">
-                    ★
-                  </button>
-                </div>
-                <input
-                  type="hidden"
-                  id="reviewRating"
-                  name="reviewRating"
-                  value="5"
-                />
+                <label for="reviewPhoto">Photo of your bottle or packaging</label>
+                <input id="reviewPhoto" name="reviewPhoto" type="file" accept="image/jpeg,image/png,image/webp" />
+                <small>JPG, PNG, or WebP. Max 5 MB. One photo per review.</small>
               </div>
               <div class="rv-extra">
-                <label id="wearLabel">How long did it last on you? <small>(optional)</small></label>
+                <label id="wearLabel">How long did it last on you?</label>
                 <div class="chip-select" id="wearSelect" data-target="reviewWear" role="radiogroup" aria-labelledby="wearLabel">
                   <button type="button" data-value="4">~4 hrs</button><button type="button" data-value="6">~6 hrs</button><button type="button" data-value="8">~8 hrs</button><button type="button" data-value="10">10+ hrs</button>
                 </div>
                 <input type="hidden" id="reviewWear" value="">
               </div>
               <div class="rv-extra">
-                <label id="projLabel">How strong was the scent trail? <small>(optional)</small></label>
+                <label id="projLabel">How strong was the scent trail?</label>
                 <div class="chip-select" id="projSelect" data-target="reviewProjection" role="radiogroup" aria-labelledby="projLabel">
                   <button type="button" data-value="soft">Soft</button><button type="button" data-value="moderate">Moderate</button><button type="button" data-value="strong">Strong</button>
                 </div>
                 <input type="hidden" id="reviewProjection" value="">
               </div>
-              <div>
-                <label for="reviewText">Your Review</label>
-                <textarea
-                  id="reviewText"
-                  name="reviewText"
-                  rows="5"
-                  maxlength="600"
-                  placeholder="Tell us about the scent, longevity, packaging, etc."
-                  required
-                ></textarea>
-              </div>
-              <div>
-                <label for="reviewPhoto">Attach a Photo</label>
-                <input
-                  id="reviewPhoto"
-                  name="reviewPhoto"
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  required
-                />
-                <small
-                  >JPG, PNG, or WebP. Max 5 MB before compression. One photo per
-                  review.</small
-                >
-              </div>
-              <button class="review-submit" id="reviewSubmit" type="submit">
-                Submit review
-              </button>
-              <div
-                id="reviewStatus"
-                class="review-status"
-                role="status"
-                aria-live="polite"
-              ></div>
-            </form>
-          </div>
-
-          <div class="reviews-carousel-wrap">
-            <div id="reviewsLoading" class="reviews-loading">
-              Gathering reviews…
             </div>
-            <div
-              class="reviews-carousel"
-              id="reviewsCarousel"
-              style="display: none"
-            ></div>
-            <div id="reviewsEmpty" class="reviews-empty" style="display: none">
-              No reviews yet. Be the first to share how yours wears.
-            </div>
-          </div>
-        </div>
+          </details>
+          <button class="review-submit" id="reviewSubmit" type="submit">Submit review</button>
+          <div id="reviewStatus" class="review-status" role="status" aria-live="polite"></div>
+        </form>
       </div>
-    </section>
+    </div>
+
+    <div class="rv-lightbox" id="rvLightbox" aria-hidden="true" hidden>
+      <div class="rv-backdrop" data-rv-lb-close></div>
+      <figure class="rv-lb-card" role="dialog" aria-modal="true" aria-label="Customer photo">
+        <button type="button" class="rv-x" data-rv-lb-close aria-label="Close">&times;</button>
+        <img id="rvLbImg" alt="">
+        <figcaption id="rvLbText"></figcaption>
+      </figure>
+    </div>
 
     <section class="feature-section how-faq" id="faq">
       <div class="wrap">

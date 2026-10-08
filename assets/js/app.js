@@ -2156,6 +2156,9 @@ function renderReviews(
     activeCat,
   );
 
+  // New layout: summary + filterable review wall
+  if (typeof renderReviewWall === "function") { renderReviewWall(); return; }
+
   reviewsCarousel.innerHTML =
     "";
 
@@ -2519,16 +2522,9 @@ reviewForm?.addEventListener(
         "reviewPhoto",
       )?.files?.[0];
 
-    if (!file) {
-      showReviewStatus(
-        "Please attach a photo with your review.",
-        "error",
-      );
-
-      return;
-    }
-
+    // The photo is optional
     if (
+      file &&
       !file.type.startsWith(
         "image/",
       )
@@ -2542,6 +2538,7 @@ reviewForm?.addEventListener(
     }
 
     if (
+      file &&
       file.size >
       5 * 1024 * 1024
     ) {
@@ -2565,12 +2562,14 @@ reviewForm?.addEventListener(
     );
 
     try {
-      const photoData =
-        await compressReviewImage(
+      const photoData = file
+        ? await compressReviewImage(
           file,
-        );
+        )
+        : "";
 
       if (
+        photoData &&
         photoData.length >
         1600000
       ) {
@@ -2643,6 +2642,7 @@ reviewForm?.addEventListener(
       );
 
       reviewForm.reset();
+      if (typeof rvAfterSubmit === "function") rvAfterSubmit();
 
       setRating(5);
       if (typeof resetPerfInputs === "function") resetPerfInputs();
@@ -5494,8 +5494,8 @@ function renderFragranceDetails(p) {
             <p>${escapeHTML(String(r.review || "").slice(0, 220))}${String(r.review || "").length > 220 ? "…" : ""}</p>
           </div>
         </div>`).join("") +
-      `<a class="fd-link" href="#reviews" data-fd-goto="reviews">Read all reviews</a>`
-    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews">Be the first to share your thoughts</a></p>`));
+      `<a class="fd-link" href="#reviews" data-fd-goto="reviews" data-rv-scent="${escapeHTML(String(p.name || "").trim().toLowerCase())}">Read all reviews</a>`
+    : `<p class="muted">No reviews for ${escapeHTML(p.name)} yet. <a class="fd-link" href="#reviews" data-fd-goto="reviews" data-rv-scent="${escapeHTML(String(p.name || "").trim().toLowerCase())}" data-rv-write="1">Be the first to share your thoughts</a></p>`));
 
   /* ----- you may also like ----- */
   set("fdSimilar", fdSimilar(p).map((x) => {
@@ -5610,6 +5610,10 @@ fragranceModal?.addEventListener("click", (e) => {
   if (go) {
     e.preventDefault();
     closeFragranceDetails();
+    if (go.dataset.rvScent !== undefined && typeof rvState !== "undefined") {
+      rvState.scent = go.dataset.rvScent; rvState.stars = 0; rvState.shown = RV_PAGE; renderReviewWall();
+      if (go.dataset.rvWrite) { setTimeout(openReviewModal, 250); return; }
+    }
     document.getElementById(go.dataset.fdGoto)?.scrollIntoView({ behavior: "smooth" });
     return;
   }
@@ -5681,7 +5685,7 @@ window.addEventListener("hashchange", () => { if (/^#scent-/.test(location.hash)
   const SELECTOR = [
     ".sec-eyebrow", "h2.sec-title", "p.sec-lede",
     ".grid3 > .card", ".feature-grid > .feature-card", ".feature-section > .wrap > .feature-card",
-    ".guide-item", ".review-form-box", ".reviews-carousel-wrap", ".tracking-box",
+    ".guide-item", ".rv-summary", ".tracking-box",
     ".co-steps", ".checkout-grid > *", ".pcard:not(.skeleton)", ".featured-row h3"
   ].join(",");
 
@@ -6565,4 +6569,244 @@ function resetPerfInputs() {
       });
     });
   });
+})();
+
+
+// ============================================================
+// REVIEWS: summary + wall, popup form, Read more, photo lightbox
+// ============================================================
+
+var RV_PAGE = 9;
+var rvState = { filter: "all", scent: "", sort: "new", stars: 0, shown: RV_PAGE };
+
+function rvEl(id) { return document.getElementById(id); }
+
+function rvProductFor(r) {
+  if (typeof catalog === "undefined") return null;
+  const name = String(r.scent || "").trim().toLowerCase();
+  const id = String(r.scentId || "").trim().toLowerCase();
+  return catalog.all().find((x) => String(x.id).toLowerCase() === id || String(x.name || "").trim().toLowerCase() === name) || null;
+}
+
+function rvStarsHtml(n) {
+  const v = Math.round(Number(n) || 0);
+  return `<span class="rv-st" aria-label="${v} out of 5 stars">${"★".repeat(v)}<i>${"★".repeat(5 - v)}</i></span>`;
+}
+
+function rvDate(ts) {
+  if (!ts) return "";
+  const d = new Date(ts);
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString("en-PH", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function rvFiltered() {
+  let list = (lastReviews || []).slice();
+  if (rvState.filter === "photos") list = list.filter((r) => r.photoUrl);
+  if (rvState.filter === "men" || rvState.filter === "women") list = list.filter((r) => (rvProductFor(r) || {}).cat === rvState.filter);
+  if (rvState.scent) list = list.filter((r) => String(r.scent || "").trim().toLowerCase() === rvState.scent);
+  if (rvState.stars) list = list.filter((r) => Math.round(Number(r.rating) || 0) === rvState.stars);
+  const t = (r) => new Date(r.timestamp || 0).getTime() || 0;
+  const sorts = {
+    new: (a, b) => t(b) - t(a),
+    high: (a, b) => (b.rating - a.rating) || t(b) - t(a),
+    low: (a, b) => (a.rating - b.rating) || t(b) - t(a),
+    photos: (a, b) => (!!b.photoUrl - !!a.photoUrl) || t(b) - t(a),
+  };
+  return list.sort(sorts[rvState.sort] || sorts.new);
+}
+
+function rvRenderSummary() {
+  const all = lastReviews || [];
+  const n = all.length;
+  const avg = n ? all.reduce((s, r) => s + (Number(r.rating) || 0), 0) / n : 0;
+  const avgEl = rvEl("rvAvg"), stars = rvEl("rvStars"), count = rvEl("rvCount"), dist = rvEl("rvDist"), perf = rvEl("rvPerf");
+  if (avgEl) avgEl.textContent = n ? avg.toFixed(1) : "—";
+  if (stars) stars.innerHTML = n ? rvStarsHtml(avg) : rvStarsHtml(0);
+  if (count) count.textContent = n ? `Based on ${n} review${n === 1 ? "" : "s"}` : "No reviews yet";
+  if (dist) {
+    dist.innerHTML = [5, 4, 3, 2, 1].map((k) => {
+      const c = all.filter((r) => Math.round(Number(r.rating) || 0) === k).length;
+      const pct = n ? Math.round(c / n * 100) : 0;
+      return `<button type="button" class="rv-bar${rvState.stars === k ? " on" : ""}" data-rv-star="${k}" ${c ? "" : "disabled"} aria-label="Show ${k}-star reviews (${c})">
+        <span>${k}★</span><span class="rv-track"><i style="width:${pct}%"></i></span><small>${pct}%</small></button>`;
+    }).join("");
+  }
+  if (perf) {
+    const w = all.filter((r) => [4, 6, 8, 10].includes(Number(r.wearHours)));
+    const pj = { soft: 0, moderate: 0, strong: 0 }; let pc = 0;
+    all.forEach((r) => { if (pj[r.projection] !== undefined) { pj[r.projection]++; pc++; } });
+    const bits = [];
+    if (w.length) { const a = w.reduce((s, r) => s + Number(r.wearHours), 0) / w.length; bits.push(`Lasts <b>${a >= 9.5 ? "10+" : "~" + Math.round(a)} hrs</b> on average`); }
+    if (pc) { const top = ["soft", "moderate", "strong"].reduce((a, b) => (pj[b] > pj[a] ? b : a), "moderate"); bits.push(`mostly <b>${top}</b> trail`); }
+    perf.innerHTML = bits.length ? bits.join(" · ") : "Every review is read before it goes up.";
+  }
+}
+
+function rvRenderScentFilter() {
+  const sel = rvEl("rvScentFilter");
+  if (!sel) return;
+  const names = {};
+  (lastReviews || []).forEach((r) => { const k = String(r.scent || "").trim(); if (k) names[k.toLowerCase()] = k; });
+  const keys = Object.keys(names).sort();
+  sel.innerHTML = `<option value="">All scents</option>` + keys.map((k) => `<option value="${escapeHTML(k)}">${escapeHTML(names[k])}</option>`).join("");
+  if (!names[rvState.scent]) rvState.scent = "";
+  sel.value = rvState.scent;
+}
+
+function rvCard(r) {
+  const p = rvProductFor(r);
+  const name = escapeHTML(r.name || r.customerName || "Customer");
+  const scent = escapeHTML(r.scent || "");
+  const photo = r.photoUrl
+    ? `<button type="button" class="rv-photo" data-rv-photo="${escapeHTML(r.photoUrl)}" aria-label="View photo"><img src="${escapeHTML(r.photoUrl)}" alt="Customer photo for ${scent}" loading="lazy" decoding="async" onerror="this.parentNode.remove()"></button>`
+    : "";
+  const chips = typeof reviewPerfChips === "function" ? reviewPerfChips(r) : "";
+  const line = p ? (p.cat === "men" ? "For Him" : p.cat === "women" ? "For Her" : "") : "";
+  return `<article class="rv-card">
+    ${photo}
+    <div class="rv-body">
+      <div class="rv-top">${rvStarsHtml(r.rating)}<time>${rvDate(r.timestamp)}</time></div>
+      <p class="rv-text">${escapeHTML(r.review || "")}</p>
+      <button type="button" class="rv-readmore" hidden>Read more</button>
+      ${chips ? `<div class="rv-chips-perf">${chips}</div>` : ""}
+      <div class="rv-who"><span class="rv-av" aria-hidden="true">${name.charAt(0).toUpperCase()}</span>
+        <span><b>${name}</b><small>${scent}${line ? " · " + line : ""}</small></span></div>
+    </div>
+  </article>`;
+}
+
+function rvCheckClamps(root) {
+  (root || document).querySelectorAll(".rv-card").forEach((card) => {
+    const t = card.querySelector(".rv-text"), b = card.querySelector(".rv-readmore");
+    if (!t || !b || card.classList.contains("open")) return;
+    b.hidden = !(t.scrollHeight > t.clientHeight + 2);
+  });
+}
+
+function renderReviewWall() {
+  const wall = rvEl("reviewsCarousel");
+  if (!wall) return;
+  if (typeof reviewsLoading !== "undefined" && reviewsLoading) reviewsLoading.style.display = "none";
+  const empty = rvEl("reviewsEmpty"), noMatch = rvEl("rvNoMatch"), more = rvEl("rvMore"), active = rvEl("rvActive");
+  rvRenderSummary();
+  rvRenderScentFilter();
+  const all = lastReviews || [];
+  if (!all.length) {
+    wall.style.display = "none"; wall.innerHTML = "";
+    if (empty) empty.style.display = "block";
+    if (noMatch) noMatch.hidden = true;
+    if (more) more.hidden = true;
+    if (active) active.hidden = true;
+    return;
+  }
+  if (empty) empty.style.display = "none";
+  const list = rvFiltered();
+  const page = list.slice(0, rvState.shown);
+  wall.style.display = list.length ? "" : "none";
+  wall.innerHTML = page.map(rvCard).join("");
+  if (noMatch) noMatch.hidden = !!list.length;
+  if (more) { more.hidden = list.length <= rvState.shown; more.textContent = `Show more reviews (${list.length - page.length} left)`; }
+  if (active) {
+    const parts = [];
+    if (rvState.stars) parts.push(`${rvState.stars}-star`);
+    if (rvState.scent) parts.push(escapeHTML(rvEl("rvScentFilter")?.selectedOptions[0]?.textContent || rvState.scent));
+    active.hidden = !parts.length;
+    active.innerHTML = parts.length ? `Showing ${list.length} ${parts.join(" · ")} review${list.length === 1 ? "" : "s"} <button type="button" data-rv-clear>Clear</button>` : "";
+  }
+  requestAnimationFrame(() => rvCheckClamps(wall));
+}
+
+// ---- popup form ----
+var rvLastFocus = null;
+function rvLock(on) { document.documentElement.classList.toggle("rv-lock", !!on); }
+
+function openReviewModal() {
+  const m = rvEl("rvModal");
+  if (!m) return;
+  rvLastFocus = document.activeElement;
+  m.hidden = false; m.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => m.classList.add("open"));
+  rvLock(true);
+  const sel = rvEl("reviewScent");
+  if (sel && rvState.scent) {
+    const opt = Array.from(sel.options).find((o) => (o.textContent || "").trim().toLowerCase() === rvState.scent || String(o.value).toLowerCase() === rvState.scent);
+    if (opt) sel.value = opt.value;
+  }
+  setTimeout(() => { const b = m.querySelector("#starSelect button.active") || m.querySelector("#starSelect button"); b && b.focus({ preventScroll: true }); }, 60);
+}
+
+function closeReviewModal() {
+  const m = rvEl("rvModal");
+  if (!m || m.hidden) return;
+  m.classList.remove("open"); m.setAttribute("aria-hidden", "true");
+  setTimeout(() => { m.hidden = true; }, 220);
+  if (!rvEl("rvLightbox") || rvEl("rvLightbox").hidden) rvLock(false);
+  rvLastFocus && rvLastFocus.focus && rvLastFocus.focus({ preventScroll: true });
+}
+
+function rvAfterSubmit() {
+  const d = document.querySelector(".rv-extra-details");
+  if (d) d.open = false;
+}
+
+// ---- lightbox ----
+function openReviewPhoto(src, card) {
+  const lb = rvEl("rvLightbox");
+  if (!lb) return;
+  rvEl("rvLbImg").src = src;
+  const who = card ? card.querySelector(".rv-who")?.textContent.replace(/\s+/g, " ").trim() : "";
+  rvEl("rvLbText").textContent = who || "";
+  lb.hidden = false; lb.setAttribute("aria-hidden", "false");
+  requestAnimationFrame(() => lb.classList.add("open"));
+  rvLock(true);
+  lb.querySelector(".rv-x")?.focus({ preventScroll: true });
+}
+function closeReviewPhoto() {
+  const lb = rvEl("rvLightbox");
+  if (!lb || lb.hidden) return;
+  lb.classList.remove("open"); lb.setAttribute("aria-hidden", "true");
+  setTimeout(() => { lb.hidden = true; rvEl("rvLbImg").removeAttribute("src"); }, 200);
+  if (!rvEl("rvModal") || rvEl("rvModal").hidden) rvLock(false);
+}
+
+function rvReset(keep) { rvState.shown = RV_PAGE; if (!keep) renderReviewWall(); }
+
+(function wireReviewWall() {
+  const sec = rvEl("reviews");
+  if (!sec) return;
+  rvEl("rvWriteBtn")?.addEventListener("click", openReviewModal);
+  rvEl("rvChips")?.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-rvf]");
+    if (!b) return;
+    rvState.filter = b.dataset.rvf;
+    rvEl("rvChips").querySelectorAll("[data-rvf]").forEach((x) => x.classList.toggle("on", x === b));
+    rvReset();
+  });
+  rvEl("rvScentFilter")?.addEventListener("change", (e) => { rvState.scent = e.target.value; rvReset(); });
+  rvEl("rvSort")?.addEventListener("change", (e) => { rvState.sort = e.target.value; rvReset(); });
+  rvEl("rvMore")?.addEventListener("click", () => { rvState.shown += RV_PAGE; renderReviewWall(); });
+  sec.addEventListener("click", (e) => {
+    const bar = e.target.closest("[data-rv-star]");
+    if (bar) { const k = Number(bar.dataset.rvStar); rvState.stars = rvState.stars === k ? 0 : k; rvReset(); return; }
+    if (e.target.closest("[data-rv-clear]")) { rvState.stars = 0; rvState.scent = ""; rvReset(); return; }
+    const rm = e.target.closest(".rv-readmore");
+    if (rm) { const c = rm.closest(".rv-card"); const open = c.classList.toggle("open"); rm.textContent = open ? "Show less" : "Read more"; return; }
+    const ph = e.target.closest("[data-rv-photo]");
+    if (ph) openReviewPhoto(ph.dataset.rvPhoto, ph.closest(".rv-card"));
+  });
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("[data-rv-close]")) closeReviewModal();
+    if (e.target.closest("[data-rv-lb-close]")) closeReviewPhoto();
+    const link = e.target.closest('a[href="#review"], a[href="#reviewForm"], [data-write-review]');
+    if (link) { e.preventDefault(); openReviewModal(); }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (rvEl("rvLightbox") && !rvEl("rvLightbox").hidden) closeReviewPhoto();
+    else closeReviewModal();
+  });
+  let t;
+  window.addEventListener("resize", () => { clearTimeout(t); t = setTimeout(() => rvCheckClamps(rvEl("reviewsCarousel")), 150); });
+  if ((lastReviews || []).length) renderReviewWall();
 })();
