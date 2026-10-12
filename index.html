@@ -682,7 +682,7 @@
         <div class="bag-head">
           <div>
             <p class="sec-eyebrow">Checkout</p>
-            <h2 class="bag-title" id="bagTitle">Your bag</h2>
+            <h2 class="bag-title"><span id="bagTitle">Your bag</span> <span class="bag-chip" id="bagChip" hidden></span></h2>
           </div>
           <button type="button" class="bag-x" data-bag-close aria-label="Close">&times;</button>
         </div>
@@ -700,20 +700,25 @@
             <div class="co-panel" data-panel="1">
               <div class="cart-box">
                 <div class="cart-head"><h4>Your Bag</h4><span class="cart-count" id="cartCount">0 items</span></div>
-                <div id="cartItems"><div class="cart-empty">Your bag is empty. Choose a fragrance from the collection, or add one below.</div></div>
-              </div>
-              <div class="quick-add">
-                <label for="scent">Add a fragrance</label>
-                <div class="quick-add-row">
-                  <select id="scent" name="scent"></select>
-                  <button type="button" class="add-cart-btn" id="addSelectedToCart">Add</button>
-                </div>
+                <div id="cartItems"><div class="cart-empty">Your bag is empty.</div></div>
               </div>
               <p class="co-error" id="coCartError" hidden>Add a fragrance to your bag to continue.</p>
               <div class="co-actions">
                 <button type="button" class="co-link" data-bag-close>← Continue shopping</button>
                 <button type="button" class="submit co-next" data-go="2">Continue to details</button>
               </div>
+              <div class="bag-picks" id="bagPicks" hidden>
+                <p class="bag-picks-title" id="bagPicksTitle">Popular picks</p>
+                <div class="bag-picks-row" id="bagPicksRow"></div>
+              </div>
+              <details class="quick-add">
+                <summary><span class="qa-plus" aria-hidden="true">+</span> Add a fragrance by name</summary>
+                <div class="quick-add-row">
+                  <label for="scent" class="visually-hidden">Choose a fragrance</label>
+                  <select id="scent" name="scent"></select>
+                  <button type="button" class="add-cart-btn" id="addSelectedToCart">Add</button>
+                </div>
+              </details>
             </div>
 
             <!-- STEP 2: DETAILS -->
@@ -784,9 +789,11 @@
               <div class="disc"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">−₱0</span></div>
             </div>
             <div class="cart-total"><span>Total</span><strong id="cartTotal">₱0</strong></div>
-            <p class="note-small">
-              You'll receive an Order ID to <a href="#tracking">track your order</a> anytime.
-            </p>
+            <ul class="bag-perks">
+              <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M5 9h14v11H5zM8 9V7a4 4 0 0 1 8 0v2"/></svg><span><b>Gift-ready</b> in the signature A&amp;E bag</span></li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path stroke="currentColor" stroke-width="1.4" d="M3 10h18"/></svg><span><b>Cash on delivery / meetup</b> or GCash</span></li>
+              <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/></svg><span>An Order ID to <a href="#tracking" data-bag-close>track your order</a> anytime</span></li>
+            </ul>
           </aside>
         </div>
       </div>

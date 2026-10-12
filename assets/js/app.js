@@ -774,90 +774,59 @@ function renderCart() {
       `₱${getCartTotal().toLocaleString()}`;
   }
 
-  if (!cart.length) {
-    wrap.innerHTML =
-      '<div class="cart-empty">Your bag is empty. Choose a fragrance from the collection, or add one below.</div>';
+  if (typeof renderBagExtras === "function") renderBagExtras(totalQty);
 
+  if (!cart.length) {
+    wrap.innerHTML = `
+      <div class="cart-empty bag-empty-state">
+        <span class="bag-empty-ico" aria-hidden="true"><svg viewBox="0 0 48 48" width="44" height="44"><path fill="none" stroke="currentColor" stroke-width="1.2" d="M10 17h28l-2 25H12z"/><path fill="none" stroke="currentColor" stroke-width="1.2" d="M17 17v-3a7 7 0 0 1 14 0v3"/></svg></span>
+        <b>Your bag is empty</b>
+        <p>Every bottle is a 25% extrait, gift-ready in our signature bag.</p>
+        <div class="bag-empty-cta">
+          <a class="ghost-btn" href="index.html?line=men">Shop For Him</a>
+          <a class="ghost-btn" href="index.html?line=women">Shop For Her</a>
+        </div>
+      </div>`;
     return;
   }
 
   const html = [];
 
   for (const item of cart) {
-    const p =
-      getProductById(
-        item.id,
-      );
-
-    if (!p) {
-      continue;
-    }
-
+    const p = getProductById(item.id);
+    if (!p) continue;
+    const price = Number(p.price || PRODUCT_PRICE);
+    const id = escapeHTML(p.id);
+    const name = escapeHTML(p.name);
+    const line = p.cat === "women" ? "For Her" : p.cat === "unisex" ? "Unisex" : "For Him";
+    const max = Number(p.stock);
+    const atMax = Number.isFinite(max) && max > 0 && Number(item.qty) >= max;
     html.push(`
-      <div class="cart-item">
-
-        ${p.img
-          ? `<img
-          ${imgAttrs(p.img)}
-          alt="${escapeHTML(p.name)}"
-          decoding="async"
-          onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;if(this.parentNode)this.outerHTML='<div class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</div>'"
-        >`
-          : `<div class="img-ph" aria-hidden="true">A&amp;E</div>`}
-
-        <div>
-
-          <div class="cart-item-name">
-            ${p.name}
+      <div class="cart-item bag-item">
+        <button type="button" class="bag-item-img" data-bag-details="${id}" aria-label="View ${name}">
+          ${p.img
+            ? `<img ${imgAttrs(p.img)} alt="" decoding="async" onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;if(this.parentNode)this.outerHTML='<span class=&quot;img-ph&quot; aria-hidden=&quot;true&quot;>A&amp;E</span>'">`
+            : `<span class="img-ph" aria-hidden="true">A&amp;E</span>`}
+        </button>
+        <div class="bag-item-main">
+          <span class="bag-item-line">${line} · Extrait</span>
+          <div class="cart-item-name">${name}</div>
+          <div class="cart-item-price">₱${price.toLocaleString()} each</div>
+          <div class="bag-item-row">
+            <div class="cart-controls qty-pill" role="group" aria-label="Quantity of ${name}">
+              <button type="button" data-cart-minus="${id}" aria-label="One less ${name}">−</button>
+              <span aria-live="polite">${item.qty}</span>
+              <button type="button" data-cart-plus="${id}" aria-label="One more ${name}" ${atMax ? "disabled" : ""}>+</button>
+            </div>
+            <button type="button" class="cart-remove bag-remove" data-cart-remove="${id}" aria-label="Remove ${name}">Remove</button>
           </div>
-
-          <div class="cart-item-price">
-            ₱${Number(
-              p.price ||
-                PRODUCT_PRICE,
-            ).toLocaleString()}
-            each
-          </div>
-
         </div>
-
-        <div class="cart-controls">
-
-          <button
-            type="button"
-            data-cart-minus="${p.id}"
-          >
-            −
-          </button>
-
-          <span>
-            ${item.qty}
-          </span>
-
-          <button
-            type="button"
-            data-cart-plus="${p.id}"
-          >
-            +
-          </button>
-
-          <button
-            type="button"
-            class="cart-remove"
-            data-cart-remove="${p.id}"
-            aria-label="Remove ${p.name}"
-          >
-            ×
-          </button>
-
-        </div>
-
+        <b class="bag-item-total">₱${(price * Number(item.qty || 0)).toLocaleString()}</b>
       </div>
     `);
   }
 
-  wrap.innerHTML =
-    html.join("");
+  wrap.innerHTML = html.join("");
 }
 
 // ============================================================
@@ -5001,7 +4970,7 @@ function renderCheckoutExtras() {
   const qty = typeof cartQuantity === "function" ? cartQuantity() : 0;
   box.innerHTML = qty
     ? cartLinesHTML(true)
-    : `<p class="summary-empty">Your bag is empty. Choose a fragrance from the collection to begin.</p>`;
+    : `<p class="summary-empty">No items yet. Your total will appear here.</p>`;
 
   // "Add 1 more for the 2-Bottle Promo"
   const nudge = document.getElementById("promoNudge");
@@ -6917,3 +6886,63 @@ function renderChatButton() {
     <button type="button" class="chat-toggle" aria-expanded="false" aria-controls="chatMenu" aria-label="Chat with us">${CHAT_ICONS.chat}</button>`;
 }
 
+
+
+// ============================================================
+// BAG: count chip, empty state, "Popular picks" quick-add
+// ============================================================
+function renderBagExtras(totalQty) {
+  const sheet = document.getElementById("order");
+  const chip = document.getElementById("bagChip");
+  const qty = Number(totalQty) || 0;
+  sheet?.classList.toggle("is-empty", !qty);
+  if (chip) { chip.hidden = !qty; chip.textContent = `${qty} ${qty === 1 ? "item" : "items"}`; }
+  document.querySelectorAll('#order .co-panel[data-panel="1"] .co-next').forEach((b) => b.setAttribute("aria-disabled", qty ? "false" : "true"));
+  renderBagPicks();
+}
+
+function renderBagPicks() {
+  const box = document.getElementById("bagPicks");
+  const row = document.getElementById("bagPicksRow");
+  const title = document.getElementById("bagPicksTitle");
+  if (!box || !row || typeof activeProducts !== "function" || (typeof isCatalogReady === "function" && !isCatalogReady())) return;
+  const inBag = new Set((cart || []).map((i) => String(i.id)));
+  const isBest = (p) => (PRODUCT_META[p.id]?.badges || p.badges || []).map((b) => String(b).toUpperCase()).includes("BEST SELLER");
+  const list = activeProducts()
+    .filter((p) => Number(p.stock) !== 0 && !inBag.has(String(p.id)))
+    .sort((a, b) => (isBest(b) - isBest(a)) || (Number(a.sortOrder ?? a.sort_order ?? 0) - Number(b.sortOrder ?? b.sort_order ?? 0)))
+    .slice(0, inBag.size ? 3 : 4);
+  if (!list.length) { box.hidden = true; return; }
+  const promo = (typeof activePromotions !== "undefined" && Array.isArray(activePromotions) ? activePromotions : [])
+    .find((x) => x.active !== false && x.type === "fixed_total" && Number(x.minQty) === 2);
+  if (title) title.textContent = !inBag.size ? "Popular picks" : (promo && (cart || []).reduce((n, i) => n + Number(i.qty || 0), 0) === 1 ? `Make it a pair: any two for ₱${Number(promo.fixedTotal).toLocaleString()}` : "You may also like");
+  row.innerHTML = list.map((p) => {
+    const id = escapeHTML(p.id), name = escapeHTML(p.name);
+    return `<div class="bag-pick">
+      <button type="button" class="bag-pick-img" data-bag-details="${id}" aria-label="View ${name}">
+        ${p.img ? `<img ${imgAttrs(p.img)} alt="" loading="lazy" decoding="async" onerror="if(this.dataset.jpg){this.src=this.dataset.jpg;this.removeAttribute('data-jpg');return;}this.onerror=null;this.remove()">` : `<span class="img-ph sm" aria-hidden="true">A&amp;E</span>`}
+      </button>
+      <span class="bag-pick-name">${name}</span>
+      <span class="bag-pick-meta">${p.cat === "women" ? "For Her" : p.cat === "unisex" ? "Unisex" : "For Him"} · ₱${Number(p.price || PRODUCT_PRICE).toLocaleString()}</span>
+      <button type="button" class="bag-pick-add" data-bag-add="${id}" aria-label="Add ${name} to bag">+ Add</button>
+    </div>`;
+  }).join("");
+  box.hidden = false;
+}
+
+document.addEventListener("click", (e) => {
+  const add = e.target.closest("[data-bag-add]");
+  if (add) {
+    e.preventDefault();
+    if (addToCart(add.dataset.bagAdd, 1) !== false) {
+      const err = document.getElementById("coCartError");
+      if (err) err.hidden = true;
+    }
+    return;
+  }
+  const det = e.target.closest("#order [data-bag-details]");
+  if (det && typeof openFragranceDetails === "function") {
+    e.preventDefault();
+    openFragranceDetails(det.dataset.bagDetails);
+  }
+});
