@@ -207,6 +207,17 @@ Run `supabase/schema.sql` again after updating (adds the order **source** and th
 - **Customer ratings in reviews** — optional "How long did it last?" and "How strong was the scent trail?". Shown in the scent popup ("What customers say") and on each review. Needs the latest `supabase/schema.sql`.
 - **How to order + FAQ** — new section near the bottom (also in the menu). Edit the questions in Admin → Homepage & Payment → **FAQ**; "Reset to the default questions" brings back the built-in ones. Check the delivery times there and change them to yours.
 
+## Sizes (50ml + 20ml)
+
+Run `supabase/add-sizes.sql` once in Supabase → SQL Editor (safe to re-run), then push the updated files.
+
+- **Add a 20ml:** Admin → Products → **+ 20ml** next to the 50ml. Type only the price, stock and cost (puhunan). The photo, notes, description and badges are copied from the 50ml automatically, and follow it whenever you edit the 50ml.
+- A 20ml is its own product row linked to the 50ml (`parent_id`), so stock, restocks, cost, profit reports, low-stock emails, manual orders and order history all work per size, like any product. Its name is shown as "Scent (20ml)" in orders and reports.
+- **Customer site:** one card per scent with a **20ml | 50ml** picker; price, stock and Add to bag follow the size picked. The Discover popup has the same picker. Reviews belong to the scent.
+- Edit scent info (photo, notes, badges...) on the **50ml**, not on the 20ml. The 20ml copies the 50ml.
+- To delete a scent that has a 20ml, delete the 20ml first.
+- Promos count bottles regardless of size (see "Promotions" note in the project chat): a "2 bottles for ₱X" promo only applies when ₱X is lower than the cart's normal total.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

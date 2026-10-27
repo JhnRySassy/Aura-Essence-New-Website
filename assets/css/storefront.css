@@ -681,3 +681,43 @@ body.fav-open { overflow: hidden; }
 .fd-sim-img { aspect-ratio: 4 / 3; }
 .fd-review > div { flex: 1; min-width: 0; }
 @media (max-width: 760px) { .fd-sim-img { aspect-ratio: 1 / 1; } }
+
+/* ---------- Sizes: 50ml / 20ml picker ---------- */
+.psizes,
+.fd-sizes {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 2px;
+}
+.fd-sizes[hidden] { display: none; }
+.fd-sizes-label {
+  font-size: 10px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  opacity: .7;
+  margin-right: 2px;
+}
+.size-chip {
+  appearance: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: .06em;
+  padding: 6px 14px;
+  min-height: 32px;
+  border: 1px solid var(--line, rgba(212, 178, 106, .35));
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.size-chip:hover { border-color: var(--brass-bright, #d4b26a); }
+.size-chip.on {
+  border-color: var(--brass-bright, #d4b26a);
+  background: var(--brass-bright, #d4b26a);
+  color: #0e0d0c;
+}
+.size-chip.out:not(.on) { opacity: .5; text-decoration: line-through; }
+.size-chip:focus-visible { outline: 2px solid var(--brass-bright, #d4b26a); outline-offset: 2px; }

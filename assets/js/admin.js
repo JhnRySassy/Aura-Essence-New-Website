@@ -8224,6 +8224,147 @@ Object.assign(AdminApp.prototype, {
 
 
 /* =========================================================
+   SIZES (50ml + 20ml)
+   "+ 20ml" button on each product: type only price, stock and
+   cost. Photo, notes, description and badges are copied from the
+   50ml by the database and stay in sync when the 50ml is edited.
+========================================================= */
+
+const _origSizes = {
+  renderProducts: AdminApp.prototype.renderProducts,
+  editProduct: AdminApp.prototype.editProduct,
+  deleteProduct: AdminApp.prototype.deleteProduct
+};
+
+Object.assign(AdminApp.prototype, {
+
+  renderProducts() {
+    _origSizes.renderProducts.call(this);
+    this.bindSizeActions();
+
+    document.querySelectorAll("#productsRows tr").forEach(tr => {
+      const id = tr.querySelector("[data-edit]")?.dataset.edit;
+      const p = id && this.productFor(id);
+      if (!p) return;
+
+      if (p.parentId) {
+        const small = tr.querySelector(".prod-cell small");
+        if (small && !small.querySelector(".size-tag")) {
+          small.insertAdjacentHTML("beforeend",
+            ` · <span class="badge size-tag">${escapeHTML(p.sizeLabel || "")} size</span>`);
+        }
+        return;
+      }
+
+      const actions = tr.querySelector(".row-actions");
+      const hasTwenty = (this.products || []).some(x =>
+        x.parentId === p.id && String(x.sizeLabel || "").toLowerCase() === "20ml");
+      if (actions && !hasTwenty && !actions.querySelector("[data-add-size]")) {
+        actions.insertAdjacentHTML("afterbegin",
+          `<button type="button" class="btn" data-add-size="${escapeHTML(p.id)}">+ 20ml</button>`);
+      }
+    });
+  },
+
+
+  bindSizeActions() {
+    const rows = this.dom.productsRows;
+    if (!rows || rows.dataset.sizesBound) return;
+    rows.dataset.sizesBound = "1";
+    rows.addEventListener("click", e => {
+      const btn = e.target.closest("[data-add-size]");
+      if (btn) this.openSizeDialog(btn.dataset.addSize);
+    });
+  },
+
+
+  openSizeDialog(parentId) {
+    const parent = this.productFor(parentId);
+    if (!parent) return;
+
+    document.getElementById("sizeDialog")?.remove();
+
+    const dlg = document.createElement("dialog");
+    dlg.id = "sizeDialog";
+    dlg.style.cssText =
+      "background:var(--panel,#111);color:var(--text,#eee7d7);border:1px solid var(--line,#2b2b2b);" +
+      "border-radius:14px;padding:22px;width:min(420px,92vw);";
+    const field = "display:grid;gap:6px;margin-top:12px;font-size:13px;";
+    const input = "width:100%;padding:10px;border-radius:8px;border:1px solid var(--line,#2b2b2b);" +
+                  "background:var(--panel2,#151515);color:inherit;font:inherit;";
+    dlg.innerHTML = `
+      <form method="dialog" id="sizeForm">
+        <h3 style="margin:0 0 4px">Add a size</h3>
+        <p class="muted" style="margin:0">${escapeHTML(parent.name)} — photo, notes, description and badges are copied from this product automatically.</p>
+        <label style="${field}">Size<input id="sizeLabelInput" style="${input}" value="20ml" maxlength="10" required></label>
+        <label style="${field}">Price (₱)<input id="sizePrice" style="${input}" type="number" min="0" step="0.01" inputmode="decimal" required></label>
+        <label style="${field}">Stock <small class="muted">(blank = unlimited)</small><input id="sizeStock" style="${input}" type="number" min="0" inputmode="numeric"></label>
+        <label style="${field}">Cost / puhunan (₱) <small class="muted">(optional)</small><input id="sizeCost" style="${input}" type="number" min="0" step="0.01" inputmode="decimal"></label>
+        <p id="sizeError" role="alert" style="color:var(--red,#d98b8b);margin:12px 0 0" hidden></p>
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+          <button type="button" class="btn" id="sizeCancel">Cancel</button>
+          <button type="submit" class="btn primary" id="sizeSave">Add size</button>
+        </div>
+      </form>`;
+    document.body.appendChild(dlg);
+
+    const err = dlg.querySelector("#sizeError");
+    dlg.querySelector("#sizeCancel").addEventListener("click", () => dlg.close());
+    dlg.addEventListener("close", () => dlg.remove());
+
+    dlg.querySelector("#sizeForm").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const save = dlg.querySelector("#sizeSave");
+      err.hidden = true;
+      save.disabled = true;
+      try {
+        await this.request("POST", this.params({
+          action: "adminAddSize",
+          parentId: parent.id,
+          size: dlg.querySelector("#sizeLabelInput").value,
+          price: dlg.querySelector("#sizePrice").value,
+          stock: dlg.querySelector("#sizeStock").value,
+          cost: dlg.querySelector("#sizeCost").value
+        }));
+        dlg.close();
+        this.setStatus("Size added");
+        await Promise.all([this.loadProducts(), this.loadDashboard()]);
+      } catch (error) {
+        err.textContent = error.message;
+        err.hidden = false;
+        save.disabled = false;
+      }
+    });
+
+    dlg.showModal();
+    dlg.querySelector("#sizePrice").focus();
+  },
+
+
+  editProduct(product) {
+    _origSizes.editProduct.call(this, product);
+    const form = this.dom.productForm;
+    if (!form) return;
+    form.querySelector("#sizeNotice")?.remove();
+    if (product?.parentId) {
+      form.insertAdjacentHTML("afterbegin",
+        `<p id="sizeNotice" class="muted" style="margin:0 0 12px">This is the ${escapeHTML(product.sizeLabel || "")} size of ${escapeHTML(product.parentId)}. Only price, stock, cost and visibility are its own — name, photo, notes and badges follow the main product, so change those there.</p>`);
+    }
+  },
+
+
+  async deleteProduct(id = this.dom.pOriginalId?.value) {
+    const sizes = (this.products || []).filter(x => x.parentId === id);
+    if (sizes.length) {
+      alert(`This product has a ${sizes.map(x => x.sizeLabel).join(", ")} size. Delete that size first, then delete this product.`);
+      return;
+    }
+    return _origSizes.deleteProduct.call(this, id);
+  }
+});
+
+
+/* =========================================================
    START ADMIN APP
 ========================================================= */
 

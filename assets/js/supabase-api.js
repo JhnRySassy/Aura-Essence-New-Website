@@ -122,7 +122,7 @@ function friendlyError(error) {
    (database uses snake_case, the site uses camelCase)
 --------------------------------------------------------- */
 
-const PUBLIC_PRODUCT_COLUMNS = "id,name,cat,price,stock,sort_order,img,descr,desc_long,top_notes,heart_notes,base_notes,application,profiles,longevity,projection,strength,time,occasion,badges,active,created_at,updated_at";
+const PUBLIC_PRODUCT_COLUMNS = "id,name,cat,price,stock,sort_order,img,descr,desc_long,top_notes,heart_notes,base_notes,application,profiles,longevity,projection,strength,time,occasion,badges,active,created_at,updated_at,parent_id,size_label";
 
 function productFromRow(r) {
   return {
@@ -147,6 +147,9 @@ function productFromRow(r) {
     occasion: r.occasion,
     badges: r.badges || [],
     active: r.active,
+    // sizes: a 20ml row points at its 50ml scent through parentId
+    parentId: r.parent_id || null,
+    sizeLabel: r.size_label || "50ml",
     cost: r.cost == null ? null : Number(r.cost)
   };
 }
@@ -685,6 +688,19 @@ const actions = {
     const rows = must(await db.from("promotions").update({ active: toBool(p.active, true) }).eq("id", String(p.id)).select("id, active"));
     if (!rows.length) return { success: false, message: "Promotion not found." };
     return ok({ active: rows[0].active });
+  },
+
+  // Add a size (e.g. 20ml) under an existing scent; only price/stock/cost are typed.
+  async adminAddSize(db, p) {
+    const stockText = String(p.stock ?? "").trim();
+    const costText = String(p.cost ?? "").trim();
+    return must(await db.rpc("admin_add_size", {
+      p_parent_id: String(p.parentId || ""),
+      p_size: String(p.size || "20ml"),
+      p_price: toNum(p.price, 0),
+      p_stock: stockText === "" ? null : Math.max(0, toInt(stockText, 0)),
+      p_cost: costText === "" ? null : Math.max(0, toNum(costText, 0))
+    }));
   },
 
   async adminDeleteProduct(db, p) {

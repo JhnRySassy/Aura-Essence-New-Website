@@ -376,6 +376,74 @@ function getProductById(id) {
   return catalog.find(id);
 }
 
+// ============================================================
+// SIZES (50ml / 20ml)
+// A 20ml is its own product row linked to its 50ml scent (parentId).
+// ============================================================
+
+function sizeMl(p) {
+  const n = parseFloat(String(p.sizeLabel || ""));
+  return Number.isFinite(n) ? n : 0;
+}
+
+// Every sellable size of one scent, smallest first. Always includes the 50ml itself.
+function sizesOf(p) {
+  const rootId = p.parentId || p.id;
+  const root = catalog.find(rootId) || p;
+  const kids = catalog.all().filter((x) => x.parentId === rootId && x.active !== false);
+  return [root, ...kids].sort((a, b) => sizeMl(a) - sizeMl(b));
+}
+
+function sizeInStock(p) {
+  return p.stock == null || p.stock === "" || Number(p.stock) > 0;
+}
+
+// Size shown first: the 50ml if it is available, otherwise the first one in stock
+function defaultSize(family) {
+  const root = family.find((x) => !x.parentId) || family[0];
+  return sizeInStock(root) ? root : (family.find(sizeInStock) || root);
+}
+
+function sizeChipsHTML(family, selected) {
+  if (family.length < 2) return "";
+  return `<div class="psizes" role="group" aria-label="Choose a size">${family.map((x) =>
+    `<button type="button" class="size-chip${x.id === selected.id ? " on" : ""}${sizeInStock(x) ? "" : " out"}" data-size-id="${escapeHTML(x.id)}" aria-pressed="${x.id === selected.id}">${escapeHTML(x.sizeLabel || "50ml")}</button>`
+  ).join("")}</div>`;
+}
+
+// Customer taps 20ml / 50ml on a product card
+function selectCardSize(chip) {
+  const card = chip.closest(".pcard");
+  const p = getProductById(chip.dataset.sizeId);
+  if (!card || !p) return;
+
+  card.querySelectorAll(".size-chip").forEach((c) => {
+    const on = c === chip;
+    c.classList.toggle("on", on);
+    c.setAttribute("aria-pressed", String(on));
+  });
+
+  const stock = p.stock == null || p.stock === "" ? null : Number(p.stock);
+  const soldOut = stock === 0;
+  card.classList.toggle("is-sold-out", soldOut);
+
+  const price = card.querySelector(".pprice");
+  if (price) price.innerHTML = `&#8369;${Number(p.price || PRODUCT_PRICE).toLocaleString()}`;
+
+  const order = card.querySelector(".porder");
+  if (order) {
+    order.dataset.id = p.id;
+    order.disabled = soldOut;
+    order.textContent = soldOut ? "Sold out" : "Add to bag";
+  }
+
+  const note = card.querySelector(".stock-note");
+  if (note) {
+    note.className = "stock-note" + (soldOut ? " out" : stock !== null && stock <= 2 ? " low" : "");
+    note.textContent = stock === null ? "" : soldOut ? "Sold out" : stock <= 2 ? `Only ${stock} left` : "Available";
+  }
+}
+
 let activePromotions = [];
 
 function getCartSubtotal() {
@@ -923,6 +991,11 @@ function getVisibleProducts(cat) {
         return false;
       }
 
+      // 20ml rows appear as a size option inside their 50ml scent
+      if (p.parentId) {
+        return false;
+      }
+
       // IMPORTANT:
       // Product category is p.cat
       if (p.cat !== cat) {
@@ -991,10 +1064,14 @@ function buildProductCard(p) {
       "div",
     );
 
+  // sizes: price / stock / Add to bag follow the size picked (50ml by default)
+  const family = sizesOf(p);
+  const sel = defaultSize(family);
+
   const stock =
-    p.stock == null || p.stock === ""
+    sel.stock == null || sel.stock === ""
       ? null
-      : Number(p.stock);
+      : Number(sel.stock);
 
   const soldOut = stock === 0;
 
@@ -1076,9 +1153,10 @@ function buildProductCard(p) {
         ${escapeHTML(p.desc || "")}
       </p>
       <div class="product-rating">${ratingText}</div>
+      ${sizeChipsHTML(family, sel)}
       <div class="pfoot">
         <span class="pprice">
-          &#8369;${Number(p.price || PRODUCT_PRICE).toLocaleString()}
+          &#8369;${Number(sel.price || PRODUCT_PRICE).toLocaleString()}
         </span>
         <div class="pactions">
           <button
@@ -1091,7 +1169,7 @@ function buildProductCard(p) {
           <button
             type="button"
             class="porder"
-            data-id="${id}"
+            data-id="${escapeHTML(sel.id)}"
             ${soldOut ? "disabled" : ""}
           >
             ${soldOut ? "Sold out" : "Add to bag"}
@@ -1676,6 +1754,16 @@ function handleProductClick(e) {
     return;
   }
 
+  const sizeChip =
+    e.target.closest(
+      ".size-chip",
+    );
+
+  if (sizeChip) {
+    selectCardSize(sizeChip);
+    return;
+  }
+
   const btn =
     e.target.closest(
       ".porder",
@@ -1984,7 +2072,7 @@ function renderReviewScentOptions() {
     '<option value="">Choose a scent</option>' +
     catalog
       .all()
-      .filter((p) => p.active == true)
+      .filter((p) => p.active == true && !p.parentId)
       .map(
         (p) =>
           `<option value="${p.id}">${p.name}</option>`,
@@ -4263,7 +4351,8 @@ document.getElementById("promoClose")?.addEventListener("click", () => {
 /* ---------- Live counts ---------- */
 
 function activeProducts() {
-  return catalog.all().filter((p) => p.active !== false);
+  // sizes (20ml) are shown inside their scent, not as separate scents
+  return catalog.all().filter((p) => p.active !== false && !p.parentId);
 }
 
 function renderCounts() {
@@ -5207,6 +5296,8 @@ function fdStars(avg) {
 }
 
 function fdReviewsFor(p) {
+  // reviews belong to the scent, so a 20ml shows its 50ml's reviews
+  if (p.parentId) p = catalog.find(p.parentId) || p;
   const name = String(p.name || "").trim().toLowerCase();
   const id = String(p.id).toLowerCase();
   return (lastReviews || []).filter((r) =>
@@ -5220,8 +5311,9 @@ function fdNavList(p) {
   try {
     list = getVisibleProducts(activeCat).filter((x) => x.active !== false);
   } catch { /* ignore */ }
-  if (!list.some((x) => x.id === p.id)) {
-    list = catalog.all().filter((x) => x.active !== false && x.cat === p.cat);
+  const rootId = p.parentId || p.id;
+  if (!list.some((x) => x.id === rootId)) {
+    list = catalog.all().filter((x) => x.active !== false && !x.parentId && x.cat === p.cat);
   }
   return list;
 }
@@ -5229,7 +5321,7 @@ function fdNavList(p) {
 function fdSimilar(p) {
   const mine = new Set(fdListOf(fdMeta(p).profiles).map((x) => x.toLowerCase()));
   return catalog.all()
-    .filter((x) => x.id !== p.id && x.active !== false)
+    .filter((x) => x.id !== p.id && x.id !== (p.parentId || p.id) && !x.parentId && x.active !== false)
     .map((x) => {
       const theirs = fdListOf(fdMeta(x).profiles).map((t) => t.toLowerCase());
       const shared = theirs.filter((t) => mine.has(t)).length;
@@ -5247,6 +5339,18 @@ function fdPhotoHTML(p, cls) {
     : `<div class="img-ph ${cls || ""}">A&amp;E</div>`;
 }
 
+// 50ml | 20ml buttons inside the Discover popup
+function renderFdSizes(p) {
+  const box = document.getElementById("fdSizes");
+  if (!box) return;
+  const family = sizesOf(p);
+  if (family.length < 2) { box.innerHTML = ""; box.hidden = true; return; }
+  box.hidden = false;
+  box.innerHTML = `<span class="fd-sizes-label">Size</span>` + family.map((x) =>
+    `<button type="button" class="size-chip${x.id === p.id ? " on" : ""}${sizeInStock(x) ? "" : " out"}" data-fd-size="${escapeHTML(x.id)}" aria-pressed="${x.id === p.id}">${escapeHTML(x.sizeLabel || "50ml")} · ₱${Number(x.price || PRODUCT_PRICE).toLocaleString()}</button>`
+  ).join("");
+}
+
 function renderFragranceDetails(p) {
   fdCurrentId = p.id;
   const meta = fdMeta(p);
@@ -5262,12 +5366,13 @@ function renderFragranceDetails(p) {
   text("fragranceModalCategory", `${fdCatLabel(p)} · Extrait de Parfum`);
   text("fragranceModalTitle", p.name);
 
-  const stats = reviewStats[p.id];
+  const stats = reviewStats[p.parentId || p.id];
   set("fdRating", stats && stats.count
     ? `<span class="stars">${fdStars(stats.avg)}</span> ${stats.avg.toFixed(1)} · ${stats.count} review${stats.count === 1 ? "" : "s"}`
     : `<span class="muted">No reviews yet</span>`);
 
   text("fdPrice", price);
+  renderFdSizes(p);
   const stockEl = document.getElementById("fdStock");
   if (stockEl) { stockEl.textContent = info.text; stockEl.className = `fd-stock ${info.cls}`; }
   text("fdShort", p.desc || "");
@@ -5374,7 +5479,7 @@ function renderFragranceDetails(p) {
 
   /* ----- ‹ › navigation ----- */
   fdList = fdNavList(p);
-  const idx = fdList.findIndex((x) => x.id === p.id);
+  const idx = fdList.findIndex((x) => x.id === (p.parentId || p.id));
   text("fdPos", fdList.length > 1 && idx >= 0 ? `${idx + 1} / ${fdList.length}` : "");
   ["fdPrev", "fdNext"].forEach((id) => {
     const b = document.getElementById(id);
@@ -5387,7 +5492,8 @@ function renderFragranceDetails(p) {
 
 function fdStep(dir) {
   if (!fdList.length || !fdCurrentId) return;
-  const idx = fdList.findIndex((x) => x.id === fdCurrentId);
+  const curRoot = (catalog.find(fdCurrentId) || {}).parentId || fdCurrentId;
+  const idx = fdList.findIndex((x) => x.id === curRoot);
   const next = fdList[(idx + dir + fdList.length) % fdList.length];
   if (next) renderFragranceDetails(next);
 }
@@ -5456,6 +5562,13 @@ document.getElementById("fdShare")?.addEventListener("click", async (e) => {
 });
 
 fragranceModal?.addEventListener("click", (e) => {
+  const sizeBtn = e.target.closest("[data-fd-size]");
+  if (sizeBtn) {
+    const sp = catalog.find(sizeBtn.dataset.fdSize);
+    if (sp) renderFragranceDetails(sp);
+    return;
+  }
+
   const open = e.target.closest("[data-fd-open]");
   if (open) { renderFragranceDetails(catalog.find(open.dataset.fdOpen)); return; }
 
