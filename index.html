@@ -4,28 +4,52 @@
     <meta charset="UTF-8" />
     <script>
       /* Light/dark: apply the saved choice before the page paints (no flash). Dark is the default. */
-      try { if (localStorage.getItem("aeTheme") === "light") document.documentElement.setAttribute("data-theme", "light"); } catch (e) {}
+      try {
+        if (localStorage.getItem("aeTheme") === "light")
+          document.documentElement.setAttribute("data-theme", "light");
+      } catch (e) {}
       // Shop page (index.html?line=men / ?line=women): hide the homepage sections before first paint
-      if (/[?&]line=(men|women)\b/.test(location.search)) document.documentElement.classList.add("shop-mode");
+      if (/[?&]line=(men|women)\b/.test(location.search))
+        document.documentElement.classList.add("shop-mode");
     </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>A&amp;E — Aura &amp; Essence</title>
-    <meta name="description" content="Aura &amp; Essence — 25% extrait de parfum inspired by iconic designer scents. ₱430 per bottle, gift-ready, long-lasting. Order online and track your order." />
+    <meta
+      name="description"
+      content="Aura &amp; Essence — 25% extrait de parfum inspired by iconic designer scents. ₱430 per bottle, gift-ready, long-lasting. Order online and track your order."
+    />
     <meta name="theme-color" content="#0e0d0c" id="themeColor" />
     <!-- Link preview on Facebook / Messenger / Viber -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Aura &amp; Essence" />
-    <meta property="og:title" content="Aura &amp; Essence — Extrait de Parfum · ₱430" />
-    <meta property="og:description" content="Iconic scents, refined. 25% concentration, long-lasting, gift-ready packaging. Order online in minutes." />
-    <meta property="og:image" content="https://raw.githubusercontent.com/JhnRySassy/Aura-Essence-Website/main/assets/images/hero.jpg" />
+    <meta
+      property="og:title"
+      content="Aura &amp; Essence — Extrait de Parfum · ₱430"
+    />
+    <meta
+      property="og:description"
+      content="Iconic scents, refined. 25% concentration, long-lasting, gift-ready packaging. Order online in minutes."
+    />
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/JhnRySassy/Aura-Essence-Website/main/assets/images/hero.jpg"
+    />
     <meta property="og:image:width" content="900" />
     <meta property="og:image:height" content="1200" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg" />
-    <link rel="preload" as="image" type="image/webp" href="assets/images/hero.webp" imagesrcset="assets/images/hero-600.webp 600w, assets/images/hero.webp 900w" imagesizes="(max-width: 700px) 92vw, 45vw" fetchpriority="high" />
+    <link
+      rel="preload"
+      as="image"
+      type="image/webp"
+      href="assets/images/hero.webp"
+      imagesrcset="assets/images/hero-600.webp 600w, assets/images/hero.webp 900w"
+      imagesizes="(max-width: 700px) 92vw, 45vw"
+      fetchpriority="high"
+    />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -33,21 +57,38 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="assets/css/styles.css" />
-    <link rel="stylesheet" href="assets/css/profile-sync.css"/>
-    <link rel="stylesheet" href="assets/css/storefront.css"/>
-    <link rel="stylesheet" href="assets/css/premium.css"/>
-    <link rel="stylesheet" href="assets/css/theme-light.css"/>
-    <link rel="stylesheet" href="assets/css/features.css"/>
+    <link rel="stylesheet" href="assets/css/profile-sync.css" />
+    <link rel="stylesheet" href="assets/css/storefront.css" />
+    <link rel="stylesheet" href="assets/css/premium.css" />
+    <link rel="stylesheet" href="assets/css/theme-light.css" />
+    <link rel="stylesheet" href="assets/css/features.css" />
   </head>
   <body>
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="nav">
       <div class="promo-bar" id="promoBar" hidden>
         <span id="promoText"></span>
-        <button type="button" id="promoClose" aria-label="Hide this message">&times;</button>
+        <button type="button" id="promoClose" aria-label="Hide this message">
+          &times;
+        </button>
       </div>
       <div class="navrow">
-        <a class="brand" href="#top" aria-label="Aura &amp; Essence — back to top"><svg class="brand-logo" aria-hidden="true" focusable="false" viewBox="4 38 419 320"><path fill="currentColor" fill-rule="evenodd" d="M210.2 354.5 C207.7 354.4 204.3 354.3 202.8 354.3 C200.6 354.3 200 354.2 200.1 353.9 C200.1 353.7 201.1 353.6 203 353.4 C204.6 353.3 206.7 353 207.6 352.7 C208.6 352.5 209.8 352.3 210.3 352.3 C210.7 352.3 211.8 352 212.6 351.8 C213.4 351.5 215.2 351 216.5 350.6 C220 349.6 224 347.4 226.5 345.1 C230.1 341.7 233.5 336.3 235.1 331.5 C236.2 328 237 325.1 237 324.5 C237 324.2 237.2 323.1 237.5 322.1 C237.8 321.2 238.1 319.4 238.2 318.2 C238.4 317.1 238.6 315.2 238.8 314.1 C239.1 311.7 239.3 307.6 239.3 305.6 C239.3 304.7 239.4 303.5 239.5 302.8 C239.7 302.2 239.8 299.4 239.9 296.6 L240.1 291.5 L238.4 288.2 C237.5 286.4 236.6 284.7 236.4 284.5 C236.2 284.3 235.7 283.5 235.4 282.8 C235 282 234.3 280.8 233.9 280 C231.9 276.6 229 271.4 227.9 269.4 C227.3 268.1 225.8 265.3 224.6 263.1 C223.4 260.9 221.9 258.1 221.2 256.9 C220.5 255.6 218.9 252.7 217.7 250.4 C216.5 248 215 245.4 214.5 244.5 C214 243.6 213.5 242.7 213.5 242.4 C213.3 241.4 214.3 241.7 215.9 242.9 C216.7 243.5 218.1 244.4 219 244.9 C219.9 245.4 221 246.1 221.4 246.4 C222.5 247.2 231.5 251.6 234 252.5 C238 254 240.1 254.8 241.8 255.2 C242.6 255.5 244 255.9 244.8 256.1 C252.7 258.6 257.3 259.4 264 259.6 C270.7 259.9 273.5 260.1 273.9 260.6 C274.5 261.1 274.5 260.4 274.6 301.8 C274.7 330.8 274.7 333.7 275.1 335 C275.3 335.8 275.6 336.9 275.7 337.6 C276.2 340.3 277.8 343.2 279.9 345.5 C281.3 347 285.4 349.1 287.9 349.5 C288.4 349.6 289.7 349.9 290.6 350.1 C292.1 350.4 295 350.5 310.5 350.5 C322.5 350.5 329.4 350.4 330.9 350.2 C332.1 350.1 333.8 349.9 334.6 349.8 C335.4 349.6 337.2 349.4 338.4 349.3 C339.7 349.1 341.2 348.8 341.8 348.6 C342.4 348.4 343.1 348.2 343.4 348.2 C343.7 348.2 344.9 348 346 347.7 C352.8 346.1 356.5 345 360.3 343.3 C361.4 342.7 362.9 342.2 363.4 342 C366.4 341.2 378.1 334.5 382.2 331.2 C382.8 330.7 383.7 330.1 384.2 329.7 C387.1 327.6 390.6 324.5 397.3 318.2 C400.7 315 403.4 312.1 406.5 308.2 C407.1 307.5 408.2 306.1 409 305.2 C409.8 304.4 410.9 302.8 411.6 301.9 C412.2 300.9 413.2 299.6 413.6 298.9 C414.1 298.2 414.9 297 415.5 296.2 C416 295.5 416.6 294.5 416.9 294 C417.1 293.5 417.6 292.8 417.9 292.3 C418.6 291.4 419.5 291.2 419.5 291.9 C419.5 292.7 418.5 296.7 417.6 299.8 C416.8 302.7 413.8 313.9 413.2 316.5 C413 317.3 412.7 318.3 412.5 318.8 C412.4 319.2 412.1 320.3 411.9 321.1 C411.7 321.9 411.3 323.4 411 324.4 C410.7 325.3 410.2 327.3 409.9 328.8 C409.5 330.2 409 332.1 408.8 333 C408.5 333.9 408.2 334.9 408.2 335.1 C408.1 335.4 407.6 337.2 407.1 339.1 C406.5 341.1 405.9 343.5 405.6 344.6 C405 347.7 404.3 350.5 403.7 352.3 C403.3 353.7 403.1 354.1 402.4 354.4 C401.7 354.8 398.3 354.8 364.4 354.6 C316.1 354.4 300.2 354.4 253.5 354.5 C232.3 354.6 212.8 354.6 210.2 354.5 Z M8.7 290.2 C8.6 290.2 8.6 290 8.7 289.8 C9 289.3 10 289 11.2 289 C11.9 289 12.9 288.8 13.4 288.6 C14 288.4 14.8 288.2 15.4 288.1 C16.8 287.9 19.5 286.9 22.1 285.8 C26.9 283.7 30.4 281.3 33.5 278.1 C35.4 276 36.6 274.6 41 268.6 C42.4 266.8 43.4 265.3 44.2 264 C44.5 263.4 45.2 262.3 45.7 261.6 C46.9 259.6 49.5 255 51.4 251.2 C52.3 249.4 53.1 247.8 53.3 247.6 C53.4 247.5 54.2 245.9 55.2 244 C56.2 242.1 57.1 240.3 57.3 239.9 C57.6 239.5 58.2 238.1 58.8 236.9 C59.3 235.6 60 234.3 60.2 233.9 C61.7 231.1 66.1 222.1 66.6 220.8 C68.4 216.1 71.3 212 73.7 210.5 C74.5 209.9 75.2 210 75.2 210.6 C75.2 211 74.1 213.8 73.2 215.5 C72.8 216.3 72.3 217.5 72 218.2 C71.8 218.8 70.9 220.8 70.1 222.5 C67.3 228.3 66.5 230.1 65.8 232 C65.5 233 65 234.3 64.7 234.7 C64.5 235.2 64.2 235.9 64.2 236.1 C64.2 236.6 63.4 238.9 61.6 243.6 C60.7 246 60.6 246.5 60.1 248.5 C59.1 253.4 58.6 264.7 59.4 267.5 C59.6 268.3 59.8 269.4 59.8 269.9 C59.8 274.5 65.7 283 70.5 285.5 C72.9 286.7 81 289.2 82.4 289.3 C83.3 289.3 84.2 289.5 84.2 289.8 C84.2 289.9 83.7 290 82.9 290.1 C81.4 290.3 9 290.4 8.7 290.2 Z M269.2 251.7 C268.8 251.6 267.3 251.5 266 251.4 C262 251.1 260 250.8 253.8 249.5 C252.4 249.2 250.6 248.7 249.7 248.5 C248.8 248.2 247.9 248 247.7 248 C247.5 248 246.8 247.8 246.1 247.5 C245.4 247.3 243.4 246.5 241.5 245.9 C234.4 243.4 221.8 237.2 214 232.2 C211.2 230.4 207.9 228.5 205.8 227.2 C204.7 226.6 201.5 224.6 198.7 222.8 C189.7 216.9 187.2 215.4 182.3 212.5 C176.3 209.1 170.8 206.1 167 204.3 C163.6 202.7 155.5 199.5 153.5 198.9 C152.7 198.7 151.3 198.3 150.4 198 C149.4 197.7 147.3 197.1 145.8 196.7 C144.2 196.3 142.3 195.8 141.6 195.6 C140.8 195.4 139.3 195.1 138.1 195 C137 194.9 135.6 194.7 135.1 194.5 C133.2 194 124.3 193.5 119.9 193.6 C115.1 193.8 109.3 194.3 108 194.7 C107.5 194.9 106.7 195 106.3 195 C105.8 195 104.6 195.2 103.5 195.5 C102.5 195.8 100.5 196.3 99.1 196.6 C91 198.7 79 203.5 74.5 206.5 C73.8 207 72.5 207.7 71.8 208.1 C71.1 208.5 69.3 209.5 67.8 210.5 C66.3 211.4 64.6 212.5 63.9 212.9 C62.2 213.9 59.7 215.7 55.1 219.2 C54.4 219.7 53.2 220.6 52.4 221.1 C51.7 221.6 49.7 223.2 48.1 224.7 C46.5 226.3 45.2 227.5 45.1 227.5 C44.5 227.5 45.8 225.9 50.6 221 C54.7 216.7 56.8 214.8 58.8 213.4 C60.2 212.3 61.8 211.1 62.2 210.6 C63.4 209.5 67 206.8 70 204.9 C77.5 200 80 198.5 81 198 C81.6 197.8 82.6 197.2 83.1 196.8 C83.6 196.4 84.6 195.8 85.2 195.6 C85.9 195.4 86.6 195.1 86.8 194.8 C87.1 194.4 90.3 192.8 90.8 192.8 C90.9 192.8 92.3 192.2 93.8 191.5 C101.5 188.2 103.1 187.6 107.1 186.3 C110.3 185.3 112 184.8 113.2 184.6 C113.9 184.5 114.7 184.3 115 184.1 C115.6 183.8 117.9 183.4 122.4 182.7 C123.3 182.6 124.9 182.3 125.8 182.1 C129.7 181.3 145.9 181.1 150.5 181.9 C151.7 182.1 153.6 182.4 154.9 182.6 C158.8 183.2 162.8 184 163.9 184.4 C164.4 184.6 165.1 184.7 165.5 184.7 C165.8 184.7 166.7 185 167.6 185.3 C174.4 187.5 176.2 188.1 178.1 188.8 C180.5 189.8 182.2 190.5 183.9 191.3 C184.5 191.5 185.1 191.8 185.2 191.8 C185.4 191.8 186.3 192.1 187.2 192.6 C188.1 193.1 191 194.5 193.5 195.8 C196 197 198.5 198.3 199 198.7 C199.4 199 200.4 199.5 201.1 199.8 C201.8 200.1 202.8 200.6 203.3 201 C203.9 201.4 205.1 202 205.9 202.5 C206.7 203 207.9 203.7 208.5 204.2 C209.2 204.6 210.2 205.2 210.9 205.5 C211.6 205.8 212.6 206.4 213.1 206.9 C213.7 207.3 214.9 208.1 215.9 208.6 C216.9 209.1 217.8 209.6 217.9 209.7 C218 209.9 218.7 210.4 219.5 210.8 C220.3 211.2 221.7 212 222.6 212.6 C223.5 213.2 224.9 214 225.6 214.5 C226.4 215 227.6 215.8 228.3 216.2 C229.9 217.2 233.1 219.1 234.9 219.9 C235.5 220.3 236.7 220.9 237.4 221.4 C238.8 222.3 248.9 227.8 249.2 227.8 C249.3 227.8 251.2 228.7 253.4 229.8 C255.6 230.8 257.5 231.8 257.7 231.8 C258 231.8 259.2 232.3 260.5 232.9 C261.8 233.5 263.1 234 263.3 234 C263.6 234 264.2 234.2 264.8 234.5 C265.3 234.8 265.9 235 266.2 235 C266.7 235 268.1 235.4 271.3 236.4 C272.3 236.7 273.5 237 273.8 237 C274.2 237 274.9 237.2 275.4 237.4 C275.9 237.6 277.1 237.8 278.1 237.9 C279.1 237.9 280.4 238.1 281 238.4 C281.5 238.6 283.2 238.8 284.7 238.9 C286.2 239 287.9 239.2 288.5 239.4 C289.8 239.8 300 239.7 301.8 239.3 C302.4 239.2 304.2 239 305.8 238.9 C307.6 238.8 309.1 238.5 309.8 238.2 C310.5 238 311.5 237.7 312.1 237.7 C312.7 237.7 313.7 237.5 314.4 237.2 C315.2 237 316 236.8 316.3 236.8 C316.9 236.8 317.2 236.7 321.5 235.3 C324 234.5 329.7 231.9 332.3 230.4 C337.2 227.7 342.5 223.5 348.4 217.9 C349.6 216.8 350.5 216 350.5 216.1 C350.5 216.4 348 220 346.6 221.8 C343 226.3 335.6 232.7 329.6 236.5 C321.1 242 311.3 246.3 301.8 248.7 C300.6 249 299.1 249.4 298.4 249.6 C297.7 249.8 296.2 250.1 295.1 250.2 C294 250.4 292.8 250.6 292.5 250.7 C292.1 250.8 290.3 251 288.5 251.1 C286.6 251.2 284.5 251.5 283.7 251.6 C282.1 252 270.8 252.1 269.2 251.7 Z M271.8 227.7 C271.5 227.6 270.9 227.4 270.4 227.2 C268.9 226.8 264.6 225.1 262.8 224.1 C261.9 223.6 259.3 222.4 257 221.4 C254.7 220.4 251.5 218.8 249.9 218 C248.2 217.1 244.9 215.4 242.5 214.2 C240.1 213 237.2 211.5 236 210.7 C234.8 210 233 209 231.9 208.4 C230.8 207.9 228.2 206.5 226.2 205.3 C219.6 201.2 213.7 197.8 209.8 195.7 C207.6 194.6 204.4 192.8 202.5 191.8 C200.6 190.8 196.6 188.7 193.6 187.2 L188 184.5 L186.8 182.3 C186.1 181.1 185.3 179.6 185.1 179 C184.9 178.5 184.5 177.6 184.1 177.2 C183.8 176.7 182.3 173.9 180.9 170.9 C179.4 167.9 177.6 164.1 176.7 162.5 C174.8 159.1 172.7 154.7 171.8 152.6 C171.5 151.8 170.8 150.5 170.4 149.8 C169.3 148 165 139.6 164.3 137.8 C163.8 136.5 148.6 105.8 145.6 99.9 C145 98.6 143.4 95.5 142.1 92.9 C140.8 90.3 139.5 87.9 139.3 87.7 C138.4 86.7 137 87.6 136.3 89.6 C136 90.4 135.5 91.4 135.1 91.9 C134.8 92.5 134.4 93.3 134.2 93.8 C134.1 94.2 133.6 95.1 133.3 95.6 C132.9 96.2 132 97.9 131.3 99.5 C129.5 103.4 125.5 111.3 123.8 114.4 C123.1 115.8 122.3 117.4 122 118 C121.8 118.6 120.6 121 119.3 123.4 C118.1 125.7 116.5 129 115.7 130.6 C113 136.1 108.6 144.8 105.8 150.4 C98.4 164.7 94.9 171.4 94.5 172.2 C92.7 176.3 87.8 185.5 87.2 186.2 C86.3 187.1 83.5 188.7 82.5 188.9 C81.6 189.1 81.4 188.7 81.8 187.6 C82.1 186.5 87.5 175.3 88.9 172.6 C89.4 171.7 90 170.5 90.2 170 C90.5 169.6 91.2 168.2 91.8 166.9 C93.1 164.5 95.5 159.7 99.9 150.5 C101.4 147.5 103.2 143.9 104 142.4 C107.6 135.3 110.1 130.4 115.6 119.3 C129.8 91.1 137.3 76.4 137.5 76.1 C137.8 75.7 140 71.5 146.9 57.8 C152.1 47.4 153.7 44.4 154.5 43.7 C155 43.2 155.7 42.8 156 42.8 C157.1 42.8 156.3 41.2 176.4 81 C180.5 89 185.3 98.4 187.1 101.9 C188.9 105.3 193.4 114.2 197.1 121.6 C203.5 134.2 207.2 141.5 210.4 147.6 C211.1 149 212.9 152.7 214.3 155.8 C215.8 158.8 217.3 161.9 217.6 162.5 C218.9 164.9 226.8 181 227.4 182.4 C227.6 182.9 228 183.6 228.3 183.9 C228.5 184.2 229.1 185.3 229.6 186.5 C230.3 188.3 235 198 237 201.9 C239.5 206.6 239.8 207 240.7 206.1 C241.1 205.8 241.1 204.4 241.1 191.3 C241.1 182.9 240.9 176.1 240.8 175 C240.6 174 240.4 171.1 240.3 168.6 C240 164.4 239.7 162.3 238.6 158.2 C236.6 150.6 235.4 148.4 231.2 144.3 C229.6 142.8 228.6 142.1 226.7 141.2 C224.4 140 222 139.2 219.7 138.6 C219 138.5 218.5 138.3 218.5 138.1 C218.5 138 219.5 137.8 220.7 137.7 C221.9 137.6 243.3 137.5 268.2 137.5 C293.2 137.5 330.2 137.5 350.5 137.5 C374.4 137.5 387.7 137.6 388.1 137.7 C388.9 138 389.1 138.6 389.3 140.9 C389.4 141.8 389.7 143.6 389.9 144.8 C390.3 147.2 390.6 150 391.1 153.9 C391.6 157.8 392.2 161.9 392.8 165.1 C393.2 167.7 393.4 169.2 394 173.4 C394.2 174.3 394.4 175.7 394.5 176.5 C394.7 177.3 394.9 179.2 395.1 180.8 C395.3 182.3 395.6 183.9 395.7 184.3 C395.9 184.7 396 185.9 396 186.9 C396 188.4 395.9 188.8 395.6 188.9 C395 189.1 394 187.9 393.4 186.3 C392.5 183.6 391.7 181.6 391.2 181 C391 180.6 390.4 179.6 390.1 178.8 C389.7 178 389 176.7 388.4 175.9 C387.8 175.1 387 173.8 386.6 173.1 C384.3 169.1 376.9 160.9 372.5 157.5 C369.6 155.3 362.3 150.9 359.5 149.7 C355.9 148 353.2 147.1 349.2 146 C345 144.8 343.7 144.5 339.3 143.4 C338.4 143.2 336.4 142.8 334.8 142.6 C333.2 142.4 331.2 142.1 330.4 142 C328.4 141.6 277.4 141.6 275.9 142 C275.4 142.2 274.9 142.5 274.7 142.8 C274.6 143.1 274.5 155.9 274.4 185.2 C274.4 220.4 274.3 227.2 274 227.6 C273.7 228 272.3 228.1 271.8 227.7 Z"/></svg></a>
+        <a
+          class="brand"
+          href="#top"
+          aria-label="Aura &amp; Essence — back to top"
+          ><svg
+            class="brand-logo"
+            aria-hidden="true"
+            focusable="false"
+            viewBox="4 38 419 320"
+          >
+            <path
+              fill="currentColor"
+              fill-rule="evenodd"
+              d="M210.2 354.5 C207.7 354.4 204.3 354.3 202.8 354.3 C200.6 354.3 200 354.2 200.1 353.9 C200.1 353.7 201.1 353.6 203 353.4 C204.6 353.3 206.7 353 207.6 352.7 C208.6 352.5 209.8 352.3 210.3 352.3 C210.7 352.3 211.8 352 212.6 351.8 C213.4 351.5 215.2 351 216.5 350.6 C220 349.6 224 347.4 226.5 345.1 C230.1 341.7 233.5 336.3 235.1 331.5 C236.2 328 237 325.1 237 324.5 C237 324.2 237.2 323.1 237.5 322.1 C237.8 321.2 238.1 319.4 238.2 318.2 C238.4 317.1 238.6 315.2 238.8 314.1 C239.1 311.7 239.3 307.6 239.3 305.6 C239.3 304.7 239.4 303.5 239.5 302.8 C239.7 302.2 239.8 299.4 239.9 296.6 L240.1 291.5 L238.4 288.2 C237.5 286.4 236.6 284.7 236.4 284.5 C236.2 284.3 235.7 283.5 235.4 282.8 C235 282 234.3 280.8 233.9 280 C231.9 276.6 229 271.4 227.9 269.4 C227.3 268.1 225.8 265.3 224.6 263.1 C223.4 260.9 221.9 258.1 221.2 256.9 C220.5 255.6 218.9 252.7 217.7 250.4 C216.5 248 215 245.4 214.5 244.5 C214 243.6 213.5 242.7 213.5 242.4 C213.3 241.4 214.3 241.7 215.9 242.9 C216.7 243.5 218.1 244.4 219 244.9 C219.9 245.4 221 246.1 221.4 246.4 C222.5 247.2 231.5 251.6 234 252.5 C238 254 240.1 254.8 241.8 255.2 C242.6 255.5 244 255.9 244.8 256.1 C252.7 258.6 257.3 259.4 264 259.6 C270.7 259.9 273.5 260.1 273.9 260.6 C274.5 261.1 274.5 260.4 274.6 301.8 C274.7 330.8 274.7 333.7 275.1 335 C275.3 335.8 275.6 336.9 275.7 337.6 C276.2 340.3 277.8 343.2 279.9 345.5 C281.3 347 285.4 349.1 287.9 349.5 C288.4 349.6 289.7 349.9 290.6 350.1 C292.1 350.4 295 350.5 310.5 350.5 C322.5 350.5 329.4 350.4 330.9 350.2 C332.1 350.1 333.8 349.9 334.6 349.8 C335.4 349.6 337.2 349.4 338.4 349.3 C339.7 349.1 341.2 348.8 341.8 348.6 C342.4 348.4 343.1 348.2 343.4 348.2 C343.7 348.2 344.9 348 346 347.7 C352.8 346.1 356.5 345 360.3 343.3 C361.4 342.7 362.9 342.2 363.4 342 C366.4 341.2 378.1 334.5 382.2 331.2 C382.8 330.7 383.7 330.1 384.2 329.7 C387.1 327.6 390.6 324.5 397.3 318.2 C400.7 315 403.4 312.1 406.5 308.2 C407.1 307.5 408.2 306.1 409 305.2 C409.8 304.4 410.9 302.8 411.6 301.9 C412.2 300.9 413.2 299.6 413.6 298.9 C414.1 298.2 414.9 297 415.5 296.2 C416 295.5 416.6 294.5 416.9 294 C417.1 293.5 417.6 292.8 417.9 292.3 C418.6 291.4 419.5 291.2 419.5 291.9 C419.5 292.7 418.5 296.7 417.6 299.8 C416.8 302.7 413.8 313.9 413.2 316.5 C413 317.3 412.7 318.3 412.5 318.8 C412.4 319.2 412.1 320.3 411.9 321.1 C411.7 321.9 411.3 323.4 411 324.4 C410.7 325.3 410.2 327.3 409.9 328.8 C409.5 330.2 409 332.1 408.8 333 C408.5 333.9 408.2 334.9 408.2 335.1 C408.1 335.4 407.6 337.2 407.1 339.1 C406.5 341.1 405.9 343.5 405.6 344.6 C405 347.7 404.3 350.5 403.7 352.3 C403.3 353.7 403.1 354.1 402.4 354.4 C401.7 354.8 398.3 354.8 364.4 354.6 C316.1 354.4 300.2 354.4 253.5 354.5 C232.3 354.6 212.8 354.6 210.2 354.5 Z M8.7 290.2 C8.6 290.2 8.6 290 8.7 289.8 C9 289.3 10 289 11.2 289 C11.9 289 12.9 288.8 13.4 288.6 C14 288.4 14.8 288.2 15.4 288.1 C16.8 287.9 19.5 286.9 22.1 285.8 C26.9 283.7 30.4 281.3 33.5 278.1 C35.4 276 36.6 274.6 41 268.6 C42.4 266.8 43.4 265.3 44.2 264 C44.5 263.4 45.2 262.3 45.7 261.6 C46.9 259.6 49.5 255 51.4 251.2 C52.3 249.4 53.1 247.8 53.3 247.6 C53.4 247.5 54.2 245.9 55.2 244 C56.2 242.1 57.1 240.3 57.3 239.9 C57.6 239.5 58.2 238.1 58.8 236.9 C59.3 235.6 60 234.3 60.2 233.9 C61.7 231.1 66.1 222.1 66.6 220.8 C68.4 216.1 71.3 212 73.7 210.5 C74.5 209.9 75.2 210 75.2 210.6 C75.2 211 74.1 213.8 73.2 215.5 C72.8 216.3 72.3 217.5 72 218.2 C71.8 218.8 70.9 220.8 70.1 222.5 C67.3 228.3 66.5 230.1 65.8 232 C65.5 233 65 234.3 64.7 234.7 C64.5 235.2 64.2 235.9 64.2 236.1 C64.2 236.6 63.4 238.9 61.6 243.6 C60.7 246 60.6 246.5 60.1 248.5 C59.1 253.4 58.6 264.7 59.4 267.5 C59.6 268.3 59.8 269.4 59.8 269.9 C59.8 274.5 65.7 283 70.5 285.5 C72.9 286.7 81 289.2 82.4 289.3 C83.3 289.3 84.2 289.5 84.2 289.8 C84.2 289.9 83.7 290 82.9 290.1 C81.4 290.3 9 290.4 8.7 290.2 Z M269.2 251.7 C268.8 251.6 267.3 251.5 266 251.4 C262 251.1 260 250.8 253.8 249.5 C252.4 249.2 250.6 248.7 249.7 248.5 C248.8 248.2 247.9 248 247.7 248 C247.5 248 246.8 247.8 246.1 247.5 C245.4 247.3 243.4 246.5 241.5 245.9 C234.4 243.4 221.8 237.2 214 232.2 C211.2 230.4 207.9 228.5 205.8 227.2 C204.7 226.6 201.5 224.6 198.7 222.8 C189.7 216.9 187.2 215.4 182.3 212.5 C176.3 209.1 170.8 206.1 167 204.3 C163.6 202.7 155.5 199.5 153.5 198.9 C152.7 198.7 151.3 198.3 150.4 198 C149.4 197.7 147.3 197.1 145.8 196.7 C144.2 196.3 142.3 195.8 141.6 195.6 C140.8 195.4 139.3 195.1 138.1 195 C137 194.9 135.6 194.7 135.1 194.5 C133.2 194 124.3 193.5 119.9 193.6 C115.1 193.8 109.3 194.3 108 194.7 C107.5 194.9 106.7 195 106.3 195 C105.8 195 104.6 195.2 103.5 195.5 C102.5 195.8 100.5 196.3 99.1 196.6 C91 198.7 79 203.5 74.5 206.5 C73.8 207 72.5 207.7 71.8 208.1 C71.1 208.5 69.3 209.5 67.8 210.5 C66.3 211.4 64.6 212.5 63.9 212.9 C62.2 213.9 59.7 215.7 55.1 219.2 C54.4 219.7 53.2 220.6 52.4 221.1 C51.7 221.6 49.7 223.2 48.1 224.7 C46.5 226.3 45.2 227.5 45.1 227.5 C44.5 227.5 45.8 225.9 50.6 221 C54.7 216.7 56.8 214.8 58.8 213.4 C60.2 212.3 61.8 211.1 62.2 210.6 C63.4 209.5 67 206.8 70 204.9 C77.5 200 80 198.5 81 198 C81.6 197.8 82.6 197.2 83.1 196.8 C83.6 196.4 84.6 195.8 85.2 195.6 C85.9 195.4 86.6 195.1 86.8 194.8 C87.1 194.4 90.3 192.8 90.8 192.8 C90.9 192.8 92.3 192.2 93.8 191.5 C101.5 188.2 103.1 187.6 107.1 186.3 C110.3 185.3 112 184.8 113.2 184.6 C113.9 184.5 114.7 184.3 115 184.1 C115.6 183.8 117.9 183.4 122.4 182.7 C123.3 182.6 124.9 182.3 125.8 182.1 C129.7 181.3 145.9 181.1 150.5 181.9 C151.7 182.1 153.6 182.4 154.9 182.6 C158.8 183.2 162.8 184 163.9 184.4 C164.4 184.6 165.1 184.7 165.5 184.7 C165.8 184.7 166.7 185 167.6 185.3 C174.4 187.5 176.2 188.1 178.1 188.8 C180.5 189.8 182.2 190.5 183.9 191.3 C184.5 191.5 185.1 191.8 185.2 191.8 C185.4 191.8 186.3 192.1 187.2 192.6 C188.1 193.1 191 194.5 193.5 195.8 C196 197 198.5 198.3 199 198.7 C199.4 199 200.4 199.5 201.1 199.8 C201.8 200.1 202.8 200.6 203.3 201 C203.9 201.4 205.1 202 205.9 202.5 C206.7 203 207.9 203.7 208.5 204.2 C209.2 204.6 210.2 205.2 210.9 205.5 C211.6 205.8 212.6 206.4 213.1 206.9 C213.7 207.3 214.9 208.1 215.9 208.6 C216.9 209.1 217.8 209.6 217.9 209.7 C218 209.9 218.7 210.4 219.5 210.8 C220.3 211.2 221.7 212 222.6 212.6 C223.5 213.2 224.9 214 225.6 214.5 C226.4 215 227.6 215.8 228.3 216.2 C229.9 217.2 233.1 219.1 234.9 219.9 C235.5 220.3 236.7 220.9 237.4 221.4 C238.8 222.3 248.9 227.8 249.2 227.8 C249.3 227.8 251.2 228.7 253.4 229.8 C255.6 230.8 257.5 231.8 257.7 231.8 C258 231.8 259.2 232.3 260.5 232.9 C261.8 233.5 263.1 234 263.3 234 C263.6 234 264.2 234.2 264.8 234.5 C265.3 234.8 265.9 235 266.2 235 C266.7 235 268.1 235.4 271.3 236.4 C272.3 236.7 273.5 237 273.8 237 C274.2 237 274.9 237.2 275.4 237.4 C275.9 237.6 277.1 237.8 278.1 237.9 C279.1 237.9 280.4 238.1 281 238.4 C281.5 238.6 283.2 238.8 284.7 238.9 C286.2 239 287.9 239.2 288.5 239.4 C289.8 239.8 300 239.7 301.8 239.3 C302.4 239.2 304.2 239 305.8 238.9 C307.6 238.8 309.1 238.5 309.8 238.2 C310.5 238 311.5 237.7 312.1 237.7 C312.7 237.7 313.7 237.5 314.4 237.2 C315.2 237 316 236.8 316.3 236.8 C316.9 236.8 317.2 236.7 321.5 235.3 C324 234.5 329.7 231.9 332.3 230.4 C337.2 227.7 342.5 223.5 348.4 217.9 C349.6 216.8 350.5 216 350.5 216.1 C350.5 216.4 348 220 346.6 221.8 C343 226.3 335.6 232.7 329.6 236.5 C321.1 242 311.3 246.3 301.8 248.7 C300.6 249 299.1 249.4 298.4 249.6 C297.7 249.8 296.2 250.1 295.1 250.2 C294 250.4 292.8 250.6 292.5 250.7 C292.1 250.8 290.3 251 288.5 251.1 C286.6 251.2 284.5 251.5 283.7 251.6 C282.1 252 270.8 252.1 269.2 251.7 Z M271.8 227.7 C271.5 227.6 270.9 227.4 270.4 227.2 C268.9 226.8 264.6 225.1 262.8 224.1 C261.9 223.6 259.3 222.4 257 221.4 C254.7 220.4 251.5 218.8 249.9 218 C248.2 217.1 244.9 215.4 242.5 214.2 C240.1 213 237.2 211.5 236 210.7 C234.8 210 233 209 231.9 208.4 C230.8 207.9 228.2 206.5 226.2 205.3 C219.6 201.2 213.7 197.8 209.8 195.7 C207.6 194.6 204.4 192.8 202.5 191.8 C200.6 190.8 196.6 188.7 193.6 187.2 L188 184.5 L186.8 182.3 C186.1 181.1 185.3 179.6 185.1 179 C184.9 178.5 184.5 177.6 184.1 177.2 C183.8 176.7 182.3 173.9 180.9 170.9 C179.4 167.9 177.6 164.1 176.7 162.5 C174.8 159.1 172.7 154.7 171.8 152.6 C171.5 151.8 170.8 150.5 170.4 149.8 C169.3 148 165 139.6 164.3 137.8 C163.8 136.5 148.6 105.8 145.6 99.9 C145 98.6 143.4 95.5 142.1 92.9 C140.8 90.3 139.5 87.9 139.3 87.7 C138.4 86.7 137 87.6 136.3 89.6 C136 90.4 135.5 91.4 135.1 91.9 C134.8 92.5 134.4 93.3 134.2 93.8 C134.1 94.2 133.6 95.1 133.3 95.6 C132.9 96.2 132 97.9 131.3 99.5 C129.5 103.4 125.5 111.3 123.8 114.4 C123.1 115.8 122.3 117.4 122 118 C121.8 118.6 120.6 121 119.3 123.4 C118.1 125.7 116.5 129 115.7 130.6 C113 136.1 108.6 144.8 105.8 150.4 C98.4 164.7 94.9 171.4 94.5 172.2 C92.7 176.3 87.8 185.5 87.2 186.2 C86.3 187.1 83.5 188.7 82.5 188.9 C81.6 189.1 81.4 188.7 81.8 187.6 C82.1 186.5 87.5 175.3 88.9 172.6 C89.4 171.7 90 170.5 90.2 170 C90.5 169.6 91.2 168.2 91.8 166.9 C93.1 164.5 95.5 159.7 99.9 150.5 C101.4 147.5 103.2 143.9 104 142.4 C107.6 135.3 110.1 130.4 115.6 119.3 C129.8 91.1 137.3 76.4 137.5 76.1 C137.8 75.7 140 71.5 146.9 57.8 C152.1 47.4 153.7 44.4 154.5 43.7 C155 43.2 155.7 42.8 156 42.8 C157.1 42.8 156.3 41.2 176.4 81 C180.5 89 185.3 98.4 187.1 101.9 C188.9 105.3 193.4 114.2 197.1 121.6 C203.5 134.2 207.2 141.5 210.4 147.6 C211.1 149 212.9 152.7 214.3 155.8 C215.8 158.8 217.3 161.9 217.6 162.5 C218.9 164.9 226.8 181 227.4 182.4 C227.6 182.9 228 183.6 228.3 183.9 C228.5 184.2 229.1 185.3 229.6 186.5 C230.3 188.3 235 198 237 201.9 C239.5 206.6 239.8 207 240.7 206.1 C241.1 205.8 241.1 204.4 241.1 191.3 C241.1 182.9 240.9 176.1 240.8 175 C240.6 174 240.4 171.1 240.3 168.6 C240 164.4 239.7 162.3 238.6 158.2 C236.6 150.6 235.4 148.4 231.2 144.3 C229.6 142.8 228.6 142.1 226.7 141.2 C224.4 140 222 139.2 219.7 138.6 C219 138.5 218.5 138.3 218.5 138.1 C218.5 138 219.5 137.8 220.7 137.7 C221.9 137.6 243.3 137.5 268.2 137.5 C293.2 137.5 330.2 137.5 350.5 137.5 C374.4 137.5 387.7 137.6 388.1 137.7 C388.9 138 389.1 138.6 389.3 140.9 C389.4 141.8 389.7 143.6 389.9 144.8 C390.3 147.2 390.6 150 391.1 153.9 C391.6 157.8 392.2 161.9 392.8 165.1 C393.2 167.7 393.4 169.2 394 173.4 C394.2 174.3 394.4 175.7 394.5 176.5 C394.7 177.3 394.9 179.2 395.1 180.8 C395.3 182.3 395.6 183.9 395.7 184.3 C395.9 184.7 396 185.9 396 186.9 C396 188.4 395.9 188.8 395.6 188.9 C395 189.1 394 187.9 393.4 186.3 C392.5 183.6 391.7 181.6 391.2 181 C391 180.6 390.4 179.6 390.1 178.8 C389.7 178 389 176.7 388.4 175.9 C387.8 175.1 387 173.8 386.6 173.1 C384.3 169.1 376.9 160.9 372.5 157.5 C369.6 155.3 362.3 150.9 359.5 149.7 C355.9 148 353.2 147.1 349.2 146 C345 144.8 343.7 144.5 339.3 143.4 C338.4 143.2 336.4 142.8 334.8 142.6 C333.2 142.4 331.2 142.1 330.4 142 C328.4 141.6 277.4 141.6 275.9 142 C275.4 142.2 274.9 142.5 274.7 142.8 C274.6 143.1 274.5 155.9 274.4 185.2 C274.4 220.4 274.3 227.2 274 227.6 C273.7 228 272.3 228.1 271.8 227.7 Z"
+            /></svg
+        ></a>
         <nav class="nav-links" id="navLinks" aria-label="Main">
           <a href="#collection">Collection</a>
           <a href="#scentFinder">Find Your Scent</a>
@@ -56,858 +97,1576 @@
           <a href="#faq">FAQ</a>
         </nav>
         <div class="nav-actions">
-          <button type="button" class="cart-btn theme-btn" id="themeToggle" aria-label="Switch to light mode" title="Light mode">
-            <svg class="i-sun" viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-            <svg class="i-moon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+          <button
+            type="button"
+            class="cart-btn theme-btn"
+            id="themeToggle"
+            aria-label="Switch to light mode"
+            title="Light mode"
+          >
+            <svg
+              class="i-sun"
+              viewBox="0 0 24 24"
+              width="19"
+              height="19"
+              aria-hidden="true"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="4"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+              />
+              <path
+                d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linecap="round"
+              />
+            </svg>
+            <svg
+              class="i-moon"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              aria-hidden="true"
+            >
+              <path
+                d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.5"
+                stroke-linejoin="round"
+              />
+            </svg>
           </button>
-          <button type="button" class="cart-btn fav-btn" id="headerFav" aria-label="Favorites, 0 saved" aria-controls="favDrawer">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/></svg>
+          <button
+            type="button"
+            class="cart-btn fav-btn"
+            id="headerFav"
+            aria-label="Favorites, 0 saved"
+            aria-controls="favDrawer"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+                d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"
+              />
+            </svg>
             <span class="cart-badge" id="headerFavCount" hidden>0</span>
           </button>
-          <a class="cart-btn" href="#order" id="headerCart" aria-label="Bag, 0 items">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>
+          <a
+            class="cart-btn"
+            href="#order"
+            id="headerCart"
+            aria-label="Bag, 0 items"
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linejoin="round"
+                d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"
+              />
+              <path
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                d="M9 10V7a3 3 0 0 1 6 0v3"
+              />
+            </svg>
             <span class="cart-badge" id="headerCartCount" hidden>0</span>
           </a>
           <a class="cta" href="#collection">Shop</a>
-          <button type="button" class="menu-btn" id="menuBtn" aria-label="Open menu" aria-expanded="false" aria-controls="navLinks">
+          <button
+            type="button"
+            class="menu-btn"
+            id="menuBtn"
+            aria-label="Open menu"
+            aria-expanded="false"
+            aria-controls="navLinks"
+          >
             <span></span><span></span><span></span>
           </button>
         </div>
       </div>
     </header>
     <main id="main" tabindex="-1">
+      <section class="hero" id="top">
+        <div class="wrap">
+          <div>
+            <p class="eyebrow">Extrait de Parfum &middot; 25% Concentration</p>
+            <h1 class="title">AURA<em>&amp; Essence</em></h1>
+            <p class="sub" id="heroSub">
+              Signature extraits inspired by the world's most loved fragrances —
+              blended to stay with you from morning into night.
+            </p>
+            <div class="badges">
+              <span class="badge">Long-lasting</span>
+              <span class="badge">Made to be worn daily</span>
+              <span class="badge">Gift-ready</span>
+            </div>
+            <div class="hero-actions">
+              <div class="price-tag">
+                <span>Each bottle</span><b id="heroPrice">&#8369;430</b>
+              </div>
+              <a class="btn-primary" href="#collection"
+                >Discover the Collection</a
+              >
+            </div>
+          </div>
+          <div class="hero-shot">
+            <picture>
+              <source
+                type="image/webp"
+                srcset="
+                  assets/images/hero-600.webp 600w,
+                  assets/images/hero.webp     900w
+                "
+                sizes="(max-width: 700px) 92vw, 45vw"
+              />
+              <img
+                src="assets/images/hero.jpg"
+                width="900"
+                height="1200"
+                fetchpriority="high"
+                decoding="async"
+                alt="Aura &amp; Essence perfume bottle with gift bag"
+              />
+            </picture>
+          </div>
+        </div>
+      </section>
 
-    <section class="hero" id="top">
-      <div class="wrap">
-        <div>
-          <p class="eyebrow">Extrait de Parfum &middot; 25% Concentration</p>
-          <h1 class="title">AURA<em>&amp; Essence</em></h1>
-          <p class="sub" id="heroSub">
-            Signature extraits inspired by the world's most loved fragrances —
-            blended to stay with you from morning into night.
+      <div
+        class="trust-strip"
+        id="trustStrip"
+        hidden
+        aria-label="Aura &amp; Essence in numbers"
+      >
+        <div class="wrap trust-row" id="trustRow"></div>
+      </div>
+
+      <section class="collection" id="collection">
+        <div class="wrap">
+          <nav class="shop-crumbs" aria-label="Breadcrumb">
+            <a href="index.html">Home</a><span aria-hidden="true">/</span
+            ><span id="shopCrumb">For Him</span>
+          </nav>
+          <p class="sec-eyebrow" id="collectionEyebrow">The Collection</p>
+          <h2 class="sec-title" id="collectionTitle">Find your signature</h2>
+          <p class="sec-lede" id="collectionLede">
+            Two lines, one house. Choose yours — or start with what customers
+            love most.
           </p>
-          <div class="badges">
-            <span class="badge">Long-lasting</span>
-            <span class="badge">Made to be worn daily</span>
-            <span class="badge">Gift-ready</span>
-          </div>
-          <div class="hero-actions">
-            <div class="price-tag"><span>Each bottle</span><b id="heroPrice">&#8369;430</b></div>
-            <a class="btn-primary" href="#collection">Discover the Collection</a>
-          </div>
-        </div>
-        <div class="hero-shot">
-          <picture>
-            <source type="image/webp" srcset="assets/images/hero-600.webp 600w, assets/images/hero.webp 900w" sizes="(max-width: 700px) 92vw, 45vw" />
-            <img
-              src="assets/images/hero.jpg" width="900" height="1200" fetchpriority="high" decoding="async"
-              alt="Aura &amp; Essence perfume bottle with gift bag"
-            />
-          </picture>
-        </div>
-      </div>
-    </section>
-
-    <div class="trust-strip" id="trustStrip" hidden aria-label="Aura &amp; Essence in numbers">
-      <div class="wrap trust-row" id="trustRow"></div>
-    </div>
-
-    <section class="collection" id="collection">
-      <div class="wrap">
-        <nav class="shop-crumbs" aria-label="Breadcrumb"><a href="index.html">Home</a><span aria-hidden="true">/</span><span id="shopCrumb">For Him</span></nav>
-        <p class="sec-eyebrow" id="collectionEyebrow">The Collection</p>
-        <h2 class="sec-title" id="collectionTitle">Find your signature</h2>
-        <p class="sec-lede" id="collectionLede">
-          Two lines, one house. Choose yours — or start with what customers love most.
-        </p>
-        <div class="line-cards" id="lineCards">
-          <a class="line-card" href="index.html?line=men" data-line="men">
-            <picture><source type="image/webp" srcset="assets/images/invictus2.webp"><img src="assets/images/invictus2.jpg" alt="" loading="lazy" decoding="async"></picture>
-            <span class="line-card-body">
-              <span class="line-eyebrow">For Him</span>
-              <span class="line-title">The black cap line</span>
-              <span class="line-meta" data-line-count="men">Signature extraits</span>
-              <span class="line-cta">Shop For Him <i aria-hidden="true">→</i></span>
-            </span>
-          </a>
-          <a class="line-card" href="index.html?line=women" data-line="women">
-            <picture><source type="image/webp" srcset="assets/images/selena.webp"><img src="assets/images/selena.jpg" alt="" loading="lazy" decoding="async"></picture>
-            <span class="line-card-body">
-              <span class="line-eyebrow">For Her</span>
-              <span class="line-title">The gold cap line</span>
-              <span class="line-meta" data-line-count="women">Signature extraits</span>
-              <span class="line-cta">Shop For Her <i aria-hidden="true">→</i></span>
-            </span>
-          </a>
-        </div>
-        <div class="tabs">
-          <button class="tab active" data-cat="men">
-            For Him <span class="count"></span>
-          </button>
-          <button class="tab" data-cat="women">
-            For Her <span class="count"></span>
-          </button>
-        </div>
-        <div class="collection-tools">
-          <input id="productSearch" class="collection-search" type="search" placeholder="Search by name or note…" aria-label="Search fragrances">
-          <select id="profileFilter" class="collection-filter" aria-label="Filter by scent character">
-            <option value="all">All scent profiles</option>
-
-  <option value="fresh">Fresh</option>
-  <option value="spicy">Spicy</option>
-  <option value="citrus">Citrus</option>
-  <option value="amber">Amber</option>
-  <option value="woody">Woody</option>
-  <option value="aquatic">Aquatic</option>
-  <option value="sweet">Sweet</option>
-  <option value="warm">Warm</option>
-  <option value="vanilla">Vanilla</option>
-  <option value="chestnut">Chestnut</option>
-  <option value="marine">Marine</option>
-  <option value="aromatic">Aromatic</option>
-  <option value="minty">Minty</option>
-  <option value="floral">Floral</option>
-  <option value="rose">Rose</option>
-  <option value="powdery">Powdery</option>
-  <option value="coffee">Coffee</option>
-  <option value="musky">Musky</option>
-  <option value="fruity">Fruity</option>
-          </select>
-          <select id="weatherFilter" class="collection-filter" aria-label="Filter by weather">
-            <option value="all">Any weather</option>
-            <option value="hot">For the heat</option>
-            <option value="cold">For cool evenings</option>
-            <option value="any">Wear any time</option>
-          </select>
-          <select id="sortSelect" class="collection-filter" aria-label="Sort">
-            <option value="featured">Sort: Featured</option>
-            <option value="best">Best sellers</option>
-            <option value="rating">Top rated</option>
-            <option value="name">Name A–Z</option>
-            <option value="priceAsc">Price: low to high</option>
-            <option value="priceDesc">Price: high to low</option>
-          </select>
-          <button type="button" class="ghost-btn" id="wishlistToggle">♡ Favorites</button>
-        </div>
-        <p class="shop-count" id="shopCount" aria-live="polite"></p>
-        <div id="featuredRows" class="featured-rows" aria-busy="true"><div class="featured-row sk-row" aria-hidden="true"><h3><span class="sk sk-title"></span></h3><div class="mini-row"><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div></div></div></div>
-        <a class="shop-all-link" href="index.html?line=men" id="shopAllLink">See all fragrances <i aria-hidden="true">→</i></a>
-        <div class="carousel-wrap">
-          <button
-            type="button"
-            class="carousel-arrow left"
-            id="carouselPrev"
-            aria-label="Previous perfumes"
-            title="Previous"
-          >&#10094;</button>
-
-          <div class="carousel" id="carousel"></div>
-
-          <button
-            type="button"
-            class="carousel-arrow right"
-            id="carouselNext"
-            aria-label="Next perfumes"
-            title="Next"
-          >&#10095;</button>
-        </div>
-        <div class="shop-help">
-          <p>Can't decide? Answer three quick questions and we'll suggest one.</p>
-          <a class="ghost-btn" href="index.html#scentFinder">Find your scent</a>
-        </div>
-      </div>
-    </section>
-
-    <section class="sotw" id="scentOfWeek" hidden aria-labelledby="sotwName">
-      <div class="wrap sotw-grid">
-        <div class="sotw-photo" id="sotwPhoto"></div>
-        <div class="sotw-body">
-          <p class="sec-eyebrow">Scent of the Week</p>
-          <h2 class="sotw-name" id="sotwName"></h2>
-          <p class="sotw-line" id="sotwLine"></p>
-          <p class="sotw-note" id="sotwNote" hidden></p>
-          <dl class="sotw-notes" id="sotwNotes"></dl>
-          <div class="sotw-buy">
-            <b class="sotw-price" id="sotwPrice"></b>
-            <button type="button" class="btn-primary" id="sotwAdd">Add to bag</button>
-            <button type="button" class="ghost-btn" id="sotwMore">Discover</button>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-section feel" id="shopByFeel">
-      <div class="wrap">
-        <p class="sec-eyebrow">Shop by Feel</p>
-        <h2 class="sec-title">For every climate, every mood</h2>
-        <p class="sec-lede">Start with the weather you'll wear it in — or the accord you're drawn to.</p>
-        <div class="feel-weather" id="feelWeather" role="tablist" aria-label="Shop by weather"><span class="sk sk-pill" aria-hidden="true"></span><span class="sk sk-pill" aria-hidden="true"></span><span class="sk sk-pill" aria-hidden="true"></span></div>
-        <div class="feel-accords" id="feelAccords" role="group" aria-label="Shop by accord"></div>
-        <div class="feel-results" id="feelResults" aria-live="polite">
-          <div class="feel-results-head">
-            <h3 id="feelResultsTitle"></h3>
-            <button type="button" class="feel-clear" id="feelClear" hidden>Show all weather</button>
-          </div>
-          <div class="mini-row" id="feelRow"><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div><div class="pcard skeleton" aria-hidden="true"><div class="pimg"></div><div class="pbody"><i></i><i></i><i class="short"></i></div></div></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-section" id="scentFinder">
-      <div class="wrap">
-        <p class="sec-eyebrow">Scent Finder</p>
-        <h2 class="sec-title">Find your scent</h2>
-        <p class="sec-lede">Three questions. One recommendation — chosen for when, and how, you'll wear it.</p>
-        <div class="feature-grid">
-          <div class="feature-card">
-            <h3><span>01</span>When will you wear it?</h3>
-            <div class="quiz-options" data-question="occasion">
-              <button class="quiz-option" data-value="day">Daytime</button>
-              <button class="quiz-option" data-value="night">Date / Night</button>
-              <button class="quiz-option" data-value="office">Office</button>
-              <button class="quiz-option" data-value="outdoor">Outdoor</button>
-            </div>
-          </div>
-          <div class="feature-card">
-  <h3><span>02</span>What draws you in?</h3>
-
-  <p class="quiz-helper">
-    Select all that apply
-  </p>
-
-  <div
-    class="quiz-options quiz-multi"
-    data-question="profile"
-  >
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="fresh"
-    >
-      Fresh
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="spicy"
-    >
-      Spicy
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="citrus"
-    >
-      Citrus
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="amber"
-    >
-      Amber
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="woody"
-    >
-      Woody
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="aquatic"
-    >
-      Aquatic
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="sweet"
-    >
-      Sweet
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="warm"
-    >
-      Warm
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="vanilla"
-    >
-      Vanilla
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="chestnut"
-    >
-      Chestnut
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="marine"
-    >
-      Marine
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="aromatic"
-    >
-      Aromatic
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="minty"
-    >
-      Minty
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="floral"
-    >
-      Floral
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="rose"
-    >
-      Rose
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="powdery"
-    >
-      Powdery
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="coffee"
-    >
-      Coffee
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="musky"
-    >
-      Musky
-    </button>
-
-    <button
-      type="button"
-      class="quiz-option"
-      data-value="fruity"
-    >
-      Fruity
-    </button>
-
-  </div>
-</div>
-          <div class="feature-card">
-            <h3><span>03</span>How present should it be?</h3>
-            <div class="quiz-options" data-question="strength">
-              <button class="quiz-option" data-value="subtle">Subtle</button>
-              <button class="quiz-option" data-value="moderate">Moderate</button>
-              <button class="quiz-option" data-value="bold">Bold</button>
-            </div>
-            <button type="button" class="btn-primary" id="findScentBtn" style="margin-top:16px">Reveal my scent</button>
-            <div class="quiz-result" id="quizResult">
-              <h4 id="quizResultName"></h4>
-              <p id="quizResultText"></p>
-              <button type="button" class="ghost-btn" id="quizOrderBtn">Add to bag</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="reviews" id="reviews">
-      <div class="wrap">
-        <p class="sec-eyebrow">Reviews</p>
-        <h2 class="sec-title">In their words</h2>
-        <p class="sec-lede">
-          Honest notes from the people who wear them. Tried a scent? We'd love
-          to hear how it wears on you.
-        </p>
-
-        <div class="rv-summary" id="rvSummary">
-          <div class="rv-score">
-            <b id="rvAvg">—</b>
-            <span class="rv-stars" id="rvStars" aria-hidden="true">★★★★★</span>
-            <small id="rvCount">No reviews yet</small>
-          </div>
-          <div class="rv-dist" id="rvDist" aria-label="Rating breakdown"></div>
-          <div class="rv-side">
-            <p class="rv-perf" id="rvPerf"></p>
-            <button type="button" class="btn-primary" id="rvWriteBtn">Write a review</button>
-          </div>
-        </div>
-
-        <div class="rv-toolbar">
-          <div class="rv-chips" id="rvChips" role="group" aria-label="Filter reviews">
-            <button type="button" class="on" data-rvf="all">All</button>
-            <button type="button" data-rvf="photos">With photos</button>
-            <button type="button" data-rvf="men">For Him</button>
-            <button type="button" data-rvf="women">For Her</button>
-          </div>
-          <div class="rv-selects">
-            <select id="rvScentFilter" class="collection-filter" aria-label="Filter by scent"><option value="">All scents</option></select>
-            <select id="rvSort" class="collection-filter" aria-label="Sort reviews">
-              <option value="new">Newest</option>
-              <option value="high">Highest rated</option>
-              <option value="low">Lowest rated</option>
-              <option value="photos">With photos first</option>
-            </select>
-          </div>
-        </div>
-        <p class="rv-active" id="rvActive" hidden></p>
-
-        <div id="reviewsLoading" class="reviews-loading" role="status"><span class="visually-hidden">Gathering reviews…</span><div class="rv-sk" aria-hidden="true"><span class="sk sk-photo"></span><span class="sk sk-line"></span><span class="sk sk-line"></span><span class="sk sk-line short"></span></div><div class="rv-sk" aria-hidden="true"><span class="sk sk-photo"></span><span class="sk sk-line"></span><span class="sk sk-line"></span><span class="sk sk-line short"></span></div><div class="rv-sk" aria-hidden="true"><span class="sk sk-photo"></span><span class="sk sk-line"></span><span class="sk sk-line"></span><span class="sk sk-line short"></span></div></div>
-        <div class="rv-carousel" id="rvCarousel" hidden>
-          <div class="rv-rail" id="reviewsCarousel" role="list" tabindex="0" aria-label="Customer reviews, use arrow keys to scroll"></div>
-          <div class="rv-nav" id="rvNav">
-            <div class="rv-progress" aria-hidden="true"><i id="rvProgress"></i></div>
-            <span class="rv-counter" id="rvCounter" aria-live="polite"></span>
-            <div class="rv-arrows">
-              <button type="button" class="rv-arrow" id="rvPrev" aria-label="Previous reviews"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
-              <button type="button" class="rv-arrow" id="rvNext" aria-label="Next reviews"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
-            </div>
-          </div>
-        </div>
-        <div id="reviewsEmpty" class="reviews-empty" style="display: none">
-          No reviews yet. Be the first to share how yours wears.
-        </div>
-        <p class="rv-nomatch" id="rvNoMatch" hidden>No reviews match this filter yet.</p>
-      </div>
-    </section>
-
-    <div class="rv-modal" id="rvModal" aria-hidden="true" hidden>
-      <div class="rv-backdrop" data-rv-close></div>
-      <div class="rv-dialog review-form-box" role="dialog" aria-modal="true" aria-labelledby="rvModalTitle">
-        <button type="button" class="rv-x" data-rv-close aria-label="Close">&times;</button>
-        <p class="sec-eyebrow">Your review</p>
-        <h3 id="rvModalTitle">Share your experience</h3>
-        <p class="review-note">Takes a minute. A photo is required; reviews appear once we've read them.</p>
-        <form class="review-form" id="reviewForm">
-          <div>
-            <label>Your rating</label>
-            <div class="star-select" id="starSelect" aria-label="Choose rating">
-              <button type="button" data-rating="1" aria-label="1 star">★</button>
-              <button type="button" data-rating="2" aria-label="2 stars">★</button>
-              <button type="button" data-rating="3" aria-label="3 stars">★</button>
-              <button type="button" data-rating="4" aria-label="4 stars">★</button>
-              <button type="button" data-rating="5" aria-label="5 stars">★</button>
-            </div>
-            <input type="hidden" id="reviewRating" name="reviewRating" value="5" />
-          </div>
-          <div class="rv-form-row">
-            <div>
-              <label for="reviewScent">Scent</label>
-              <select id="reviewScent" name="reviewScent" required></select>
-            </div>
-            <div>
-              <label for="reviewName">Your name</label>
-              <input id="reviewName" name="reviewName" type="text" maxlength="80" placeholder="e.g. Maria" required />
-            </div>
-          </div>
-          <div>
-            <label for="reviewText">Your review</label>
-            <textarea id="reviewText" name="reviewText" rows="4" maxlength="600" placeholder="How does it smell on you? How long did it last?" required></textarea>
-          </div>
-          <div class="rv-photo-field">
-            <label for="reviewPhoto">Photo of your bottle or packaging</label>
-            <label class="rv-drop" id="rvPhotoDrop" for="reviewPhoto">
-              <input id="reviewPhoto" name="reviewPhoto" type="file" accept="image/jpeg,image/png,image/webp" required />
-              <img id="rvPhotoPreview" alt="" />
-              <span class="rv-drop-empty">
-                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><rect x="3" y="5" width="18" height="15" rx="1.5"/><circle cx="12" cy="12.5" r="3.6"/><path d="M8.5 5l1.3-2h4.4l1.3 2"/></svg>
-                <b>Tap to add a photo</b>
-                <small>JPG, PNG, or WebP · max 5 MB</small>
+          <div class="line-cards" id="lineCards">
+            <a class="line-card" href="index.html?line=men" data-line="men">
+              <picture
+                ><source
+                  type="image/webp"
+                  srcset="assets/images/invictus2.webp" />
+                <img
+                  src="assets/images/invictus2.jpg"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+              /></picture>
+              <span class="line-card-body">
+                <span class="line-eyebrow">For Him</span>
+                <span class="line-title">The black cap line</span>
+                <span class="line-meta" data-line-count="men"
+                  >Signature extraits</span
+                >
+                <span class="line-cta"
+                  >Shop For Him <i aria-hidden="true">→</i></span
+                >
               </span>
-              <span class="rv-drop-change"><span id="rvPhotoName"></span><em>Change photo</em></span>
-            </label>
+            </a>
+            <a class="line-card" href="index.html?line=women" data-line="women">
+              <picture
+                ><source type="image/webp" srcset="assets/images/selena.webp" />
+                <img
+                  src="assets/images/selena.jpg"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+              /></picture>
+              <span class="line-card-body">
+                <span class="line-eyebrow">For Her</span>
+                <span class="line-title">The gold cap line</span>
+                <span class="line-meta" data-line-count="women"
+                  >Signature extraits</span
+                >
+                <span class="line-cta"
+                  >Shop For Her <i aria-hidden="true">→</i></span
+                >
+              </span>
+            </a>
           </div>
-          <div class="rv-perf-fields">
-            <p class="rv-perf-title">How did it wear on you? <small>Optional, but it helps other customers</small></p>
-            <div class="rv-extra">
-              <label id="wearLabel">How long did it last?</label>
-              <div class="chip-select" id="wearSelect" data-target="reviewWear" role="radiogroup" aria-labelledby="wearLabel">
-                <button type="button" data-value="4">~4 hrs</button><button type="button" data-value="6">~6 hrs</button><button type="button" data-value="8">~8 hrs</button><button type="button" data-value="10">10+ hrs</button>
-              </div>
-              <input type="hidden" id="reviewWear" value="">
-            </div>
-            <div class="rv-extra">
-              <label id="projLabel">How strong was the scent trail?</label>
-              <div class="chip-select" id="projSelect" data-target="reviewProjection" role="radiogroup" aria-labelledby="projLabel">
-                <button type="button" data-value="soft">Soft</button><button type="button" data-value="moderate">Moderate</button><button type="button" data-value="strong">Strong</button>
-              </div>
-              <input type="hidden" id="reviewProjection" value="">
-            </div>
+          <div class="tabs">
+            <button class="tab active" data-cat="men">
+              For Him <span class="count"></span>
+            </button>
+            <button class="tab" data-cat="women">
+              For Her <span class="count"></span>
+            </button>
           </div>
-          <button class="review-submit" id="reviewSubmit" type="submit">Submit review</button>
-          <div id="reviewStatus" class="review-status" role="status" aria-live="polite"></div>
-        </form>
-      </div>
-    </div>
+          <div class="collection-tools">
+            <input
+              id="productSearch"
+              class="collection-search"
+              type="search"
+              placeholder="Search by name or note…"
+              aria-label="Search fragrances"
+            />
+            <select
+              id="profileFilter"
+              class="collection-filter"
+              aria-label="Filter by scent character"
+            >
+              <option value="all">All scent profiles</option>
 
-    <div class="rv-lightbox" id="rvLightbox" aria-hidden="true" hidden>
-      <div class="rv-backdrop" data-rv-lb-close></div>
-      <figure class="rv-lb-card" role="dialog" aria-modal="true" aria-label="Customer review">
-        <button type="button" class="rv-x" data-rv-lb-close aria-label="Close">&times;</button>
-        <div class="rv-lb-media"><img id="rvLbImg" alt=""></div>
-        <figcaption class="rv-lb-text" id="rvLbText"></figcaption>
-      </figure>
-    </div>
+              <option value="fresh">Fresh</option>
+              <option value="spicy">Spicy</option>
+              <option value="citrus">Citrus</option>
+              <option value="amber">Amber</option>
+              <option value="woody">Woody</option>
+              <option value="aquatic">Aquatic</option>
+              <option value="sweet">Sweet</option>
+              <option value="warm">Warm</option>
+              <option value="vanilla">Vanilla</option>
+              <option value="chestnut">Chestnut</option>
+              <option value="marine">Marine</option>
+              <option value="aromatic">Aromatic</option>
+              <option value="minty">Minty</option>
+              <option value="floral">Floral</option>
+              <option value="rose">Rose</option>
+              <option value="powdery">Powdery</option>
+              <option value="coffee">Coffee</option>
+              <option value="musky">Musky</option>
+              <option value="fruity">Fruity</option>
+            </select>
+            <select
+              id="weatherFilter"
+              class="collection-filter"
+              aria-label="Filter by weather"
+            >
+              <option value="all">Any weather</option>
+              <option value="hot">For the heat</option>
+              <option value="cold">For cool evenings</option>
+              <option value="any">Wear any time</option>
+            </select>
+            <select id="sortSelect" class="collection-filter" aria-label="Sort">
+              <option value="featured">Sort: Featured</option>
+              <option value="best">Best sellers</option>
+              <option value="rating">Top rated</option>
+              <option value="name">Name A–Z</option>
+              <option value="priceAsc">Price: low to high</option>
+              <option value="priceDesc">Price: high to low</option>
+            </select>
+            <button type="button" class="ghost-btn" id="wishlistToggle">
+              ♡ Favorites
+            </button>
+          </div>
+          <p class="shop-count" id="shopCount" aria-live="polite"></p>
+          <div id="featuredRows" class="featured-rows" aria-busy="true">
+            <div class="featured-row sk-row" aria-hidden="true">
+              <h3><span class="sk sk-title"></span></h3>
+              <div class="mini-row">
+                <div class="pcard skeleton" aria-hidden="true">
+                  <div class="pimg"></div>
+                  <div class="pbody"><i></i><i></i><i class="short"></i></div>
+                </div>
+                <div class="pcard skeleton" aria-hidden="true">
+                  <div class="pimg"></div>
+                  <div class="pbody"><i></i><i></i><i class="short"></i></div>
+                </div>
+                <div class="pcard skeleton" aria-hidden="true">
+                  <div class="pimg"></div>
+                  <div class="pbody"><i></i><i></i><i class="short"></i></div>
+                </div>
+                <div class="pcard skeleton" aria-hidden="true">
+                  <div class="pimg"></div>
+                  <div class="pbody"><i></i><i></i><i class="short"></i></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <a class="shop-all-link" href="index.html?line=men" id="shopAllLink"
+            >See all fragrances <i aria-hidden="true">→</i></a
+          >
+          <div class="carousel-wrap">
+            <button
+              type="button"
+              class="carousel-arrow left"
+              id="carouselPrev"
+              aria-label="Previous perfumes"
+              title="Previous"
+            >
+              &#10094;
+            </button>
 
-    <section class="details">
-      <div class="wrap">
-        <p class="sec-eyebrow">The House</p>
-        <h2 class="sec-title">Crafted to linger</h2>
-        <p class="sec-lede">
-          The character of the scents you love, made richer and meant to be
-          worn every day — not saved for special occasions.
-        </p>
-        <div class="grid3">
-          <div class="card">
-            <h3>25% Extrait</h3>
-            <p>
-              A true extrait de parfum — more perfume oil, less alcohol — so the
-              scent stays close through the day without reapplying.
-            </p>
+            <div class="carousel" id="carousel"></div>
+
+            <button
+              type="button"
+              class="carousel-arrow right"
+              id="carouselNext"
+              aria-label="Next perfumes"
+              title="Next"
+            >
+              &#10095;
+            </button>
           </div>
-          <div class="card">
-            <h3 id="blendCountTitle">Signature Blends</h3>
-            <p id="blendCountText">
-              For him and for her. A black cap marks the men's line; gold,
-              the women's.
-            </p>
-          </div>
-          <div class="card">
-            <h3>Ready to Give</h3>
+          <div class="shop-help">
             <p>
-              Every bottle arrives in the signature A&amp;E bag — ready to
-              present as it is, with nothing more to wrap.
+              Can't decide? Answer three quick questions and we'll suggest one.
             </p>
+            <a class="ghost-btn" href="index.html#scentFinder"
+              >Find your scent</a
+            >
           </div>
         </div>
-        <figure class="house-film" id="houseFilm">
-          <video id="filmVideo" muted playsinline loop preload="none"
-            poster="assets/video/ae-film-16x9.webp"
-            data-wide="assets/video/ae-film-16x9.mp4" data-tall="assets/video/ae-film-4x5.mp4"
-            data-wide-poster="assets/video/ae-film-16x9.webp" data-tall-poster="assets/video/ae-film-4x5.webp"
-            aria-label="Aura &amp; Essence brand film"></video>
-          <button type="button" class="film-btn" id="filmBtn" aria-label="Play the film">
-            <svg class="i-play" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M8 5.5v13l10.5-6.5Z" fill="currentColor"/></svg>
-            <svg class="i-pause" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M7.5 5h3v14h-3zM13.5 5h3v14h-3z" fill="currentColor"/></svg>
+      </section>
+
+      <section class="sotw" id="scentOfWeek" hidden aria-labelledby="sotwName">
+        <div class="wrap sotw-grid">
+          <div class="sotw-photo" id="sotwPhoto"></div>
+          <div class="sotw-body">
+            <p class="sec-eyebrow">Scent of the Week</p>
+            <h2 class="sotw-name" id="sotwName"></h2>
+            <p class="sotw-line" id="sotwLine"></p>
+            <p class="sotw-note" id="sotwNote" hidden></p>
+            <dl class="sotw-notes" id="sotwNotes"></dl>
+            <div class="sotw-buy">
+              <b class="sotw-price" id="sotwPrice"></b>
+              <button type="button" class="btn-primary" id="sotwAdd">
+                Add to bag
+              </button>
+              <button type="button" class="ghost-btn" id="sotwMore">
+                Discover
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature-section feel" id="shopByFeel">
+        <div class="wrap">
+          <p class="sec-eyebrow">Shop by Feel</p>
+          <h2 class="sec-title">For every climate, every mood</h2>
+          <p class="sec-lede">
+            Start with the weather you'll wear it in — or the accord you're
+            drawn to.
+          </p>
+          <div
+            class="feel-weather"
+            id="feelWeather"
+            role="tablist"
+            aria-label="Shop by weather"
+          >
+            <span class="sk sk-pill" aria-hidden="true"></span
+            ><span class="sk sk-pill" aria-hidden="true"></span
+            ><span class="sk sk-pill" aria-hidden="true"></span>
+          </div>
+          <div
+            class="feel-accords"
+            id="feelAccords"
+            role="group"
+            aria-label="Shop by accord"
+          ></div>
+          <div class="feel-results" id="feelResults" aria-live="polite">
+            <div class="feel-results-head">
+              <h3 id="feelResultsTitle"></h3>
+              <button type="button" class="feel-clear" id="feelClear" hidden>
+                Show all weather
+              </button>
+            </div>
+            <div class="mini-row" id="feelRow">
+              <div class="pcard skeleton" aria-hidden="true">
+                <div class="pimg"></div>
+                <div class="pbody"><i></i><i></i><i class="short"></i></div>
+              </div>
+              <div class="pcard skeleton" aria-hidden="true">
+                <div class="pimg"></div>
+                <div class="pbody"><i></i><i></i><i class="short"></i></div>
+              </div>
+              <div class="pcard skeleton" aria-hidden="true">
+                <div class="pimg"></div>
+                <div class="pbody"><i></i><i></i><i class="short"></i></div>
+              </div>
+              <div class="pcard skeleton" aria-hidden="true">
+                <div class="pimg"></div>
+                <div class="pbody"><i></i><i></i><i class="short"></i></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature-section" id="scentFinder">
+        <div class="wrap">
+          <p class="sec-eyebrow">Scent Finder</p>
+          <h2 class="sec-title">Find your scent</h2>
+          <p class="sec-lede">
+            Three questions. One recommendation — chosen for when, and how,
+            you'll wear it.
+          </p>
+          <div class="feature-grid">
+            <div class="feature-card">
+              <h3><span>01</span>When will you wear it?</h3>
+              <div class="quiz-options" data-question="occasion">
+                <button class="quiz-option" data-value="day">Daytime</button>
+                <button class="quiz-option" data-value="night">
+                  Date / Night
+                </button>
+                <button class="quiz-option" data-value="office">Office</button>
+                <button class="quiz-option" data-value="outdoor">
+                  Outdoor
+                </button>
+              </div>
+            </div>
+            <div class="feature-card">
+              <h3><span>02</span>What draws you in?</h3>
+
+              <p class="quiz-helper">Select all that apply</p>
+
+              <div class="quiz-options quiz-multi" data-question="profile">
+                <button type="button" class="quiz-option" data-value="fresh">
+                  Fresh
+                </button>
+
+                <button type="button" class="quiz-option" data-value="spicy">
+                  Spicy
+                </button>
+
+                <button type="button" class="quiz-option" data-value="citrus">
+                  Citrus
+                </button>
+
+                <button type="button" class="quiz-option" data-value="amber">
+                  Amber
+                </button>
+
+                <button type="button" class="quiz-option" data-value="woody">
+                  Woody
+                </button>
+
+                <button type="button" class="quiz-option" data-value="aquatic">
+                  Aquatic
+                </button>
+
+                <button type="button" class="quiz-option" data-value="sweet">
+                  Sweet
+                </button>
+
+                <button type="button" class="quiz-option" data-value="warm">
+                  Warm
+                </button>
+
+                <button type="button" class="quiz-option" data-value="vanilla">
+                  Vanilla
+                </button>
+
+                <button type="button" class="quiz-option" data-value="chestnut">
+                  Chestnut
+                </button>
+
+                <button type="button" class="quiz-option" data-value="marine">
+                  Marine
+                </button>
+
+                <button type="button" class="quiz-option" data-value="aromatic">
+                  Aromatic
+                </button>
+
+                <button type="button" class="quiz-option" data-value="minty">
+                  Minty
+                </button>
+
+                <button type="button" class="quiz-option" data-value="floral">
+                  Floral
+                </button>
+
+                <button type="button" class="quiz-option" data-value="rose">
+                  Rose
+                </button>
+
+                <button type="button" class="quiz-option" data-value="powdery">
+                  Powdery
+                </button>
+
+                <button type="button" class="quiz-option" data-value="coffee">
+                  Coffee
+                </button>
+
+                <button type="button" class="quiz-option" data-value="musky">
+                  Musky
+                </button>
+
+                <button type="button" class="quiz-option" data-value="fruity">
+                  Fruity
+                </button>
+              </div>
+            </div>
+            <div class="feature-card">
+              <h3><span>03</span>How present should it be?</h3>
+              <div class="quiz-options" data-question="strength">
+                <button class="quiz-option" data-value="subtle">Subtle</button>
+                <button class="quiz-option" data-value="moderate">
+                  Moderate
+                </button>
+                <button class="quiz-option" data-value="bold">Bold</button>
+              </div>
+              <button
+                type="button"
+                class="btn-primary"
+                id="findScentBtn"
+                style="margin-top: 16px"
+              >
+                Reveal my scent
+              </button>
+              <div class="quiz-result" id="quizResult">
+                <h4 id="quizResultName"></h4>
+                <p id="quizResultText"></p>
+                <button type="button" class="ghost-btn" id="quizOrderBtn">
+                  Add to bag
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="reviews" id="reviews">
+        <div class="wrap">
+          <p class="sec-eyebrow">Reviews</p>
+          <h2 class="sec-title">In their words</h2>
+          <p class="sec-lede">
+            Honest notes from the people who wear them. Tried a scent? We'd love
+            to hear how it wears on you.
+          </p>
+
+          <div class="rv-summary" id="rvSummary">
+            <div class="rv-score">
+              <b id="rvAvg">—</b>
+              <span class="rv-stars" id="rvStars" aria-hidden="true"
+                >★★★★★</span
+              >
+              <small id="rvCount">No reviews yet</small>
+            </div>
+            <div
+              class="rv-dist"
+              id="rvDist"
+              aria-label="Rating breakdown"
+            ></div>
+            <div class="rv-side">
+              <p class="rv-perf" id="rvPerf"></p>
+              <button type="button" class="btn-primary" id="rvWriteBtn">
+                Write a review
+              </button>
+            </div>
+          </div>
+
+          <div class="rv-toolbar">
+            <div
+              class="rv-chips"
+              id="rvChips"
+              role="group"
+              aria-label="Filter reviews"
+            >
+              <button type="button" class="on" data-rvf="all">All</button>
+              <button type="button" data-rvf="photos">With photos</button>
+              <button type="button" data-rvf="men">For Him</button>
+              <button type="button" data-rvf="women">For Her</button>
+            </div>
+            <div class="rv-selects">
+              <select
+                id="rvScentFilter"
+                class="collection-filter"
+                aria-label="Filter by scent"
+              >
+                <option value="">All scents</option>
+              </select>
+              <select
+                id="rvSort"
+                class="collection-filter"
+                aria-label="Sort reviews"
+              >
+                <option value="new">Newest</option>
+                <option value="high">Highest rated</option>
+                <option value="low">Lowest rated</option>
+                <option value="photos">With photos first</option>
+              </select>
+            </div>
+          </div>
+          <p class="rv-active" id="rvActive" hidden></p>
+
+          <div id="reviewsLoading" class="reviews-loading" role="status">
+            <span class="visually-hidden">Gathering reviews…</span>
+            <div class="rv-sk" aria-hidden="true">
+              <span class="sk sk-photo"></span><span class="sk sk-line"></span
+              ><span class="sk sk-line"></span
+              ><span class="sk sk-line short"></span>
+            </div>
+            <div class="rv-sk" aria-hidden="true">
+              <span class="sk sk-photo"></span><span class="sk sk-line"></span
+              ><span class="sk sk-line"></span
+              ><span class="sk sk-line short"></span>
+            </div>
+            <div class="rv-sk" aria-hidden="true">
+              <span class="sk sk-photo"></span><span class="sk sk-line"></span
+              ><span class="sk sk-line"></span
+              ><span class="sk sk-line short"></span>
+            </div>
+          </div>
+          <div class="rv-carousel" id="rvCarousel" hidden>
+            <div
+              class="rv-rail"
+              id="reviewsCarousel"
+              role="list"
+              tabindex="0"
+              aria-label="Customer reviews, use arrow keys to scroll"
+            ></div>
+            <div class="rv-nav" id="rvNav">
+              <div class="rv-progress" aria-hidden="true">
+                <i id="rvProgress"></i>
+              </div>
+              <span class="rv-counter" id="rvCounter" aria-live="polite"></span>
+              <div class="rv-arrows">
+                <button
+                  type="button"
+                  class="rv-arrow"
+                  id="rvPrev"
+                  aria-label="Previous reviews"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M15 5l-7 7 7 7" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="rv-arrow"
+                  id="rvNext"
+                  aria-label="Next reviews"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="18"
+                    height="18"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    aria-hidden="true"
+                  >
+                    <path d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <div id="reviewsEmpty" class="reviews-empty" style="display: none">
+            No reviews yet. Be the first to share how yours wears.
+          </div>
+          <p class="rv-nomatch" id="rvNoMatch" hidden>
+            No reviews match this filter yet.
+          </p>
+        </div>
+      </section>
+
+      <div class="rv-modal" id="rvModal" aria-hidden="true" hidden>
+        <div class="rv-backdrop" data-rv-close></div>
+        <div
+          class="rv-dialog review-form-box"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="rvModalTitle"
+        >
+          <button type="button" class="rv-x" data-rv-close aria-label="Close">
+            &times;
           </button>
-          <figcaption>The House of Aura &amp; Essence</figcaption>
+          <p class="sec-eyebrow">Your review</p>
+          <h3 id="rvModalTitle">Share your experience</h3>
+          <p class="review-note">
+            Takes a minute. A photo is required; reviews appear once we've read
+            them.
+          </p>
+          <form class="review-form" id="reviewForm">
+            <div>
+              <label>Your rating</label>
+              <div
+                class="star-select"
+                id="starSelect"
+                aria-label="Choose rating"
+              >
+                <button type="button" data-rating="1" aria-label="1 star">
+                  ★
+                </button>
+                <button type="button" data-rating="2" aria-label="2 stars">
+                  ★
+                </button>
+                <button type="button" data-rating="3" aria-label="3 stars">
+                  ★
+                </button>
+                <button type="button" data-rating="4" aria-label="4 stars">
+                  ★
+                </button>
+                <button type="button" data-rating="5" aria-label="5 stars">
+                  ★
+                </button>
+              </div>
+              <input
+                type="hidden"
+                id="reviewRating"
+                name="reviewRating"
+                value="5"
+              />
+            </div>
+            <div class="rv-form-row">
+              <div>
+                <label for="reviewScent">Scent</label>
+                <select id="reviewScent" name="reviewScent" required></select>
+              </div>
+              <div>
+                <label for="reviewName">Your name</label>
+                <input
+                  id="reviewName"
+                  name="reviewName"
+                  type="text"
+                  maxlength="80"
+                  placeholder="e.g. Maria"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label for="reviewText">Your review</label>
+              <textarea
+                id="reviewText"
+                name="reviewText"
+                rows="4"
+                maxlength="600"
+                placeholder="How does it smell on you? How long did it last?"
+                required
+              ></textarea>
+            </div>
+            <div class="rv-photo-field">
+              <label for="reviewPhoto">Photo of your bottle or packaging</label>
+              <label class="rv-drop" id="rvPhotoDrop" for="reviewPhoto">
+                <input
+                  id="reviewPhoto"
+                  name="reviewPhoto"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  required
+                />
+                <img id="rvPhotoPreview" alt="" />
+                <span class="rv-drop-empty">
+                  <svg
+                    viewBox="0 0 24 24"
+                    width="26"
+                    height="26"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.3"
+                    aria-hidden="true"
+                  >
+                    <rect x="3" y="5" width="18" height="15" rx="1.5" />
+                    <circle cx="12" cy="12.5" r="3.6" />
+                    <path d="M8.5 5l1.3-2h4.4l1.3 2" />
+                  </svg>
+                  <b>Tap to add a photo</b>
+                  <small>JPG, PNG, or WebP · max 5 MB</small>
+                </span>
+                <span class="rv-drop-change"
+                  ><span id="rvPhotoName"></span><em>Change photo</em></span
+                >
+              </label>
+            </div>
+            <div class="rv-perf-fields">
+              <p class="rv-perf-title">
+                How did it wear on you?
+                <small>Optional, but it helps other customers</small>
+              </p>
+              <div class="rv-extra">
+                <label id="wearLabel">How long did it last?</label>
+                <div
+                  class="chip-select"
+                  id="wearSelect"
+                  data-target="reviewWear"
+                  role="radiogroup"
+                  aria-labelledby="wearLabel"
+                >
+                  <button type="button" data-value="4">~4 hrs</button
+                  ><button type="button" data-value="6">~6 hrs</button
+                  ><button type="button" data-value="8">~8 hrs</button
+                  ><button type="button" data-value="10">10+ hrs</button>
+                </div>
+                <input type="hidden" id="reviewWear" value="" />
+              </div>
+              <div class="rv-extra">
+                <label id="projLabel">How strong was the scent trail?</label>
+                <div
+                  class="chip-select"
+                  id="projSelect"
+                  data-target="reviewProjection"
+                  role="radiogroup"
+                  aria-labelledby="projLabel"
+                >
+                  <button type="button" data-value="soft">Soft</button
+                  ><button type="button" data-value="moderate">Moderate</button
+                  ><button type="button" data-value="strong">Strong</button>
+                </div>
+                <input type="hidden" id="reviewProjection" value="" />
+              </div>
+            </div>
+            <button class="review-submit" id="reviewSubmit" type="submit">
+              Submit review
+            </button>
+            <div
+              id="reviewStatus"
+              class="review-status"
+              role="status"
+              aria-live="polite"
+            ></div>
+          </form>
+        </div>
+      </div>
+
+      <div class="rv-lightbox" id="rvLightbox" aria-hidden="true" hidden>
+        <div class="rv-backdrop" data-rv-lb-close></div>
+        <figure
+          class="rv-lb-card"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Customer review"
+        >
+          <button
+            type="button"
+            class="rv-x"
+            data-rv-lb-close
+            aria-label="Close"
+          >
+            &times;
+          </button>
+          <div class="rv-lb-media"><img id="rvLbImg" alt="" /></div>
+          <figcaption class="rv-lb-text" id="rvLbText"></figcaption>
         </figure>
       </div>
-    </section>
 
-    <section class="feature-section how-faq" id="faq">
-      <div class="wrap">
-        <p class="sec-eyebrow">Help</p>
-        <h2 class="sec-title">How to order</h2>
-        <p class="sec-lede">Five simple steps — from choosing your scent to wearing it.</p>
-        <ol class="how-steps">
-          <li><span class="how-num">01</span><b>Choose your scent</b><p>Shop For Him or For Her, or take the scent finder if you can't decide.</p></li>
-          <li><span class="how-num">02</span><b>Add to bag</b><p>Tap <i>Add to bag</i>. Your bag is always one tap away at the top of the page.</p></li>
-          <li><span class="how-num">03</span><b>Check out</b><p>Open your bag, add your name, number and delivery or meetup location, then place your order.</p></li>
-          <li><span class="how-num">04</span><b>Pay</b><p>Cash on delivery / meetup, or GCash — send the screenshot on Messenger so we can confirm.</p></li>
-          <li><span class="how-num">05</span><b>Track &amp; enjoy</b><p>You get an Order ID right away. Use it in <a href="#tracking">Track Order</a> anytime.</p></li>
-        </ol>
-        <div class="faq-wrap">
-          <h3 class="faq-title">Frequently asked questions</h3>
-          <div class="faq-list" id="faqList"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="feature-section" id="tracking">
-      <div class="wrap">
-        <p class="sec-eyebrow">Orders</p>
-        <h2 class="sec-title">Track your order</h2>
-        <p class="sec-lede">Enter your Order ID and the mobile number you ordered with.</p>
-        <div class="tracking-box">
-          <div class="tracking-form">
-            <input id="trackingOrderId" class="collection-search" placeholder="AE-20260928-123456-123" autocomplete="off">
-            <input id="trackingContact" class="collection-search" placeholder="Mobile number" autocomplete="tel">
-            <button type="button" class="btn-primary" id="trackOrderBtn">Track</button>
-          </div>
-          <div class="tracking-result" id="trackingResult">
-            <div class="tracking-id" id="trackingResultId"></div>
-            <div id="trackingResultSummary"></div>
-            <div class="tracking-status" id="trackingStatus"></div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <div class="bag-modal" id="bagModal" aria-hidden="true" hidden>
-    <div class="bag-backdrop" data-bag-close></div>
-    <section class="order bag-sheet" id="order" role="dialog" aria-modal="true" aria-labelledby="bagTitle">
-      <div class="wrap">
-        <div class="bag-head">
-          <div>
-            <p class="sec-eyebrow">Checkout</p>
-            <h2 class="bag-title"><span id="bagTitle">Your bag</span> <span class="bag-chip" id="bagChip" hidden></span></h2>
-          </div>
-          <button type="button" class="bag-x" data-bag-close aria-label="Close">&times;</button>
-        </div>
-
-        <ol class="co-steps" id="coSteps" aria-label="Checkout steps">
-          <li data-step="1" class="active"><button type="button" data-go="1"><span>1</span>Bag</button></li>
-          <li data-step="2"><button type="button" data-go="2"><span>2</span>Details</button></li>
-          <li data-step="3"><button type="button" data-go="3"><span>3</span>Review</button></li>
-        </ol>
-
-        <div class="order-grid checkout-grid">
-          <form id="orderForm" novalidate>
-
-            <!-- STEP 1: CART -->
-            <div class="co-panel" data-panel="1">
-              <div class="cart-box">
-                <div class="cart-head"><h4>Your Bag</h4><span class="cart-count" id="cartCount">0 items</span></div>
-                <div id="cartItems"><div class="cart-empty">Your bag is empty.</div></div>
-              </div>
-              <p class="co-error" id="coCartError" hidden>Add a fragrance to your bag to continue.</p>
-              <div class="co-actions">
-                <button type="button" class="co-link" data-bag-close>← Continue shopping</button>
-                <button type="button" class="submit co-next" data-go="2">Continue to details</button>
-              </div>
-              <div class="bag-picks" id="bagPicks" hidden>
-                <p class="bag-picks-title" id="bagPicksTitle">Popular picks</p>
-                <div class="bag-picks-row" id="bagPicksRow"></div>
-              </div>
-              <details class="quick-add">
-                <summary><span class="qa-plus" aria-hidden="true">+</span> Add a fragrance by name</summary>
-                <div class="quick-add-row">
-                  <label for="scent" class="visually-hidden">Choose a fragrance</label>
-                  <select id="scent" name="scent"></select>
-                  <button type="button" class="add-cart-btn" id="addSelectedToCart">Add</button>
-                </div>
-              </details>
-            </div>
-
-            <!-- STEP 2: DETAILS -->
-            <div class="co-panel" data-panel="2" hidden>
-              <div class="field">
-                <label for="fullname">Full Name</label>
-                <input id="fullname" name="fullname" type="text" placeholder="Juan Dela Cruz" autocomplete="name" required />
-                <small class="field-error" data-error-for="fullname"></small>
-              </div>
-              <div class="field">
-                <label for="contact">Mobile Number</label>
-                <input id="contact" name="contact" type="tel" placeholder="0917 123 4567" autocomplete="tel" inputmode="tel" required />
-                <small class="field-error" data-error-for="contact"></small>
-              </div>
-              <div class="field">
-                <label for="address">Delivery / Meetup Location</label>
-                <input id="address" name="address" type="text" placeholder="Street, Barangay, City / landmark" autocomplete="street-address" required />
-                <small class="field-error" data-error-for="address"></small>
-              </div>
-              <div class="field">
-                <span class="field-label">Payment</span>
-                <div class="pay-options" role="radiogroup" aria-label="Payment">
-                  <label class="pay-option">
-                    <input type="radio" name="payment" value="Cash on Delivery / Meetup" checked>
-                    <span><b>Cash on Delivery / Meetup</b><small>Pay when your order arrives</small></span>
-                  </label>
-                  <label class="pay-option">
-                    <input type="radio" name="payment" value="GCash">
-                    <span><b>GCash</b><small>The GCash number appears once you place your order</small></span>
-                  </label>
-                </div>
-              </div>
-              <div class="field">
-                <label for="notes">Notes (optional)</label>
-                <textarea id="notes" name="notes" rows="3" placeholder="Preferred schedule, landmark, etc."></textarea>
-              </div>
-              <div class="co-actions">
-                <button type="button" class="co-link" data-go="1">← Back to bag</button>
-                <button type="button" class="submit co-next" data-go="3">Review order</button>
-              </div>
-            </div>
-
-            <!-- STEP 3: REVIEW -->
-            <div class="co-panel" data-panel="3" hidden>
-              <div class="review-box" id="reviewBox"></div>
-              <div class="co-actions">
-                <button type="button" class="co-link" data-go="2">← Edit details</button>
-                <button type="submit" class="submit" id="submitBtn">Place order</button>
-              </div>
-              <div id="submitStatus" class="submit-status" role="status" aria-live="polite"></div>
-            </div>
-          </form>
-
-          <aside class="summary-box live-summary" id="liveSummary" aria-label="Order summary">
-            <h4>Order Summary</h4>
-            <div class="sum-items" id="sumItems"><p class="summary-empty">Your bag is empty.</p></div>
-            <p class="promo-nudge" id="promoNudge" hidden></p>
-            <div class="voucher-box" id="voucherBox">
-              <label for="voucherInput">Voucher code</label>
-              <div class="voucher-row">
-                <input id="voucherInput" type="text" placeholder="e.g. SUKI50" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="30">
-                <button type="button" id="voucherApply">Apply</button>
-              </div>
-              <p class="voucher-status" id="voucherStatus" aria-live="polite"></p>
-            </div>
-            <div class="cart-lines" id="cartLines" hidden>
-              <div><span>Subtotal</span><span id="cartSubtotal">₱0</span></div>
-              <div class="disc"><span id="cartDiscountLabel">Discount</span><span id="cartDiscount">−₱0</span></div>
-            </div>
-            <div class="cart-total"><span>Total</span><strong id="cartTotal">₱0</strong></div>
-            <ul class="bag-perks">
-              <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M5 9h14v11H5zM8 9V7a4 4 0 0 1 8 0v2"/></svg><span><b>Gift-ready</b> in the signature A&amp;E bag</span></li>
-              <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.4"/><path stroke="currentColor" stroke-width="1.4" d="M3 10h18"/></svg><span><b>Cash on delivery / meetup</b> or GCash</span></li>
-              <li><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/></svg><span>An Order ID to <a href="#tracking" data-bag-close>track your order</a> anytime</span></li>
-            </ul>
-          </aside>
-        </div>
-      </div>
-    </section>
-    </div>
-
-    <div class="confirmation-modal" id="confirmationModal" aria-hidden="true">
-      <div class="confirmation-dialog" role="dialog" aria-modal="true" aria-labelledby="confirmationTitle">
-        <div class="confirmation-check">✓</div>
-        <h3 id="confirmationTitle">Thank you</h3>
-        <p id="confirmationMessage">Thank you. Your order has been received and saved.</p>
-        <div class="confirmation-order-id" id="confirmationOrderId"></div>
-        <button type="button" class="copy-chip" data-copy-target="confirmationOrderId">Copy Order ID</button>
-        <div class="pay-steps" id="payInstructions"></div>
-        <details class="conf-details">
-          <summary>Order details</summary>
-          <div id="summaryEmpty" class="summary-empty" hidden></div>
-          <div id="summaryLines" class="summary-lines"></div>
-          <div class="summary-actions" id="summaryActions"><button type="button" class="ghost-btn" id="copyBtn">Copy Order Summary</button></div>
-        </details>
-        <div class="confirmation-actions">
-          <button type="button" class="btn-primary" id="confirmationTrackBtn">Track Order</button>
-          <button type="button" class="ghost-btn" id="confirmationCloseBtn">Continue browsing</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="fragrance-modal" id="fragranceModal" aria-hidden="true">
-      <div class="fragrance-dialog fd" role="dialog" aria-modal="true" aria-labelledby="fragranceModalTitle">
-        <div class="fd-topbar">
-          <div class="fd-navs">
-            <button type="button" class="fd-nav" id="fdPrev" aria-label="Previous perfume">‹</button>
-            <span class="fd-pos" id="fdPos"></span>
-            <button type="button" class="fd-nav" id="fdNext" aria-label="Next perfume">›</button>
-          </div>
-          <div class="fd-tools">
-            <button type="button" class="fd-share" id="fdShare">Share</button>
-            <button type="button" class="fragrance-close" id="fragranceClose" aria-label="Close">&times;</button>
-          </div>
-        </div>
-
-        <div class="fd-body" id="fdBody">
-          <div class="fd-hero">
-            <div class="fd-photo" id="fdPhoto"></div>
-            <div class="fd-info">
-              <p class="fd-cat" id="fragranceModalCategory"></p>
-              <h3 id="fragranceModalTitle">Fragrance Details</h3>
-              <a class="fd-rating" id="fdRating" href="#fdReviews"></a>
-              <div class="fd-price-row"><span class="fd-price" id="fdPrice"></span><span class="fd-stock" id="fdStock"></span></div>
-              <div class="fd-sizes" id="fdSizes" hidden></div>
-              <p class="fd-short" id="fdShort"></p>
-              <div class="fd-actions">
-                <button type="button" class="fd-add" id="fdAdd">Add to bag</button>
-                <button type="button" class="fragrance-fav" id="fragranceFav" aria-pressed="false">♡ Save</button>
-              </div>
-              <p class="fd-promo" id="fdPromo" hidden></p>
-            </div>
-          </div>
-
-          <section class="fd-sec">
-            <h4>At a glance</h4>
-            <div class="fd-glance" id="fdGlance"></div>
-          </section>
-
-          <section class="fd-sec">
-            <h4>How it smells over time</h4>
-            <ol class="fd-timeline">
-              <li><span class="fd-when">Opening<small>first 15–30 min</small></span><span class="fd-notes"><b>Top notes</b><strong id="fragranceTopNotes"></strong></span></li>
-              <li><span class="fd-when">Heart<small>30 min – 3 hrs</small></span><span class="fd-notes"><b>Heart notes</b><strong id="fragranceHeartNotes"></strong></span></li>
-              <li><span class="fd-when">Dry-down<small>3 hrs onward</small></span><span class="fd-notes"><b>Base notes</b><strong id="fragranceBaseNotes"></strong></span></li>
-            </ol>
-          </section>
-
-          <section class="fd-sec">
-            <h4>About this scent</h4>
-            <p class="fragrance-description fd-clamp" id="fragranceModalDescription"></p>
-            <button type="button" class="fd-more" id="fdMore" hidden>Read more</button>
-            <details class="fd-apply" id="fdApply">
-              <summary>How to apply</summary>
-              <p id="fragranceApplication"></p>
-            </details>
-          </section>
-
-          <section class="fd-sec" id="fdReviews">
-            <h4>Reviews</h4>
-            <div class="fd-reviews" id="fdReviewList"></div>
-          </section>
-
-          <section class="fd-sec">
-            <h4>You may also like</h4>
-            <div class="fd-similar" id="fdSimilar"></div>
-          </section>
-
-          <p class="fragrance-note-disclaimer">
-            Note: This fragrance profile is provided as a guide to the scent
-            inspiration. Aura &amp; Essence is not affiliated with or endorsed
-            by the original fragrance brands, and the actual blend may vary.
+      <section class="details">
+        <div class="wrap">
+          <p class="sec-eyebrow">The House</p>
+          <h2 class="sec-title">Crafted to linger</h2>
+          <p class="sec-lede">
+            The character of the scents you love, made richer and meant to be
+            worn every day — not saved for special occasions.
           </p>
+          <div class="grid3">
+            <div class="card">
+              <h3>25% Extrait</h3>
+              <p>
+                A true extrait de parfum — more perfume oil, less alcohol — so
+                the scent stays close through the day without reapplying.
+              </p>
+            </div>
+            <div class="card">
+              <h3 id="blendCountTitle">Signature Blends</h3>
+              <p id="blendCountText">
+                For him and for her. A black cap marks the men's line; gold, the
+                women's.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Ready to Give</h3>
+              <p>
+                Every bottle arrives in the signature A&amp;E bag — ready to
+                present as it is, with nothing more to wrap.
+              </p>
+            </div>
+          </div>
+          <figure class="house-film" id="houseFilm">
+            <video
+              id="filmVideo"
+              muted
+              playsinline
+              loop
+              preload="none"
+              poster="assets/video/ae-film-16x9.webp"
+              data-wide="assets/video/ae-film-16x9.mp4"
+              data-tall="assets/video/ae-film-4x5.mp4"
+              data-wide-poster="assets/video/ae-film-16x9.webp"
+              data-tall-poster="assets/video/ae-film-4x5.webp"
+              aria-label="Aura &amp; Essence brand film"
+            ></video>
+            <button
+              type="button"
+              class="film-btn"
+              id="filmBtn"
+              aria-label="Play the film"
+            >
+              <svg
+                class="i-play"
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+                aria-hidden="true"
+              >
+                <path d="M8 5.5v13l10.5-6.5Z" fill="currentColor" />
+              </svg>
+              <svg
+                class="i-pause"
+                viewBox="0 0 24 24"
+                width="20"
+                height="20"
+                aria-hidden="true"
+              >
+                <path d="M7.5 5h3v14h-3zM13.5 5h3v14h-3z" fill="currentColor" />
+              </svg>
+            </button>
+            <figcaption>The House of Aura &amp; Essence</figcaption>
+          </figure>
         </div>
+      </section>
 
-        <div class="fd-buybar" id="fdBuybar" aria-hidden="true">
-          <span class="fd-bar-thumb" id="fdBarThumb" aria-hidden="true"></span>
-          <span class="fd-bar-info"><b id="fdBarName"></b><small><em id="fdBarPrice"></em> · <span id="fdBarStock"></span></small></span>
-          <button type="button" class="fd-bar-fav" id="fdBarFav" aria-pressed="false" aria-label="Save to favorites">♡</button>
-          <button type="button" class="fd-add" id="fdBarAdd" tabindex="-1">Add to bag</button>
+      <section class="feature-section how-faq" id="faq">
+        <div class="wrap">
+          <p class="sec-eyebrow">Help</p>
+          <h2 class="sec-title">How to order</h2>
+          <p class="sec-lede">
+            Five simple steps — from choosing your scent to wearing it.
+          </p>
+          <ol class="how-steps">
+            <li>
+              <span class="how-num">01</span><b>Choose your scent</b>
+              <p>
+                Shop For Him or For Her, or take the scent finder if you can't
+                decide.
+              </p>
+            </li>
+            <li>
+              <span class="how-num">02</span><b>Add to bag</b>
+              <p>
+                Tap <i>Add to bag</i>. Your bag is always one tap away at the
+                top of the page.
+              </p>
+            </li>
+            <li>
+              <span class="how-num">03</span><b>Check out</b>
+              <p>
+                Open your bag, add your name, number and delivery or meetup
+                location, then place your order.
+              </p>
+            </li>
+            <li>
+              <span class="how-num">04</span><b>Pay</b>
+              <p>
+                Cash on delivery / meetup, or GCash — send the screenshot on
+                Messenger so we can confirm.
+              </p>
+            </li>
+            <li>
+              <span class="how-num">05</span><b>Track &amp; enjoy</b>
+              <p>
+                You get an Order ID right away. Use it in
+                <a href="#tracking">Track Order</a> anytime.
+              </p>
+            </li>
+          </ol>
+          <div class="faq-wrap">
+            <h3 class="faq-title">Frequently asked questions</h3>
+            <div class="faq-list" id="faqList"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="feature-section" id="tracking">
+        <div class="wrap">
+          <p class="sec-eyebrow">Orders</p>
+          <h2 class="sec-title">Track your order</h2>
+          <p class="sec-lede">
+            Enter your Order ID and the mobile number you ordered with.
+          </p>
+          <div class="tracking-box">
+            <div class="tracking-form">
+              <input
+                id="trackingOrderId"
+                class="collection-search"
+                placeholder="AE-20260928-123456-123"
+                autocomplete="off"
+              />
+              <input
+                id="trackingContact"
+                class="collection-search"
+                placeholder="Mobile number"
+                autocomplete="tel"
+              />
+              <button type="button" class="btn-primary" id="trackOrderBtn">
+                Track
+              </button>
+            </div>
+            <div class="tracking-result" id="trackingResult">
+              <div class="tracking-id" id="trackingResultId"></div>
+              <div id="trackingResultSummary"></div>
+              <div class="tracking-status" id="trackingStatus"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="bag-modal" id="bagModal" aria-hidden="true" hidden>
+        <div class="bag-backdrop" data-bag-close></div>
+        <section
+          class="order bag-sheet"
+          id="order"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="bagTitle"
+        >
+          <div class="wrap">
+            <div class="bag-head">
+              <div>
+                <p class="sec-eyebrow">Checkout</p>
+                <h2 class="bag-title">
+                  <span id="bagTitle">Your bag</span>
+                  <span class="bag-chip" id="bagChip" hidden></span>
+                </h2>
+              </div>
+              <button
+                type="button"
+                class="bag-x"
+                data-bag-close
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+
+            <ol class="co-steps" id="coSteps" aria-label="Checkout steps">
+              <li data-step="1" class="active">
+                <button type="button" data-go="1"><span>1</span>Bag</button>
+              </li>
+              <li data-step="2">
+                <button type="button" data-go="2"><span>2</span>Details</button>
+              </li>
+              <li data-step="3">
+                <button type="button" data-go="3"><span>3</span>Review</button>
+              </li>
+            </ol>
+
+            <div class="order-grid checkout-grid">
+              <form id="orderForm" novalidate>
+                <!-- STEP 1: CART -->
+                <div class="co-panel" data-panel="1">
+                  <div class="cart-box">
+                    <div class="cart-head">
+                      <h4>Your Bag</h4>
+                      <span class="cart-count" id="cartCount">0 items</span>
+                    </div>
+                    <div id="cartItems">
+                      <div class="cart-empty">Your bag is empty.</div>
+                    </div>
+                  </div>
+                  <p class="co-error" id="coCartError" hidden>
+                    Add a fragrance to your bag to continue.
+                  </p>
+                  <div class="co-actions">
+                    <button type="button" class="co-link" data-bag-close>
+                      ← Continue shopping
+                    </button>
+                    <button type="button" class="submit co-next" data-go="2">
+                      Continue to details
+                    </button>
+                  </div>
+                  <div class="bag-picks" id="bagPicks" hidden>
+                    <p class="bag-picks-title" id="bagPicksTitle">
+                      Popular picks
+                    </p>
+                    <div class="bag-picks-row" id="bagPicksRow"></div>
+                  </div>
+                  <details class="quick-add">
+                    <summary>
+                      <span class="qa-plus" aria-hidden="true">+</span> Add a
+                      fragrance by name
+                    </summary>
+                    <div class="quick-add-row">
+                      <label for="scent" class="visually-hidden"
+                        >Choose a fragrance</label
+                      >
+                      <select id="scent" name="scent"></select>
+                      <button
+                        type="button"
+                        class="add-cart-btn"
+                        id="addSelectedToCart"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </details>
+                </div>
+
+                <!-- STEP 2: DETAILS -->
+                <div class="co-panel" data-panel="2" hidden>
+                  <div class="field">
+                    <label for="fullname">Full Name</label>
+                    <input
+                      id="fullname"
+                      name="fullname"
+                      type="text"
+                      placeholder="Juan Dela Cruz"
+                      autocomplete="name"
+                      required
+                    />
+                    <small
+                      class="field-error"
+                      data-error-for="fullname"
+                    ></small>
+                  </div>
+                  <div class="field">
+                    <label for="contact">Mobile Number</label>
+                    <input
+                      id="contact"
+                      name="contact"
+                      type="tel"
+                      placeholder="0917 123 4567"
+                      autocomplete="tel"
+                      inputmode="tel"
+                      required
+                    />
+                    <small class="field-error" data-error-for="contact"></small>
+                  </div>
+                  <div class="field">
+                    <label for="address">Delivery / Meetup Location</label>
+                    <input
+                      id="address"
+                      name="address"
+                      type="text"
+                      placeholder="Street, Barangay, City / landmark"
+                      autocomplete="street-address"
+                      required
+                    />
+                    <small class="field-error" data-error-for="address"></small>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">Payment</span>
+                    <div
+                      class="pay-options"
+                      role="radiogroup"
+                      aria-label="Payment"
+                    >
+                      <label class="pay-option">
+                        <input
+                          type="radio"
+                          name="payment"
+                          value="Cash on Delivery / Meetup"
+                          checked
+                        />
+                        <span
+                          ><b>Cash on Delivery / Meetup</b
+                          ><small>Pay when your order arrives</small></span
+                        >
+                      </label>
+                      <label class="pay-option">
+                        <input type="radio" name="payment" value="GCash" />
+                        <span
+                          ><b>GCash</b
+                          ><small
+                            >The GCash number appears once you place your
+                            order</small
+                          ></span
+                        >
+                      </label>
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label for="notes">Notes (optional)</label>
+                    <textarea
+                      id="notes"
+                      name="notes"
+                      rows="3"
+                      placeholder="Preferred schedule, landmark, etc."
+                    ></textarea>
+                  </div>
+                  <div class="co-actions">
+                    <button type="button" class="co-link" data-go="1">
+                      ← Back to bag
+                    </button>
+                    <button type="button" class="submit co-next" data-go="3">
+                      Review order
+                    </button>
+                  </div>
+                </div>
+
+                <!-- STEP 3: REVIEW -->
+                <div class="co-panel" data-panel="3" hidden>
+                  <div class="review-box" id="reviewBox"></div>
+                  <div class="co-actions">
+                    <button type="button" class="co-link" data-go="2">
+                      ← Edit details
+                    </button>
+                    <button type="submit" class="submit" id="submitBtn">
+                      Place order
+                    </button>
+                  </div>
+                  <div
+                    id="submitStatus"
+                    class="submit-status"
+                    role="status"
+                    aria-live="polite"
+                  ></div>
+                </div>
+              </form>
+
+              <aside
+                class="summary-box live-summary"
+                id="liveSummary"
+                aria-label="Order summary"
+              >
+                <h4>Order Summary</h4>
+                <div class="sum-items" id="sumItems">
+                  <p class="summary-empty">Your bag is empty.</p>
+                </div>
+                <p class="promo-nudge" id="promoNudge" hidden></p>
+                <div class="voucher-box" id="voucherBox">
+                  <label for="voucherInput">Voucher code</label>
+                  <div class="voucher-row">
+                    <input
+                      id="voucherInput"
+                      type="text"
+                      placeholder="e.g. SUKI50"
+                      autocomplete="off"
+                      autocapitalize="characters"
+                      spellcheck="false"
+                      maxlength="30"
+                    />
+                    <button type="button" id="voucherApply">Apply</button>
+                  </div>
+                  <p
+                    class="voucher-status"
+                    id="voucherStatus"
+                    aria-live="polite"
+                  ></p>
+                </div>
+                <div class="cart-lines" id="cartLines" hidden>
+                  <div>
+                    <span>Subtotal</span><span id="cartSubtotal">₱0</span>
+                  </div>
+                  <div class="disc">
+                    <span id="cartDiscountLabel">Discount</span
+                    ><span id="cartDiscount">−₱0</span>
+                  </div>
+                </div>
+                <div class="cart-total">
+                  <span>Total</span><strong id="cartTotal">₱0</strong>
+                </div>
+                <ul class="bag-perks">
+                  <li>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      aria-hidden="true"
+                    >
+                      <path
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                        d="M5 9h14v11H5zM8 9V7a4 4 0 0 1 8 0v2"
+                      /></svg
+                    ><span><b>Gift-ready</b> in the signature A&amp;E bag</span>
+                  </li>
+                  <li>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      aria-hidden="true"
+                    >
+                      <rect
+                        x="3"
+                        y="6"
+                        width="18"
+                        height="12"
+                        rx="1.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                      />
+                      <path
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                        d="M3 10h18"
+                      /></svg
+                    ><span><b>Cash on delivery / meetup</b> or GCash</span>
+                  </li>
+                  <li>
+                    <svg
+                      viewBox="0 0 24 24"
+                      width="18"
+                      height="18"
+                      aria-hidden="true"
+                    >
+                      <circle
+                        cx="12"
+                        cy="10"
+                        r="3"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                      />
+                      <path
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.4"
+                        d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"
+                      /></svg
+                    ><span
+                      >An Order ID to
+                      <a href="#tracking" data-bag-close>track your order</a>
+                      anytime</span
+                    >
+                  </li>
+                </ul>
+              </aside>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div class="confirmation-modal" id="confirmationModal" aria-hidden="true">
+        <div
+          class="confirmation-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirmationTitle"
+        >
+          <div class="confirmation-check">✓</div>
+          <h3 id="confirmationTitle">Thank you</h3>
+          <p id="confirmationMessage">
+            Thank you. Your order has been received and saved.
+          </p>
+          <div class="confirmation-order-id" id="confirmationOrderId"></div>
+          <button
+            type="button"
+            class="copy-chip"
+            data-copy-target="confirmationOrderId"
+          >
+            Copy Order ID
+          </button>
+          <div class="pay-steps" id="payInstructions"></div>
+          <details class="conf-details">
+            <summary>Order details</summary>
+            <div id="summaryEmpty" class="summary-empty" hidden></div>
+            <div id="summaryLines" class="summary-lines"></div>
+            <div class="summary-actions" id="summaryActions">
+              <button type="button" class="ghost-btn" id="copyBtn">
+                Copy Order Summary
+              </button>
+            </div>
+          </details>
+          <div class="confirmation-actions">
+            <button type="button" class="btn-primary" id="confirmationTrackBtn">
+              Track Order
+            </button>
+            <button type="button" class="ghost-btn" id="confirmationCloseBtn">
+              Continue browsing
+            </button>
+          </div>
         </div>
       </div>
-    </div>
 
+      <div class="fragrance-modal" id="fragranceModal" aria-hidden="true">
+        <div
+          class="fragrance-dialog fd"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="fragranceModalTitle"
+        >
+          <div class="fd-topbar">
+            <div class="fd-navs">
+              <button
+                type="button"
+                class="fd-nav"
+                id="fdPrev"
+                aria-label="Previous perfume"
+              >
+                ‹
+              </button>
+              <span class="fd-pos" id="fdPos"></span>
+              <button
+                type="button"
+                class="fd-nav"
+                id="fdNext"
+                aria-label="Next perfume"
+              >
+                ›
+              </button>
+            </div>
+            <div class="fd-tools">
+              <button type="button" class="fd-share" id="fdShare">Share</button>
+              <button
+                type="button"
+                class="fragrance-close"
+                id="fragranceClose"
+                aria-label="Close"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
 
+          <div class="fd-body" id="fdBody">
+            <div class="fd-hero">
+              <div class="fd-photo" id="fdPhoto"></div>
+              <div class="fd-info">
+                <p class="fd-cat" id="fragranceModalCategory"></p>
+                <h3 id="fragranceModalTitle">Fragrance Details</h3>
+                <a class="fd-rating" id="fdRating" href="#fdReviews"></a>
+                <div class="fd-price-row">
+                  <span class="fd-price" id="fdPrice"></span
+                  ><span class="fd-stock" id="fdStock"></span>
+                </div>
+                <div class="fd-sizes" id="fdSizes" hidden></div>
+                <p class="fd-short" id="fdShort"></p>
+                <div class="fd-actions">
+                  <button type="button" class="fd-add" id="fdAdd">
+                    Add to bag
+                  </button>
+                  <button
+                    type="button"
+                    class="fragrance-fav"
+                    id="fragranceFav"
+                    aria-pressed="false"
+                  >
+                    ♡ Save
+                  </button>
+                </div>
+                <p class="fd-promo" id="fdPromo" hidden></p>
+              </div>
+            </div>
+
+            <section class="fd-sec">
+              <h4>At a glance</h4>
+              <div class="fd-glance" id="fdGlance"></div>
+            </section>
+
+            <section class="fd-sec">
+              <h4>How it smells over time</h4>
+              <ol class="fd-timeline">
+                <li>
+                  <span class="fd-when"
+                    >Opening<small>first 15–30 min</small></span
+                  ><span class="fd-notes"
+                    ><b>Top notes</b><strong id="fragranceTopNotes"></strong
+                  ></span>
+                </li>
+                <li>
+                  <span class="fd-when">Heart<small>30 min – 3 hrs</small></span
+                  ><span class="fd-notes"
+                    ><b>Heart notes</b><strong id="fragranceHeartNotes"></strong
+                  ></span>
+                </li>
+                <li>
+                  <span class="fd-when"
+                    >Dry-down<small>3 hrs onward</small></span
+                  ><span class="fd-notes"
+                    ><b>Base notes</b><strong id="fragranceBaseNotes"></strong
+                  ></span>
+                </li>
+              </ol>
+            </section>
+
+            <section class="fd-sec">
+              <h4>About this scent</h4>
+              <p
+                class="fragrance-description fd-clamp"
+                id="fragranceModalDescription"
+              ></p>
+              <button type="button" class="fd-more" id="fdMore" hidden>
+                Read more
+              </button>
+              <details class="fd-apply" id="fdApply">
+                <summary>How to apply</summary>
+                <p id="fragranceApplication"></p>
+              </details>
+            </section>
+
+            <section class="fd-sec" id="fdReviews">
+              <h4>Reviews</h4>
+              <div class="fd-reviews" id="fdReviewList"></div>
+            </section>
+
+            <section class="fd-sec">
+              <h4>You may also like</h4>
+              <div class="fd-similar" id="fdSimilar"></div>
+            </section>
+
+            <p class="fragrance-note-disclaimer">
+              Note: This fragrance profile is provided as a guide to the scent
+              inspiration. Aura &amp; Essence is not affiliated with or endorsed
+              by the original fragrance brands, and the actual blend may vary.
+            </p>
+          </div>
+
+          <div class="fd-buybar" id="fdBuybar" aria-hidden="true">
+            <span
+              class="fd-bar-thumb"
+              id="fdBarThumb"
+              aria-hidden="true"
+            ></span>
+            <span class="fd-bar-info"
+              ><b id="fdBarName"></b
+              ><small
+                ><em id="fdBarPrice"></em> ·
+                <span id="fdBarStock"></span></small
+            ></span>
+            <button
+              type="button"
+              class="fd-bar-fav"
+              id="fdBarFav"
+              aria-pressed="false"
+              aria-label="Save to favorites"
+            >
+              ♡
+            </button>
+            <button type="button" class="fd-add" id="fdBarAdd" tabindex="-1">
+              Add to bag
+            </button>
+          </div>
+        </div>
+      </div>
     </main>
 
     <footer>
-      <div class="mark" role="img" aria-label="Aura &amp; Essence"><svg class="mark-logo" aria-hidden="true" focusable="false" viewBox="4 38 419 320"><path fill="currentColor" fill-rule="evenodd" d="M210.2 354.5 C207.7 354.4 204.3 354.3 202.8 354.3 C200.6 354.3 200 354.2 200.1 353.9 C200.1 353.7 201.1 353.6 203 353.4 C204.6 353.3 206.7 353 207.6 352.7 C208.6 352.5 209.8 352.3 210.3 352.3 C210.7 352.3 211.8 352 212.6 351.8 C213.4 351.5 215.2 351 216.5 350.6 C220 349.6 224 347.4 226.5 345.1 C230.1 341.7 233.5 336.3 235.1 331.5 C236.2 328 237 325.1 237 324.5 C237 324.2 237.2 323.1 237.5 322.1 C237.8 321.2 238.1 319.4 238.2 318.2 C238.4 317.1 238.6 315.2 238.8 314.1 C239.1 311.7 239.3 307.6 239.3 305.6 C239.3 304.7 239.4 303.5 239.5 302.8 C239.7 302.2 239.8 299.4 239.9 296.6 L240.1 291.5 L238.4 288.2 C237.5 286.4 236.6 284.7 236.4 284.5 C236.2 284.3 235.7 283.5 235.4 282.8 C235 282 234.3 280.8 233.9 280 C231.9 276.6 229 271.4 227.9 269.4 C227.3 268.1 225.8 265.3 224.6 263.1 C223.4 260.9 221.9 258.1 221.2 256.9 C220.5 255.6 218.9 252.7 217.7 250.4 C216.5 248 215 245.4 214.5 244.5 C214 243.6 213.5 242.7 213.5 242.4 C213.3 241.4 214.3 241.7 215.9 242.9 C216.7 243.5 218.1 244.4 219 244.9 C219.9 245.4 221 246.1 221.4 246.4 C222.5 247.2 231.5 251.6 234 252.5 C238 254 240.1 254.8 241.8 255.2 C242.6 255.5 244 255.9 244.8 256.1 C252.7 258.6 257.3 259.4 264 259.6 C270.7 259.9 273.5 260.1 273.9 260.6 C274.5 261.1 274.5 260.4 274.6 301.8 C274.7 330.8 274.7 333.7 275.1 335 C275.3 335.8 275.6 336.9 275.7 337.6 C276.2 340.3 277.8 343.2 279.9 345.5 C281.3 347 285.4 349.1 287.9 349.5 C288.4 349.6 289.7 349.9 290.6 350.1 C292.1 350.4 295 350.5 310.5 350.5 C322.5 350.5 329.4 350.4 330.9 350.2 C332.1 350.1 333.8 349.9 334.6 349.8 C335.4 349.6 337.2 349.4 338.4 349.3 C339.7 349.1 341.2 348.8 341.8 348.6 C342.4 348.4 343.1 348.2 343.4 348.2 C343.7 348.2 344.9 348 346 347.7 C352.8 346.1 356.5 345 360.3 343.3 C361.4 342.7 362.9 342.2 363.4 342 C366.4 341.2 378.1 334.5 382.2 331.2 C382.8 330.7 383.7 330.1 384.2 329.7 C387.1 327.6 390.6 324.5 397.3 318.2 C400.7 315 403.4 312.1 406.5 308.2 C407.1 307.5 408.2 306.1 409 305.2 C409.8 304.4 410.9 302.8 411.6 301.9 C412.2 300.9 413.2 299.6 413.6 298.9 C414.1 298.2 414.9 297 415.5 296.2 C416 295.5 416.6 294.5 416.9 294 C417.1 293.5 417.6 292.8 417.9 292.3 C418.6 291.4 419.5 291.2 419.5 291.9 C419.5 292.7 418.5 296.7 417.6 299.8 C416.8 302.7 413.8 313.9 413.2 316.5 C413 317.3 412.7 318.3 412.5 318.8 C412.4 319.2 412.1 320.3 411.9 321.1 C411.7 321.9 411.3 323.4 411 324.4 C410.7 325.3 410.2 327.3 409.9 328.8 C409.5 330.2 409 332.1 408.8 333 C408.5 333.9 408.2 334.9 408.2 335.1 C408.1 335.4 407.6 337.2 407.1 339.1 C406.5 341.1 405.9 343.5 405.6 344.6 C405 347.7 404.3 350.5 403.7 352.3 C403.3 353.7 403.1 354.1 402.4 354.4 C401.7 354.8 398.3 354.8 364.4 354.6 C316.1 354.4 300.2 354.4 253.5 354.5 C232.3 354.6 212.8 354.6 210.2 354.5 Z M8.7 290.2 C8.6 290.2 8.6 290 8.7 289.8 C9 289.3 10 289 11.2 289 C11.9 289 12.9 288.8 13.4 288.6 C14 288.4 14.8 288.2 15.4 288.1 C16.8 287.9 19.5 286.9 22.1 285.8 C26.9 283.7 30.4 281.3 33.5 278.1 C35.4 276 36.6 274.6 41 268.6 C42.4 266.8 43.4 265.3 44.2 264 C44.5 263.4 45.2 262.3 45.7 261.6 C46.9 259.6 49.5 255 51.4 251.2 C52.3 249.4 53.1 247.8 53.3 247.6 C53.4 247.5 54.2 245.9 55.2 244 C56.2 242.1 57.1 240.3 57.3 239.9 C57.6 239.5 58.2 238.1 58.8 236.9 C59.3 235.6 60 234.3 60.2 233.9 C61.7 231.1 66.1 222.1 66.6 220.8 C68.4 216.1 71.3 212 73.7 210.5 C74.5 209.9 75.2 210 75.2 210.6 C75.2 211 74.1 213.8 73.2 215.5 C72.8 216.3 72.3 217.5 72 218.2 C71.8 218.8 70.9 220.8 70.1 222.5 C67.3 228.3 66.5 230.1 65.8 232 C65.5 233 65 234.3 64.7 234.7 C64.5 235.2 64.2 235.9 64.2 236.1 C64.2 236.6 63.4 238.9 61.6 243.6 C60.7 246 60.6 246.5 60.1 248.5 C59.1 253.4 58.6 264.7 59.4 267.5 C59.6 268.3 59.8 269.4 59.8 269.9 C59.8 274.5 65.7 283 70.5 285.5 C72.9 286.7 81 289.2 82.4 289.3 C83.3 289.3 84.2 289.5 84.2 289.8 C84.2 289.9 83.7 290 82.9 290.1 C81.4 290.3 9 290.4 8.7 290.2 Z M269.2 251.7 C268.8 251.6 267.3 251.5 266 251.4 C262 251.1 260 250.8 253.8 249.5 C252.4 249.2 250.6 248.7 249.7 248.5 C248.8 248.2 247.9 248 247.7 248 C247.5 248 246.8 247.8 246.1 247.5 C245.4 247.3 243.4 246.5 241.5 245.9 C234.4 243.4 221.8 237.2 214 232.2 C211.2 230.4 207.9 228.5 205.8 227.2 C204.7 226.6 201.5 224.6 198.7 222.8 C189.7 216.9 187.2 215.4 182.3 212.5 C176.3 209.1 170.8 206.1 167 204.3 C163.6 202.7 155.5 199.5 153.5 198.9 C152.7 198.7 151.3 198.3 150.4 198 C149.4 197.7 147.3 197.1 145.8 196.7 C144.2 196.3 142.3 195.8 141.6 195.6 C140.8 195.4 139.3 195.1 138.1 195 C137 194.9 135.6 194.7 135.1 194.5 C133.2 194 124.3 193.5 119.9 193.6 C115.1 193.8 109.3 194.3 108 194.7 C107.5 194.9 106.7 195 106.3 195 C105.8 195 104.6 195.2 103.5 195.5 C102.5 195.8 100.5 196.3 99.1 196.6 C91 198.7 79 203.5 74.5 206.5 C73.8 207 72.5 207.7 71.8 208.1 C71.1 208.5 69.3 209.5 67.8 210.5 C66.3 211.4 64.6 212.5 63.9 212.9 C62.2 213.9 59.7 215.7 55.1 219.2 C54.4 219.7 53.2 220.6 52.4 221.1 C51.7 221.6 49.7 223.2 48.1 224.7 C46.5 226.3 45.2 227.5 45.1 227.5 C44.5 227.5 45.8 225.9 50.6 221 C54.7 216.7 56.8 214.8 58.8 213.4 C60.2 212.3 61.8 211.1 62.2 210.6 C63.4 209.5 67 206.8 70 204.9 C77.5 200 80 198.5 81 198 C81.6 197.8 82.6 197.2 83.1 196.8 C83.6 196.4 84.6 195.8 85.2 195.6 C85.9 195.4 86.6 195.1 86.8 194.8 C87.1 194.4 90.3 192.8 90.8 192.8 C90.9 192.8 92.3 192.2 93.8 191.5 C101.5 188.2 103.1 187.6 107.1 186.3 C110.3 185.3 112 184.8 113.2 184.6 C113.9 184.5 114.7 184.3 115 184.1 C115.6 183.8 117.9 183.4 122.4 182.7 C123.3 182.6 124.9 182.3 125.8 182.1 C129.7 181.3 145.9 181.1 150.5 181.9 C151.7 182.1 153.6 182.4 154.9 182.6 C158.8 183.2 162.8 184 163.9 184.4 C164.4 184.6 165.1 184.7 165.5 184.7 C165.8 184.7 166.7 185 167.6 185.3 C174.4 187.5 176.2 188.1 178.1 188.8 C180.5 189.8 182.2 190.5 183.9 191.3 C184.5 191.5 185.1 191.8 185.2 191.8 C185.4 191.8 186.3 192.1 187.2 192.6 C188.1 193.1 191 194.5 193.5 195.8 C196 197 198.5 198.3 199 198.7 C199.4 199 200.4 199.5 201.1 199.8 C201.8 200.1 202.8 200.6 203.3 201 C203.9 201.4 205.1 202 205.9 202.5 C206.7 203 207.9 203.7 208.5 204.2 C209.2 204.6 210.2 205.2 210.9 205.5 C211.6 205.8 212.6 206.4 213.1 206.9 C213.7 207.3 214.9 208.1 215.9 208.6 C216.9 209.1 217.8 209.6 217.9 209.7 C218 209.9 218.7 210.4 219.5 210.8 C220.3 211.2 221.7 212 222.6 212.6 C223.5 213.2 224.9 214 225.6 214.5 C226.4 215 227.6 215.8 228.3 216.2 C229.9 217.2 233.1 219.1 234.9 219.9 C235.5 220.3 236.7 220.9 237.4 221.4 C238.8 222.3 248.9 227.8 249.2 227.8 C249.3 227.8 251.2 228.7 253.4 229.8 C255.6 230.8 257.5 231.8 257.7 231.8 C258 231.8 259.2 232.3 260.5 232.9 C261.8 233.5 263.1 234 263.3 234 C263.6 234 264.2 234.2 264.8 234.5 C265.3 234.8 265.9 235 266.2 235 C266.7 235 268.1 235.4 271.3 236.4 C272.3 236.7 273.5 237 273.8 237 C274.2 237 274.9 237.2 275.4 237.4 C275.9 237.6 277.1 237.8 278.1 237.9 C279.1 237.9 280.4 238.1 281 238.4 C281.5 238.6 283.2 238.8 284.7 238.9 C286.2 239 287.9 239.2 288.5 239.4 C289.8 239.8 300 239.7 301.8 239.3 C302.4 239.2 304.2 239 305.8 238.9 C307.6 238.8 309.1 238.5 309.8 238.2 C310.5 238 311.5 237.7 312.1 237.7 C312.7 237.7 313.7 237.5 314.4 237.2 C315.2 237 316 236.8 316.3 236.8 C316.9 236.8 317.2 236.7 321.5 235.3 C324 234.5 329.7 231.9 332.3 230.4 C337.2 227.7 342.5 223.5 348.4 217.9 C349.6 216.8 350.5 216 350.5 216.1 C350.5 216.4 348 220 346.6 221.8 C343 226.3 335.6 232.7 329.6 236.5 C321.1 242 311.3 246.3 301.8 248.7 C300.6 249 299.1 249.4 298.4 249.6 C297.7 249.8 296.2 250.1 295.1 250.2 C294 250.4 292.8 250.6 292.5 250.7 C292.1 250.8 290.3 251 288.5 251.1 C286.6 251.2 284.5 251.5 283.7 251.6 C282.1 252 270.8 252.1 269.2 251.7 Z M271.8 227.7 C271.5 227.6 270.9 227.4 270.4 227.2 C268.9 226.8 264.6 225.1 262.8 224.1 C261.9 223.6 259.3 222.4 257 221.4 C254.7 220.4 251.5 218.8 249.9 218 C248.2 217.1 244.9 215.4 242.5 214.2 C240.1 213 237.2 211.5 236 210.7 C234.8 210 233 209 231.9 208.4 C230.8 207.9 228.2 206.5 226.2 205.3 C219.6 201.2 213.7 197.8 209.8 195.7 C207.6 194.6 204.4 192.8 202.5 191.8 C200.6 190.8 196.6 188.7 193.6 187.2 L188 184.5 L186.8 182.3 C186.1 181.1 185.3 179.6 185.1 179 C184.9 178.5 184.5 177.6 184.1 177.2 C183.8 176.7 182.3 173.9 180.9 170.9 C179.4 167.9 177.6 164.1 176.7 162.5 C174.8 159.1 172.7 154.7 171.8 152.6 C171.5 151.8 170.8 150.5 170.4 149.8 C169.3 148 165 139.6 164.3 137.8 C163.8 136.5 148.6 105.8 145.6 99.9 C145 98.6 143.4 95.5 142.1 92.9 C140.8 90.3 139.5 87.9 139.3 87.7 C138.4 86.7 137 87.6 136.3 89.6 C136 90.4 135.5 91.4 135.1 91.9 C134.8 92.5 134.4 93.3 134.2 93.8 C134.1 94.2 133.6 95.1 133.3 95.6 C132.9 96.2 132 97.9 131.3 99.5 C129.5 103.4 125.5 111.3 123.8 114.4 C123.1 115.8 122.3 117.4 122 118 C121.8 118.6 120.6 121 119.3 123.4 C118.1 125.7 116.5 129 115.7 130.6 C113 136.1 108.6 144.8 105.8 150.4 C98.4 164.7 94.9 171.4 94.5 172.2 C92.7 176.3 87.8 185.5 87.2 186.2 C86.3 187.1 83.5 188.7 82.5 188.9 C81.6 189.1 81.4 188.7 81.8 187.6 C82.1 186.5 87.5 175.3 88.9 172.6 C89.4 171.7 90 170.5 90.2 170 C90.5 169.6 91.2 168.2 91.8 166.9 C93.1 164.5 95.5 159.7 99.9 150.5 C101.4 147.5 103.2 143.9 104 142.4 C107.6 135.3 110.1 130.4 115.6 119.3 C129.8 91.1 137.3 76.4 137.5 76.1 C137.8 75.7 140 71.5 146.9 57.8 C152.1 47.4 153.7 44.4 154.5 43.7 C155 43.2 155.7 42.8 156 42.8 C157.1 42.8 156.3 41.2 176.4 81 C180.5 89 185.3 98.4 187.1 101.9 C188.9 105.3 193.4 114.2 197.1 121.6 C203.5 134.2 207.2 141.5 210.4 147.6 C211.1 149 212.9 152.7 214.3 155.8 C215.8 158.8 217.3 161.9 217.6 162.5 C218.9 164.9 226.8 181 227.4 182.4 C227.6 182.9 228 183.6 228.3 183.9 C228.5 184.2 229.1 185.3 229.6 186.5 C230.3 188.3 235 198 237 201.9 C239.5 206.6 239.8 207 240.7 206.1 C241.1 205.8 241.1 204.4 241.1 191.3 C241.1 182.9 240.9 176.1 240.8 175 C240.6 174 240.4 171.1 240.3 168.6 C240 164.4 239.7 162.3 238.6 158.2 C236.6 150.6 235.4 148.4 231.2 144.3 C229.6 142.8 228.6 142.1 226.7 141.2 C224.4 140 222 139.2 219.7 138.6 C219 138.5 218.5 138.3 218.5 138.1 C218.5 138 219.5 137.8 220.7 137.7 C221.9 137.6 243.3 137.5 268.2 137.5 C293.2 137.5 330.2 137.5 350.5 137.5 C374.4 137.5 387.7 137.6 388.1 137.7 C388.9 138 389.1 138.6 389.3 140.9 C389.4 141.8 389.7 143.6 389.9 144.8 C390.3 147.2 390.6 150 391.1 153.9 C391.6 157.8 392.2 161.9 392.8 165.1 C393.2 167.7 393.4 169.2 394 173.4 C394.2 174.3 394.4 175.7 394.5 176.5 C394.7 177.3 394.9 179.2 395.1 180.8 C395.3 182.3 395.6 183.9 395.7 184.3 C395.9 184.7 396 185.9 396 186.9 C396 188.4 395.9 188.8 395.6 188.9 C395 189.1 394 187.9 393.4 186.3 C392.5 183.6 391.7 181.6 391.2 181 C391 180.6 390.4 179.6 390.1 178.8 C389.7 178 389 176.7 388.4 175.9 C387.8 175.1 387 173.8 386.6 173.1 C384.3 169.1 376.9 160.9 372.5 157.5 C369.6 155.3 362.3 150.9 359.5 149.7 C355.9 148 353.2 147.1 349.2 146 C345 144.8 343.7 144.5 339.3 143.4 C338.4 143.2 336.4 142.8 334.8 142.6 C333.2 142.4 331.2 142.1 330.4 142 C328.4 141.6 277.4 141.6 275.9 142 C275.4 142.2 274.9 142.5 274.7 142.8 C274.6 143.1 274.5 155.9 274.4 185.2 C274.4 220.4 274.3 227.2 274 227.6 C273.7 228 272.3 228.1 271.8 227.7 Z"/></svg></div>
+      <div class="mark" role="img" aria-label="Aura &amp; Essence">
+        <svg
+          class="mark-logo"
+          aria-hidden="true"
+          focusable="false"
+          viewBox="4 38 419 320"
+        >
+          <path
+            fill="currentColor"
+            fill-rule="evenodd"
+            d="M210.2 354.5 C207.7 354.4 204.3 354.3 202.8 354.3 C200.6 354.3 200 354.2 200.1 353.9 C200.1 353.7 201.1 353.6 203 353.4 C204.6 353.3 206.7 353 207.6 352.7 C208.6 352.5 209.8 352.3 210.3 352.3 C210.7 352.3 211.8 352 212.6 351.8 C213.4 351.5 215.2 351 216.5 350.6 C220 349.6 224 347.4 226.5 345.1 C230.1 341.7 233.5 336.3 235.1 331.5 C236.2 328 237 325.1 237 324.5 C237 324.2 237.2 323.1 237.5 322.1 C237.8 321.2 238.1 319.4 238.2 318.2 C238.4 317.1 238.6 315.2 238.8 314.1 C239.1 311.7 239.3 307.6 239.3 305.6 C239.3 304.7 239.4 303.5 239.5 302.8 C239.7 302.2 239.8 299.4 239.9 296.6 L240.1 291.5 L238.4 288.2 C237.5 286.4 236.6 284.7 236.4 284.5 C236.2 284.3 235.7 283.5 235.4 282.8 C235 282 234.3 280.8 233.9 280 C231.9 276.6 229 271.4 227.9 269.4 C227.3 268.1 225.8 265.3 224.6 263.1 C223.4 260.9 221.9 258.1 221.2 256.9 C220.5 255.6 218.9 252.7 217.7 250.4 C216.5 248 215 245.4 214.5 244.5 C214 243.6 213.5 242.7 213.5 242.4 C213.3 241.4 214.3 241.7 215.9 242.9 C216.7 243.5 218.1 244.4 219 244.9 C219.9 245.4 221 246.1 221.4 246.4 C222.5 247.2 231.5 251.6 234 252.5 C238 254 240.1 254.8 241.8 255.2 C242.6 255.5 244 255.9 244.8 256.1 C252.7 258.6 257.3 259.4 264 259.6 C270.7 259.9 273.5 260.1 273.9 260.6 C274.5 261.1 274.5 260.4 274.6 301.8 C274.7 330.8 274.7 333.7 275.1 335 C275.3 335.8 275.6 336.9 275.7 337.6 C276.2 340.3 277.8 343.2 279.9 345.5 C281.3 347 285.4 349.1 287.9 349.5 C288.4 349.6 289.7 349.9 290.6 350.1 C292.1 350.4 295 350.5 310.5 350.5 C322.5 350.5 329.4 350.4 330.9 350.2 C332.1 350.1 333.8 349.9 334.6 349.8 C335.4 349.6 337.2 349.4 338.4 349.3 C339.7 349.1 341.2 348.8 341.8 348.6 C342.4 348.4 343.1 348.2 343.4 348.2 C343.7 348.2 344.9 348 346 347.7 C352.8 346.1 356.5 345 360.3 343.3 C361.4 342.7 362.9 342.2 363.4 342 C366.4 341.2 378.1 334.5 382.2 331.2 C382.8 330.7 383.7 330.1 384.2 329.7 C387.1 327.6 390.6 324.5 397.3 318.2 C400.7 315 403.4 312.1 406.5 308.2 C407.1 307.5 408.2 306.1 409 305.2 C409.8 304.4 410.9 302.8 411.6 301.9 C412.2 300.9 413.2 299.6 413.6 298.9 C414.1 298.2 414.9 297 415.5 296.2 C416 295.5 416.6 294.5 416.9 294 C417.1 293.5 417.6 292.8 417.9 292.3 C418.6 291.4 419.5 291.2 419.5 291.9 C419.5 292.7 418.5 296.7 417.6 299.8 C416.8 302.7 413.8 313.9 413.2 316.5 C413 317.3 412.7 318.3 412.5 318.8 C412.4 319.2 412.1 320.3 411.9 321.1 C411.7 321.9 411.3 323.4 411 324.4 C410.7 325.3 410.2 327.3 409.9 328.8 C409.5 330.2 409 332.1 408.8 333 C408.5 333.9 408.2 334.9 408.2 335.1 C408.1 335.4 407.6 337.2 407.1 339.1 C406.5 341.1 405.9 343.5 405.6 344.6 C405 347.7 404.3 350.5 403.7 352.3 C403.3 353.7 403.1 354.1 402.4 354.4 C401.7 354.8 398.3 354.8 364.4 354.6 C316.1 354.4 300.2 354.4 253.5 354.5 C232.3 354.6 212.8 354.6 210.2 354.5 Z M8.7 290.2 C8.6 290.2 8.6 290 8.7 289.8 C9 289.3 10 289 11.2 289 C11.9 289 12.9 288.8 13.4 288.6 C14 288.4 14.8 288.2 15.4 288.1 C16.8 287.9 19.5 286.9 22.1 285.8 C26.9 283.7 30.4 281.3 33.5 278.1 C35.4 276 36.6 274.6 41 268.6 C42.4 266.8 43.4 265.3 44.2 264 C44.5 263.4 45.2 262.3 45.7 261.6 C46.9 259.6 49.5 255 51.4 251.2 C52.3 249.4 53.1 247.8 53.3 247.6 C53.4 247.5 54.2 245.9 55.2 244 C56.2 242.1 57.1 240.3 57.3 239.9 C57.6 239.5 58.2 238.1 58.8 236.9 C59.3 235.6 60 234.3 60.2 233.9 C61.7 231.1 66.1 222.1 66.6 220.8 C68.4 216.1 71.3 212 73.7 210.5 C74.5 209.9 75.2 210 75.2 210.6 C75.2 211 74.1 213.8 73.2 215.5 C72.8 216.3 72.3 217.5 72 218.2 C71.8 218.8 70.9 220.8 70.1 222.5 C67.3 228.3 66.5 230.1 65.8 232 C65.5 233 65 234.3 64.7 234.7 C64.5 235.2 64.2 235.9 64.2 236.1 C64.2 236.6 63.4 238.9 61.6 243.6 C60.7 246 60.6 246.5 60.1 248.5 C59.1 253.4 58.6 264.7 59.4 267.5 C59.6 268.3 59.8 269.4 59.8 269.9 C59.8 274.5 65.7 283 70.5 285.5 C72.9 286.7 81 289.2 82.4 289.3 C83.3 289.3 84.2 289.5 84.2 289.8 C84.2 289.9 83.7 290 82.9 290.1 C81.4 290.3 9 290.4 8.7 290.2 Z M269.2 251.7 C268.8 251.6 267.3 251.5 266 251.4 C262 251.1 260 250.8 253.8 249.5 C252.4 249.2 250.6 248.7 249.7 248.5 C248.8 248.2 247.9 248 247.7 248 C247.5 248 246.8 247.8 246.1 247.5 C245.4 247.3 243.4 246.5 241.5 245.9 C234.4 243.4 221.8 237.2 214 232.2 C211.2 230.4 207.9 228.5 205.8 227.2 C204.7 226.6 201.5 224.6 198.7 222.8 C189.7 216.9 187.2 215.4 182.3 212.5 C176.3 209.1 170.8 206.1 167 204.3 C163.6 202.7 155.5 199.5 153.5 198.9 C152.7 198.7 151.3 198.3 150.4 198 C149.4 197.7 147.3 197.1 145.8 196.7 C144.2 196.3 142.3 195.8 141.6 195.6 C140.8 195.4 139.3 195.1 138.1 195 C137 194.9 135.6 194.7 135.1 194.5 C133.2 194 124.3 193.5 119.9 193.6 C115.1 193.8 109.3 194.3 108 194.7 C107.5 194.9 106.7 195 106.3 195 C105.8 195 104.6 195.2 103.5 195.5 C102.5 195.8 100.5 196.3 99.1 196.6 C91 198.7 79 203.5 74.5 206.5 C73.8 207 72.5 207.7 71.8 208.1 C71.1 208.5 69.3 209.5 67.8 210.5 C66.3 211.4 64.6 212.5 63.9 212.9 C62.2 213.9 59.7 215.7 55.1 219.2 C54.4 219.7 53.2 220.6 52.4 221.1 C51.7 221.6 49.7 223.2 48.1 224.7 C46.5 226.3 45.2 227.5 45.1 227.5 C44.5 227.5 45.8 225.9 50.6 221 C54.7 216.7 56.8 214.8 58.8 213.4 C60.2 212.3 61.8 211.1 62.2 210.6 C63.4 209.5 67 206.8 70 204.9 C77.5 200 80 198.5 81 198 C81.6 197.8 82.6 197.2 83.1 196.8 C83.6 196.4 84.6 195.8 85.2 195.6 C85.9 195.4 86.6 195.1 86.8 194.8 C87.1 194.4 90.3 192.8 90.8 192.8 C90.9 192.8 92.3 192.2 93.8 191.5 C101.5 188.2 103.1 187.6 107.1 186.3 C110.3 185.3 112 184.8 113.2 184.6 C113.9 184.5 114.7 184.3 115 184.1 C115.6 183.8 117.9 183.4 122.4 182.7 C123.3 182.6 124.9 182.3 125.8 182.1 C129.7 181.3 145.9 181.1 150.5 181.9 C151.7 182.1 153.6 182.4 154.9 182.6 C158.8 183.2 162.8 184 163.9 184.4 C164.4 184.6 165.1 184.7 165.5 184.7 C165.8 184.7 166.7 185 167.6 185.3 C174.4 187.5 176.2 188.1 178.1 188.8 C180.5 189.8 182.2 190.5 183.9 191.3 C184.5 191.5 185.1 191.8 185.2 191.8 C185.4 191.8 186.3 192.1 187.2 192.6 C188.1 193.1 191 194.5 193.5 195.8 C196 197 198.5 198.3 199 198.7 C199.4 199 200.4 199.5 201.1 199.8 C201.8 200.1 202.8 200.6 203.3 201 C203.9 201.4 205.1 202 205.9 202.5 C206.7 203 207.9 203.7 208.5 204.2 C209.2 204.6 210.2 205.2 210.9 205.5 C211.6 205.8 212.6 206.4 213.1 206.9 C213.7 207.3 214.9 208.1 215.9 208.6 C216.9 209.1 217.8 209.6 217.9 209.7 C218 209.9 218.7 210.4 219.5 210.8 C220.3 211.2 221.7 212 222.6 212.6 C223.5 213.2 224.9 214 225.6 214.5 C226.4 215 227.6 215.8 228.3 216.2 C229.9 217.2 233.1 219.1 234.9 219.9 C235.5 220.3 236.7 220.9 237.4 221.4 C238.8 222.3 248.9 227.8 249.2 227.8 C249.3 227.8 251.2 228.7 253.4 229.8 C255.6 230.8 257.5 231.8 257.7 231.8 C258 231.8 259.2 232.3 260.5 232.9 C261.8 233.5 263.1 234 263.3 234 C263.6 234 264.2 234.2 264.8 234.5 C265.3 234.8 265.9 235 266.2 235 C266.7 235 268.1 235.4 271.3 236.4 C272.3 236.7 273.5 237 273.8 237 C274.2 237 274.9 237.2 275.4 237.4 C275.9 237.6 277.1 237.8 278.1 237.9 C279.1 237.9 280.4 238.1 281 238.4 C281.5 238.6 283.2 238.8 284.7 238.9 C286.2 239 287.9 239.2 288.5 239.4 C289.8 239.8 300 239.7 301.8 239.3 C302.4 239.2 304.2 239 305.8 238.9 C307.6 238.8 309.1 238.5 309.8 238.2 C310.5 238 311.5 237.7 312.1 237.7 C312.7 237.7 313.7 237.5 314.4 237.2 C315.2 237 316 236.8 316.3 236.8 C316.9 236.8 317.2 236.7 321.5 235.3 C324 234.5 329.7 231.9 332.3 230.4 C337.2 227.7 342.5 223.5 348.4 217.9 C349.6 216.8 350.5 216 350.5 216.1 C350.5 216.4 348 220 346.6 221.8 C343 226.3 335.6 232.7 329.6 236.5 C321.1 242 311.3 246.3 301.8 248.7 C300.6 249 299.1 249.4 298.4 249.6 C297.7 249.8 296.2 250.1 295.1 250.2 C294 250.4 292.8 250.6 292.5 250.7 C292.1 250.8 290.3 251 288.5 251.1 C286.6 251.2 284.5 251.5 283.7 251.6 C282.1 252 270.8 252.1 269.2 251.7 Z M271.8 227.7 C271.5 227.6 270.9 227.4 270.4 227.2 C268.9 226.8 264.6 225.1 262.8 224.1 C261.9 223.6 259.3 222.4 257 221.4 C254.7 220.4 251.5 218.8 249.9 218 C248.2 217.1 244.9 215.4 242.5 214.2 C240.1 213 237.2 211.5 236 210.7 C234.8 210 233 209 231.9 208.4 C230.8 207.9 228.2 206.5 226.2 205.3 C219.6 201.2 213.7 197.8 209.8 195.7 C207.6 194.6 204.4 192.8 202.5 191.8 C200.6 190.8 196.6 188.7 193.6 187.2 L188 184.5 L186.8 182.3 C186.1 181.1 185.3 179.6 185.1 179 C184.9 178.5 184.5 177.6 184.1 177.2 C183.8 176.7 182.3 173.9 180.9 170.9 C179.4 167.9 177.6 164.1 176.7 162.5 C174.8 159.1 172.7 154.7 171.8 152.6 C171.5 151.8 170.8 150.5 170.4 149.8 C169.3 148 165 139.6 164.3 137.8 C163.8 136.5 148.6 105.8 145.6 99.9 C145 98.6 143.4 95.5 142.1 92.9 C140.8 90.3 139.5 87.9 139.3 87.7 C138.4 86.7 137 87.6 136.3 89.6 C136 90.4 135.5 91.4 135.1 91.9 C134.8 92.5 134.4 93.3 134.2 93.8 C134.1 94.2 133.6 95.1 133.3 95.6 C132.9 96.2 132 97.9 131.3 99.5 C129.5 103.4 125.5 111.3 123.8 114.4 C123.1 115.8 122.3 117.4 122 118 C121.8 118.6 120.6 121 119.3 123.4 C118.1 125.7 116.5 129 115.7 130.6 C113 136.1 108.6 144.8 105.8 150.4 C98.4 164.7 94.9 171.4 94.5 172.2 C92.7 176.3 87.8 185.5 87.2 186.2 C86.3 187.1 83.5 188.7 82.5 188.9 C81.6 189.1 81.4 188.7 81.8 187.6 C82.1 186.5 87.5 175.3 88.9 172.6 C89.4 171.7 90 170.5 90.2 170 C90.5 169.6 91.2 168.2 91.8 166.9 C93.1 164.5 95.5 159.7 99.9 150.5 C101.4 147.5 103.2 143.9 104 142.4 C107.6 135.3 110.1 130.4 115.6 119.3 C129.8 91.1 137.3 76.4 137.5 76.1 C137.8 75.7 140 71.5 146.9 57.8 C152.1 47.4 153.7 44.4 154.5 43.7 C155 43.2 155.7 42.8 156 42.8 C157.1 42.8 156.3 41.2 176.4 81 C180.5 89 185.3 98.4 187.1 101.9 C188.9 105.3 193.4 114.2 197.1 121.6 C203.5 134.2 207.2 141.5 210.4 147.6 C211.1 149 212.9 152.7 214.3 155.8 C215.8 158.8 217.3 161.9 217.6 162.5 C218.9 164.9 226.8 181 227.4 182.4 C227.6 182.9 228 183.6 228.3 183.9 C228.5 184.2 229.1 185.3 229.6 186.5 C230.3 188.3 235 198 237 201.9 C239.5 206.6 239.8 207 240.7 206.1 C241.1 205.8 241.1 204.4 241.1 191.3 C241.1 182.9 240.9 176.1 240.8 175 C240.6 174 240.4 171.1 240.3 168.6 C240 164.4 239.7 162.3 238.6 158.2 C236.6 150.6 235.4 148.4 231.2 144.3 C229.6 142.8 228.6 142.1 226.7 141.2 C224.4 140 222 139.2 219.7 138.6 C219 138.5 218.5 138.3 218.5 138.1 C218.5 138 219.5 137.8 220.7 137.7 C221.9 137.6 243.3 137.5 268.2 137.5 C293.2 137.5 330.2 137.5 350.5 137.5 C374.4 137.5 387.7 137.6 388.1 137.7 C388.9 138 389.1 138.6 389.3 140.9 C389.4 141.8 389.7 143.6 389.9 144.8 C390.3 147.2 390.6 150 391.1 153.9 C391.6 157.8 392.2 161.9 392.8 165.1 C393.2 167.7 393.4 169.2 394 173.4 C394.2 174.3 394.4 175.7 394.5 176.5 C394.7 177.3 394.9 179.2 395.1 180.8 C395.3 182.3 395.6 183.9 395.7 184.3 C395.9 184.7 396 185.9 396 186.9 C396 188.4 395.9 188.8 395.6 188.9 C395 189.1 394 187.9 393.4 186.3 C392.5 183.6 391.7 181.6 391.2 181 C391 180.6 390.4 179.6 390.1 178.8 C389.7 178 389 176.7 388.4 175.9 C387.8 175.1 387 173.8 386.6 173.1 C384.3 169.1 376.9 160.9 372.5 157.5 C369.6 155.3 362.3 150.9 359.5 149.7 C355.9 148 353.2 147.1 349.2 146 C345 144.8 343.7 144.5 339.3 143.4 C338.4 143.2 336.4 142.8 334.8 142.6 C333.2 142.4 331.2 142.1 330.4 142 C328.4 141.6 277.4 141.6 275.9 142 C275.4 142.2 274.9 142.5 274.7 142.8 C274.6 143.1 274.5 155.9 274.4 185.2 C274.4 220.4 274.3 227.2 274 227.6 C273.7 228 272.3 228.1 271.8 227.7 Z"
+          />
+        </svg>
+      </div>
       <p class="foot-tag">Aura &amp; Essence &middot; Extrait de Parfum</p>
       <nav class="foot-links" aria-label="Footer">
         <a href="#collection">Collection</a>
@@ -917,60 +1676,116 @@
         <a href="#faq">FAQ</a>
         <a href="#welcome" id="welcomeFootLink" hidden>First-order gift</a>
       </nav>
-      <p class="foot-note">Inspired by iconic fragrances. Not affiliated with the original brands.</p>
+      <p class="foot-note">
+        Inspired by iconic fragrances. Not affiliated with the original brands.
+      </p>
     </footer>
 
     <div class="welcome-modal" id="welcomeModal" aria-hidden="true" hidden>
       <div class="welcome-backdrop" data-welcome-close></div>
-      <div class="welcome-dialog" role="dialog" aria-modal="true" aria-labelledby="welcomeTitle">
-        <button type="button" class="welcome-x" data-welcome-close aria-label="Close">&times;</button>
+      <div
+        class="welcome-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="welcomeTitle"
+      >
+        <button
+          type="button"
+          class="welcome-x"
+          data-welcome-close
+          aria-label="Close"
+        >
+          &times;
+        </button>
         <div class="welcome-mark" aria-hidden="true"></div>
         <p class="welcome-eyebrow">Welcome to the House</p>
         <h3 id="welcomeTitle">A gift for your first order</h3>
         <div id="welcomeStepForm">
-          <p class="welcome-copy">Leave your mobile number or email and we'll give you a code to use on your first bottle.</p>
+          <p class="welcome-copy">
+            Leave your mobile number or email and we'll give you a code to use
+            on your first bottle.
+          </p>
           <form id="welcomeForm" novalidate>
-            <input id="welcomeContact" class="collection-search" autocomplete="tel" inputmode="email" placeholder="09XX XXX XXXX or you@email.com" aria-label="Mobile number or email" maxlength="120">
-            <button type="submit" class="btn-primary" id="welcomeSubmit">Get my code</button>
+            <input
+              id="welcomeContact"
+              class="collection-search"
+              autocomplete="tel"
+              inputmode="email"
+              placeholder="09XX XXX XXXX or you@email.com"
+              aria-label="Mobile number or email"
+              maxlength="120"
+            />
+            <button type="submit" class="btn-primary" id="welcomeSubmit">
+              Get my code
+            </button>
           </form>
           <p class="welcome-error" id="welcomeError" role="alert"></p>
-          <p class="welcome-fine">We'll only message you about new scents and offers. No spam.</p>
+          <p class="welcome-fine">
+            We'll only message you about new scents and offers. No spam.
+          </p>
         </div>
         <div id="welcomeStepDone" hidden>
           <p class="welcome-copy" id="welcomeDoneText"></p>
           <div class="welcome-code" id="welcomeCodeBox">
             <span id="welcomeCode"></span>
-            <button type="button" class="ghost-btn" id="welcomeCopy">Copy</button>
+            <button type="button" class="ghost-btn" id="welcomeCopy">
+              Copy
+            </button>
           </div>
-          <button type="button" class="btn-primary" id="welcomeShop">Start shopping</button>
+          <button type="button" class="btn-primary" id="welcomeShop">
+            Start shopping
+          </button>
         </div>
       </div>
     </div>
 
     <div class="fav-drawer" id="favDrawer" aria-hidden="true">
       <div class="fav-backdrop" data-fav-close></div>
-      <aside class="fav-panel" role="dialog" aria-modal="true" aria-labelledby="favTitle">
+      <aside
+        class="fav-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="favTitle"
+      >
         <div class="fav-head">
           <div>
             <p class="fav-eyebrow" id="favEyebrow">Your list</p>
             <h3 id="favTitle">Favorites</h3>
           </div>
-          <button type="button" class="fav-close" data-fav-close aria-label="Close favorites">&times;</button>
+          <button
+            type="button"
+            class="fav-close"
+            data-fav-close
+            aria-label="Close favorites"
+          >
+            &times;
+          </button>
         </div>
         <div class="fav-shared" id="favShared" hidden>
           <p>Someone shared this list with you.</p>
-          <div><button type="button" id="favSaveShared">♡ Save to my favorites</button><button type="button" id="favShowMine">Show my list</button></div>
+          <div>
+            <button type="button" id="favSaveShared">
+              ♡ Save to my favorites</button
+            ><button type="button" id="favShowMine">Show my list</button>
+          </div>
         </div>
         <div class="fav-list" id="favList"></div>
         <div class="fav-empty" id="favEmpty">
           <div class="fav-empty-icon">♡</div>
           <p>No favorites yet.</p>
-          <small>Tap ♡ on any fragrance to keep it here — for comparing, or for sharing your wishlist.</small>
+          <small
+            >Tap ♡ on any fragrance to keep it here — for comparing, or for
+            sharing your wishlist.</small
+          >
           <a href="#collection" data-fav-close>Browse the collection</a>
         </div>
         <div class="fav-foot" id="favFoot" hidden>
-          <button type="button" class="fav-share" id="favShare">Share list</button>
-          <button type="button" class="fav-addall" id="favAddAll">Add all to bag</button>
+          <button type="button" class="fav-share" id="favShare">
+            Share list
+          </button>
+          <button type="button" class="fav-addall" id="favAddAll">
+            Add all to bag
+          </button>
         </div>
       </aside>
     </div>
@@ -983,10 +1798,63 @@
     </div>
 
     <nav class="bottom-bar" aria-label="Quick links">
-      <a href="#collection"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 3 4 12l8 9 8-9-8-9Z"/></svg>Shop</a>
-      <a href="#scentFinder"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3Z"/></svg>Find Scent</a>
-      <a href="#tracking"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path fill="none" stroke="currentColor" stroke-width="1.4" d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"/></svg>Track</a>
-      <a href="#order" class="bottom-cart"><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round" d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"/><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M9 10V7a3 3 0 0 1 6 0v3"/></svg>Bag<b id="bottomCartCount" hidden>0</b></a>
+      <a href="#collection"
+        ><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            d="M12 3 4 12l8 9 8-9-8-9Z"
+          /></svg
+        >Shop</a
+      >
+      <a href="#scentFinder"
+        ><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linejoin="round"
+            d="M12 3l1.9 5.6L19.5 10l-5.6 1.9L12 17.5l-1.9-5.6L4.5 10l5.6-1.4L12 3Z"
+          /></svg
+        >Find Scent</a
+      >
+      <a href="#tracking"
+        ><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+          <circle
+            cx="12"
+            cy="10"
+            r="3"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+          />
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11Z"
+          /></svg
+        >Track</a
+      >
+      <a href="#order" class="bottom-cart"
+        ><svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linejoin="round"
+            d="M5 8h14l-1.2 11.2a2 2 0 0 1-2 1.8H8.2a2 2 0 0 1-2-1.8L5 8Z"
+          />
+          <path
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.4"
+            stroke-linecap="round"
+            d="M9 10V7a3 3 0 0 1 6 0v3"
+          /></svg
+        >Bag<b id="bottomCartCount" hidden>0</b></a
+      >
     </nav>
 
     <script type="module" src="assets/js/app.js"></script>
