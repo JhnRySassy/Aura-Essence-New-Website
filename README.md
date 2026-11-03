@@ -236,6 +236,17 @@ The bell is built from what needs attention right now: new orders, sold-out and 
 - Most urgent first: new orders, sold out, unpaid, low stock, reviews. Hidden products (and their 20ml) are not alerted.
 - "Seen" is remembered per browser/device.
 
+## Premium storefront layer
+
+`assets/css/redesign.css` + `assets/js/premium-ui.js` (linked last in `index.html`). Remove those two links to go back to the previous look.
+
+- **Hero:** the photo bleeds in from the right and fades into the page (top of the page on phones).
+- **Shorter homepage:** reviews moved up; "Shop by feel" and "Scent finder" share tabs; the scent finder is one question at a time; the FAQ shows 4 questions + "Show all"; tighter spacing.
+- **Checkout on phones:** the total and the next step stay at the bottom of the bag.
+- **Logo splash** once per visit, a styled **404 page**, and a proper **link preview image** (`assets/images/og-image.jpg`, 1200×630).
+- **More photos in the scent popup (optional):** add the image files to `assets/images`, then list them in `PRODUCT_GALLERY` in `assets/js/products.js`, e.g. `sauvage: ["assets/images/sauvage-2.jpg"]`. The popup then shows thumbnails.
+- **No shipping fee:** the FAQ default says so. If you saved your own FAQ in Admin → Homepage & Payment, edit the shipping/delivery questions there too.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`

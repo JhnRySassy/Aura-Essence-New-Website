@@ -178,6 +178,12 @@ export const PRODUCTS = [
 
 export const PRODUCT_PRICE = 430;
 
+// Extra photos for the scent popup (optional). Put the files in assets/images and list them here
+// by product id, e.g.  sauvage: ["assets/images/sauvage-2.jpg", "assets/images/sauvage-3.jpg"]
+// A scent with extra photos gets a small thumbnail row under its main photo.
+export const PRODUCT_GALLERY = {
+};
+
 export const PRODUCT_META = {
   sauvage: { profiles:["fresh","woody"], occasion:["day","office","night"], strength:"bold", longevity:8, projection:8, time:["day","night"], badges:["FEATURED"] },
   invictus: { profiles:["fresh","sweet"], occasion:["day","outdoor"], strength:"moderate", longevity:7, projection:7, time:["day"], badges:[] },

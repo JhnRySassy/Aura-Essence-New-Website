@@ -1,0 +1,322 @@
+/* =========================================================
+   AURA & ESSENCE — redesign layer (loaded last)
+   Cinematic hero · tighter homepage · logo splash · scent quiz
+   as steps · FAQ trimmed · mobile checkout bar · popup photos.
+   Remove this file's <link> (and premium-ui.js) in index.html
+   to go back to the previous look.
+========================================================= */
+
+:root {
+  /* tighter vertical rhythm: the homepage is about a third shorter */
+  --sec-pad: clamp(56px, 8vh, 96px);
+}
+@media (max-width: 760px) {
+  :root { --sec-pad: clamp(48px, 7vh, 72px); }
+}
+
+/* ---------------------------------------------------------
+   HERO — the photo bleeds in from the right and melts into
+   the page; text sits on the quiet side.
+--------------------------------------------------------- */
+.hero {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  min-height: clamp(560px, calc(100svh - 120px), 820px);
+  padding: 56px 0 84px;
+  overflow: hidden;
+}
+.hero .wrap {
+  display: block;
+  position: static;
+  width: 100%;
+}
+.hero .wrap > div:first-child {
+  position: relative;
+  z-index: 2;
+  max-width: min(560px, 54%);
+}
+.hero .hero-shot {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(66vw, 980px);
+  margin: 0;
+  display: block;
+  -webkit-mask-image:
+    linear-gradient(90deg, transparent 0, #000 44%),
+    linear-gradient(180deg, #000 80%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(90deg, transparent 0, #000 44%),
+    linear-gradient(180deg, #000 80%, transparent 100%);
+  mask-composite: intersect;
+}
+.hero .hero-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  object-fit: cover;
+  object-position: 50% 52%;
+  border-radius: 0;
+  box-shadow: none;
+  filter: none;
+  margin: 0;
+}
+
+.hero-scroll {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  z-index: 3;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  font-size: 9.5px;
+  letter-spacing: .34em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+  text-decoration: none;
+}
+.hero-scroll i {
+  display: block;
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(var(--brass-bright), transparent);
+  transform-origin: top;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .hero-scroll i { animation: aeScrollCue 2.4s ease-in-out infinite; }
+}
+@keyframes aeScrollCue {
+  0%   { transform: scaleY(0); opacity: 0; }
+  30%  { opacity: 1; }
+  65%  { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+@media (max-width: 760px) {
+  .hero {
+    display: block;
+    min-height: 0;
+    padding: 0 0 44px;
+  }
+  .hero .wrap {
+    display: flex;
+    flex-direction: column;
+  }
+  .hero .hero-shot {
+    position: relative;
+    order: -1;
+    width: 100vw;
+    height: min(66svh, 540px);
+    margin-inline: calc(50% - 50vw);
+    -webkit-mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+    mask-image: linear-gradient(180deg, #000 58%, transparent 100%);
+    -webkit-mask-composite: source-over;
+    mask-composite: add;
+  }
+  .hero .hero-shot img { object-position: 50% 40%; }
+  .hero .wrap > div:first-child {
+    max-width: none;
+    margin-top: -88px;
+  }
+  .hero-scroll { display: none; }
+}
+
+/* ---------------------------------------------------------
+   LOGO SPLASH (once per visit)
+--------------------------------------------------------- */
+.ae-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 24px;
+  background: var(--ink, #0e0d0c);
+  transition: opacity .7s ease, visibility .7s;
+}
+.ae-splash.out { opacity: 0; visibility: hidden; pointer-events: none; }
+.ae-splash img { width: 84px; height: auto; }
+.ae-splash i {
+  display: block;
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--brass-bright, #d4b26a), transparent);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ae-splash img { animation: aeSplashIn 1s cubic-bezier(.2, .7, .2, 1) both; }
+  .ae-splash i { transform: scaleX(0); animation: aeSplashLine 1.3s .25s cubic-bezier(.2, .7, .2, 1) forwards; }
+}
+@keyframes aeSplashIn { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes aeSplashLine { to { transform: scaleX(1); } }
+
+/* ---------------------------------------------------------
+   DISCOVER: "Shop by feel" and "Scent finder" share one
+   spot (tabs) instead of two long sections.
+--------------------------------------------------------- */
+.discover-tabs {
+  display: flex;
+  justify-content: center;
+  padding: clamp(36px, 6vh, 64px) 20px 0;
+}
+.discover-tabs .seg {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--ink-2);
+}
+.discover-tabs button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--parchment-dim);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  padding: 12px 24px;
+  min-height: 44px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background .3s, color .3s;
+}
+.discover-tabs button:hover { color: var(--parchment); }
+.discover-tabs button[aria-selected="true"] {
+  background: var(--brass-bright);
+  color: var(--ink);
+}
+.discover-tabs button:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+.shop-mode .discover-tabs { display: none; }
+#shopByFeel[hidden], #scentFinder[hidden] { display: none !important; }
+
+/* Scent finder as steps: one question at a time */
+.sf-wizard .feature-grid { display: block; max-width: 760px; }
+.sf-wizard .feature-grid > .feature-card { display: none; }
+.sf-wizard .feature-grid > .feature-card.sf-on { display: block; }
+@media (prefers-reduced-motion: no-preference) {
+  .sf-wizard .feature-grid > .feature-card.sf-on { animation: aeRise .5s var(--ease) both; }
+}
+.sf-progress {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 760px;
+  margin: 26px 0 6px;
+  font-size: 10.5px;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--parchment-dim);
+}
+.sf-progress .bar { position: relative; flex: 1; height: 1px; background: var(--hair); }
+.sf-progress .bar i {
+  position: absolute; left: 0; top: 0; height: 1px;
+  background: var(--brass-bright);
+  transition: width .45s var(--ease);
+}
+.sf-nav { display: flex; gap: 12px; max-width: 760px; margin-top: 22px; }
+.sf-nav button[hidden] { display: none; }
+.sf-nav .sf-back {
+  appearance: none; background: transparent; border: 0;
+  color: var(--parchment-dim); font: inherit; font-size: 11px;
+  letter-spacing: .18em; text-transform: uppercase;
+  padding: 12px 4px; cursor: pointer;
+}
+.sf-nav .sf-back:hover { color: var(--parchment); }
+
+/* FAQ: first few questions, rest on request */
+.faq-list.is-trim > :nth-child(n + 5) { display: none; }
+.faq-more {
+  appearance: none;
+  margin-top: 18px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--parchment);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  padding: 13px 22px;
+  min-height: 44px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.faq-more:hover { border-color: var(--brass-bright); color: var(--brass-bright); }
+
+/* ---------------------------------------------------------
+   CHECKOUT — on phones the total and the next step stay
+   in reach at the bottom of the bag.
+--------------------------------------------------------- */
+.co-sticky { display: none; }
+@media (max-width: 900px) {
+  html.has-co-sticky .bag-sheet .co-sticky {
+    display: flex;
+    position: sticky;
+    bottom: 0;
+    z-index: 6;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 18px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--ink) 94%, transparent);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--hair);
+  }
+  .co-sticky-total { display: grid; gap: 2px; }
+  .co-sticky-total small { font-size: 9.5px; letter-spacing: .24em; text-transform: uppercase; color: var(--parchment-dim); }
+  .co-sticky-total b { font-family: "Cormorant Garamond", serif; font-weight: 500; font-size: 26px; line-height: 1; color: var(--parchment); }
+  .co-sticky .submit { flex: 1; max-width: 66%; margin: 0; padding-inline: 10px; font-size: 11px; letter-spacing: .14em; white-space: nowrap; }
+  html.has-co-sticky .bag-sheet .co-actions .co-next,
+  html.has-co-sticky .bag-sheet .co-actions #submitBtn { display: none; }
+}
+
+/* Order confirmation: a calmer, more rewarding moment */
+@media (prefers-reduced-motion: no-preference) {
+  .confirmation-modal.show .confirmation-check { animation: aeCheck .8s var(--ease) both; }
+  .confirmation-modal.show .confirmation-order-id { animation: aeRise .8s .25s var(--ease) both; }
+}
+@keyframes aeCheck {
+  0%   { transform: scale(.4); opacity: 0; box-shadow: 0 0 0 0 rgba(212, 178, 106, .45); }
+  55%  { transform: scale(1.08); opacity: 1; }
+  100% { transform: none; box-shadow: 0 0 0 22px rgba(212, 178, 106, 0); }
+}
+
+/* ---------------------------------------------------------
+   SCENT POPUP — extra photos + a slow hover zoom
+--------------------------------------------------------- */
+.fd-media { min-width: 0; }
+.fd-photo { overflow: hidden; }
+.fd-thumbs { padding-top: 10px; }
+.fd-thumbs:empty { display: none; }
+.fd-thumbs-row { display: flex; gap: 8px; }
+.fd-thumb {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--ink-2);
+  opacity: .72;
+  cursor: pointer;
+  transition: opacity .25s, border-color .25s;
+}
+.fd-thumb img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.fd-thumb:hover { opacity: 1; }
+.fd-thumb.on { opacity: 1; border-color: var(--brass-bright); }
+.fd-thumb:focus-visible { outline: 2px solid var(--brass-bright); outline-offset: 2px; }
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .fd-photo .fd-img { transition: transform 1.4s var(--ease); }
+  .fd-photo:hover .fd-img { transform: scale(1.045); }
+}

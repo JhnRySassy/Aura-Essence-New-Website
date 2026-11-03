@@ -3,6 +3,7 @@ import {
   PRODUCTS,
   PRODUCT_PRICE,
   PRODUCT_META,
+  PRODUCT_GALLERY,
 } from "./products.js";
 
 import {
@@ -5077,7 +5078,14 @@ function renderCheckoutExtras() {
       nudge.innerHTML = `Add ${more === 1 ? "one more" : `<b>${more} more</b>`} fragrance${more === 1 ? "" : "s"} — ${deal}.`;
       nudge.hidden = false;
     } else if (appliesNow) {
-      nudge.innerHTML = `${escapeHTML(appliesNow.name)} applied to your bag.`;
+      const paint = () => {
+        const given = !document.getElementById("cartLines")?.hidden;
+        nudge.innerHTML = given
+          ? `${escapeHTML(appliesNow.name)} applied to your bag.`
+          : `The “${escapeHTML(appliesNow.name)}” deal isn't applied — your bag is already cheaper than the deal price.`;
+      };
+      paint();
+      requestAnimationFrame(paint);
       nudge.hidden = false;
     } else {
       nudge.hidden = true;
@@ -5339,6 +5347,16 @@ function fdPhotoHTML(p, cls) {
     : `<div class="img-ph ${cls || ""}">A&amp;E</div>`;
 }
 
+// Extra photos (optional): thumbnails under the main photo, from PRODUCT_GALLERY in products.js
+function fdThumbsHTML(p) {
+  const extra = (PRODUCT_GALLERY && (PRODUCT_GALLERY[p.parentId || p.id] || [])) || [];
+  if (!extra.length || !p.img) return "";
+  const all = [p.img, ...extra];
+  return `<span class="fd-thumbs-row" role="group" aria-label="More photos">${all.map((src, i) =>
+    `<button type="button" class="fd-thumb${i === 0 ? " on" : ""}" data-fd-thumb="${escapeHTML(src)}" aria-label="Photo ${i + 1} of ${all.length}"><img src="${escapeHTML(webpOf(src))}" alt="" loading="lazy" decoding="async" onerror="this.onerror=null;this.src='${escapeHTML(src)}'"></button>`
+  ).join("")}</span>`;
+}
+
 // 50ml | 20ml buttons inside the Discover popup
 function renderFdSizes(p) {
   const box = document.getElementById("fdSizes");
@@ -5363,6 +5381,7 @@ function renderFragranceDetails(p) {
   const badges = fdListOf(meta.badges || p.badges).slice(0, 2)
     .map((b) => `<span class="product-badge">${escapeHTML(b)}</span>`).join("");
   set("fdPhoto", `${badges ? `<div class="product-badges">${badges}</div>` : ""}${fdPhotoHTML(p, "fd-img")}`);
+  set("fdThumbs", fdThumbsHTML(p));
   text("fragranceModalCategory", `${fdCatLabel(p)} · Extrait de Parfum`);
   text("fragranceModalTitle", p.name);
 
@@ -5562,6 +5581,14 @@ document.getElementById("fdShare")?.addEventListener("click", async (e) => {
 });
 
 fragranceModal?.addEventListener("click", (e) => {
+  const thumb = e.target.closest("[data-fd-thumb]");
+  if (thumb) {
+    const main = document.querySelector("#fdPhoto img.fd-img");
+    if (main) { main.removeAttribute("data-jpg"); main.src = webpOf(thumb.dataset.fdThumb); main.onerror = () => { main.onerror = null; main.src = thumb.dataset.fdThumb; }; }
+    document.querySelectorAll("#fdThumbs .fd-thumb").forEach((t) => t.classList.toggle("on", t === thumb));
+    return;
+  }
+
   const sizeBtn = e.target.closest("[data-fd-size]");
   if (sizeBtn) {
     const sp = catalog.find(sizeBtn.dataset.fdSize);
@@ -6440,8 +6467,7 @@ function updateBagTitle() {
 var DEFAULT_FAQ = [
   { q: "How do I order?", a: "Choose a scent and tap Add to bag. Open your bag from the top of the page, add your name, mobile number and delivery or meetup location, then place your order. You'll get an Order ID right away." },
   { q: "What payment methods do you accept?", a: "Cash on delivery / meetup, and GCash. For GCash, the number appears after you place your order — send your payment screenshot on our Messenger page so we can confirm it." },
-  { q: "How long does delivery take?", a: "Metro Manila: about 1–3 days. Luzon: about 2–5 days. Visayas & Mindanao: about 3–7 days, depending on the courier. We'll message you once your order is on its way." },
-  { q: "How much is shipping?", a: "It depends on your location and the courier. We'll confirm the exact fee when we message you about your order." },
+  { q: "Is there a shipping fee?", a: "No. We don't ship, so there is no shipping fee — the price you see is the price you pay. After you order, we'll message you to arrange the meetup or delivery." },
   { q: "How long does the scent last?", a: "Our perfumes are 25% extrait de parfum — more perfume oil than a typical eau de toilette — so they stay on the skin longer. How long exactly depends on your skin and the scent. Tip: spray on pulse points (wrists, neck) right after moisturising." },
   { q: "What does “inspired by” mean?", a: "Each blend is our own take on the character of a well-loved designer fragrance. We are not affiliated with the original brands, and their names belong to their owners — we use them only so you know which scent family to expect." },
   { q: "Can I track my order?", a: "Yes. Enter your Order ID and the mobile number you ordered with in Track Order." },
