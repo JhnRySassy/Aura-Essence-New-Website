@@ -6453,7 +6453,10 @@ Object.assign(AdminApp.prototype, {
         ["Cost of bottles sold", round(r.cost)],
         ["Gross profit", round(r.profit)],
         ["Margin %", Number.isFinite(r.margin) ? round(r.margin) : ""],
-        ["Spent on restocks", round(r.restockSpend)],
+        ["Expenses (packaging, ads, shipping, other)", round(r.expenseTotal)],
+        ["Net profit (gross profit − expenses)", round(r.net)],
+        ["Net margin %", Number.isFinite(r.netMargin) ? round(r.netMargin) : ""],
+        ["Spent on restocks (not counted twice)", round(r.restockSpend)],
         ...(r.missingBottles ? [[], [`Note: ${r.missingBottles} bottle(s) have no cost — profit is overstated.`]] : [])
       ];
       const s1 = XLSX.utils.aoa_to_sheet(summary);
@@ -6488,6 +6491,12 @@ Object.assign(AdminApp.prototype, {
         "Total": x.unitCost == null ? "" : round(x.unitCost * x.qty), "Supplier": x.supplier, "Note": x.note
       })));
       XLSX.utils.book_append_sheet(book, r.restocks.length ? s5 : XLSX.utils.aoa_to_sheet([["No restocks"]]), "Restocks");
+
+      const s6 = XLSX.utils.json_to_sheet((r.expenses || []).map(x => ({
+        "Date": x.spentOn, "Category": EXPENSE_LABEL[x.category] || x.category,
+        "Amount": round(x.amount), "Order ID": x.orderId, "Note": x.note
+      })));
+      XLSX.utils.book_append_sheet(book, (r.expenses || []).length ? s6 : XLSX.utils.aoa_to_sheet([["No expenses"]]), "Expenses");
 
       XLSX.writeFile(book, `aura-essence-report-${r.period.file}.xlsx`);
       this.toast(`Excel report downloaded (${r.period.label})`);
@@ -6529,9 +6538,9 @@ Object.assign(AdminApp.prototype, {
       // Summary boxes
       const boxes = [
         ["Sales", phpText(r.sales)],
-        ["Cost of goods", phpText(r.cost)],
         ["Gross profit", phpText(r.profit)],
-        ["Margin", pctText(r.margin)]
+        ["Expenses", phpText(r.expenseTotal)],
+        ["Net profit", phpText(r.net)]
       ];
       const bw = (W - M * 2 - 30) / 4;
       boxes.forEach(([k, v], i) => {
@@ -6578,7 +6587,9 @@ Object.assign(AdminApp.prototype, {
           ["Still to collect", phpText(r.unpaid)],
           ["Cost of bottles sold", phpText(r.cost)],
           ["Gross profit", phpText(r.profit)],
-          ["Spent on restocks", phpText(r.restockSpend)]
+          ["Expenses (packaging, ads, shipping, other)", "- " + phpText(r.expenseTotal)],
+          ["Net profit", phpText(r.net)],
+          ["Spent on restocks (not counted twice)", phpText(r.restockSpend)]
         ],
         columnStyles: { 1: { halign: "right" } }
       });
@@ -6602,6 +6613,17 @@ Object.assign(AdminApp.prototype, {
           head: [["Discount", "Orders", "Amount"]],
           body: r.discounts.map(d => [d.label, String(d.orders), phpText(d.amount)]),
           columnStyles: { 1: { halign: "right" }, 2: { halign: "right" } }
+        });
+      }
+
+      if ((r.expenses || []).length) {
+        y = heading("Expenses", doc.lastAutoTable.finalY + 26);
+        doc.autoTable({
+          ...tableStyle,
+          startY: y,
+          head: [["Date", "Category", "Amount", "Note"]],
+          body: r.expenses.map(x => [x.spentOn, EXPENSE_LABEL[x.category] || x.category, phpText(x.amount), [x.orderId, x.note].filter(Boolean).join(" · ")]),
+          columnStyles: { 2: { halign: "right" } }
         });
       }
 
@@ -8219,6 +8241,315 @@ Object.assign(AdminApp.prototype, {
           <button type="button" class="mini-btn" data-faq-op="del" data-i="${i}" aria-label="Remove">×</button>
         </div>
       </div>`).join("") : `<p class="muted">No questions — the website will show the default ones.</p>`;
+  }
+});
+
+
+/* =========================================================
+   EXPENSES  (packaging, ads, shipping, other)
+   Net profit = sales − cost of bottles sold − expenses.
+   Lives in Profit & Reports; included in the Excel + PDF reports.
+========================================================= */
+
+const EXPENSE_LABEL = { packaging: "Packaging", ads: "Ads / marketing", shipping: "Shipping", other: "Other" };
+
+const _origExp = {
+  bind: AdminApp.prototype.bind,
+  showView: AdminApp.prototype.showView,
+  computeProfit: AdminApp.prototype.computeProfit,
+  monthlySummary: AdminApp.prototype.monthlySummary,
+  renderReports: AdminApp.prototype.renderReports
+};
+
+Object.assign(AdminApp.prototype, {
+
+  bind() {
+    _origExp.bind.call(this);
+    byId("expenseForm")?.addEventListener("submit", e => { e.preventDefault(); this.saveExpense(); });
+    byId("expenseRows")?.addEventListener("click", e => {
+      const del = e.target.closest("[data-edel]");
+      if (del) this.deleteExpense(del.dataset.edel);
+    });
+  },
+
+
+  showView(view) {
+    _origExp.showView.call(this, view);
+    if (view === "reports") this.loadExpenses(true);
+  },
+
+
+  async loadExpenses(quiet = false) {
+    try {
+      const res = await this.request("GET", { action: "adminExpenses" });
+      this.expenses = res.expenses || [];
+      this.expensesLoaded = true;
+      this.expensesError = "";
+    } catch (error) {
+      this.expenses = this.expenses || [];
+      this.expensesError = error.message || "Could not load expenses.";
+      if (!quiet) this.setStatus("Could not load expenses: " + this.expensesError, true);
+    }
+    if (!byId("reportsView")?.classList.contains("hidden")) this.renderReports();
+  },
+
+
+  computeProfit(period) {
+    const r = _origExp.computeProfit.call(this, period);
+    const expenses = (this.expenses || []).filter(e => period.match(String(e.spentOn)));
+    const byCat = { packaging: 0, ads: 0, shipping: 0, other: 0 };
+    expenses.forEach(e => { byCat[e.category] = (byCat[e.category] || 0) + e.amount; });
+    const total = expenses.reduce((sum, e) => sum + e.amount, 0);
+    r.expenses = expenses;
+    r.expenseByCat = byCat;
+    r.expenseTotal = total;
+    r.net = r.profit - total;
+    r.netMargin = r.sales ? r.net / r.sales * 100 : NaN;
+    return r;
+  },
+
+
+  // Months with orders and/or expenses (a month with only expenses still shows)
+  monthlySummary(limit = 12) {
+    const map = new Map(_origExp.monthlySummary.call(this, 1000).map(row => [row.key, { ...row, expenses: 0 }]));
+    (this.expenses || []).forEach(e => {
+      const key = String(e.spentOn).slice(0, 7);
+      const row = map.get(key) || { key, orders: 0, sales: 0, cost: 0, expenses: 0 };
+      row.expenses += e.amount;
+      map.set(key, row);
+    });
+    return [...map.values()].sort((a, b) => b.key.localeCompare(a.key)).slice(0, limit);
+  },
+
+
+  renderReports() {
+    _origExp.renderReports.call(this);
+    const cardsEl = byId("profitCards");
+    const r = this.lastReport;
+    if (!cardsEl || !r) return;
+
+    const card = (label, value, sub, cls = "") =>
+      `<div class="stat ${cls}"><small>${escapeHTML(label)}</small><strong>${escapeHTML(value)}</strong><small class="sub">${escapeHTML(sub)}</small></div>`;
+    const n = r.expenses.length;
+    cardsEl.innerHTML = [
+      card("Sales", peso2(r.sales), "after all discounts"),
+      card("Cost of bottles sold", peso2(r.cost), `${r.bottles - r.missingBottles} of ${r.bottles} bottles have a cost`),
+      card("Gross profit", peso2(r.profit), `sales − cost · ${pctText(r.margin)} margin`),
+      card("Expenses", peso2(r.expenseTotal), `${n} entr${n === 1 ? "y" : "ies"} · packaging, ads, shipping…`),
+      card("Net profit", peso2(r.net), "gross profit − expenses", r.net >= 0 ? "highlight" : "warn"),
+      card("Net margin", pctText(r.netMargin), "net profit ÷ sales"),
+      card("Discounts given", peso2(r.discountTotal), "promos + vouchers"),
+      card("Spent on restocks", peso2(r.restockSpend), `${r.restocks.length} restock${r.restocks.length === 1 ? "" : "s"} · already in cost, not counted twice`)
+    ].join("");
+
+    this.renderExpenses(r);
+
+    // Monthly summary: Month · Orders · Sales · Expenses · Net profit
+    const rows = byId("monthlyRows");
+    if (rows) {
+      const months = this.monthlySummary(12);
+      rows.innerHTML = months.length ? months.map(m => {
+        const net = m.sales - m.cost - m.expenses;
+        return `
+        <tr data-month="${m.key}" class="clickable">
+          <td data-label="Month" class="td-main">${escapeHTML(monthName(m.key))}</td>
+          <td data-label="Orders">${m.orders}</td>
+          <td data-label="Sales">${peso2(m.sales)}</td>
+          <td data-label="Expenses">${m.expenses ? peso2(m.expenses) : "—"}</td>
+          <td data-label="Net profit"><b class="${net < 0 ? "neg" : ""}">${peso2(net)}</b></td>
+        </tr>`;
+      }).join("") : `<tr><td colspan="5" class="muted">No orders yet.</td></tr>`;
+      rows.querySelectorAll("[data-month]").forEach(tr => tr.addEventListener("click", () => {
+        byId("reportRange").value = "month";
+        byId("reportMonth").value = tr.dataset.month;
+        this.renderReports();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }));
+    }
+  },
+
+
+  renderExpenses(r) {
+    const dateEl = byId("eDate");
+    if (dateEl && !dateEl.value) dateEl.value = manilaDay(new Date());
+
+    const label = byId("expenseTotalLabel");
+    if (label) label.textContent = `${r.period.label} · ${peso2(r.expenseTotal)}`;
+
+    const cats = byId("expenseCats");
+    if (cats) {
+      cats.innerHTML = Object.keys(EXPENSE_LABEL).map(k => `
+        <span class="exp-chip"><small>${escapeHTML(EXPENSE_LABEL[k])}</small><b>${peso2(r.expenseByCat[k] || 0)}</b></span>`).join("");
+    }
+
+    const body = byId("expenseRows");
+    if (!body) return;
+    if (this.expensesError && !this.expensesLoaded) {
+      body.innerHTML = `<tr><td colspan="5" class="muted">Expenses are not set up yet. Run <b>supabase/add-expenses.sql</b> in Supabase → SQL Editor, then refresh. (${escapeHTML(this.expensesError)})</td></tr>`;
+      return;
+    }
+    body.innerHTML = r.expenses.length ? r.expenses.map(x => `
+      <tr>
+        <td data-label="Date">${escapeHTML(niceDate(x.spentOn))}</td>
+        <td data-label="Category"><span class="badge">${escapeHTML(EXPENSE_LABEL[x.category] || x.category)}</span></td>
+        <td data-label="Amount"><b>${peso2(x.amount)}</b></td>
+        <td data-label="Note">${escapeHTML([x.orderId, x.note].filter(Boolean).join(" · ")) || `<span class="muted">—</span>`}</td>
+        <td data-label=""><button class="btn ghost small" type="button" data-edel="${x.id}" title="Delete this expense">Delete</button></td>
+      </tr>`).join("")
+      : `<tr><td colspan="5" class="muted">No expenses in this period yet. Add packaging, ads or shipping costs above.</td></tr>`;
+  },
+
+
+  async saveExpense() {
+    const amount = Number(byId("eAmount")?.value);
+    if (!(amount > 0)) return this.setStatus("Enter the amount spent.", true);
+    try {
+      const res = await this.request("POST", {
+        action: "adminAddExpense",
+        date: byId("eDate")?.value || "",
+        category: byId("eCategory")?.value || "",
+        amount,
+        note: byId("eNote")?.value || "",
+        orderId: byId("eOrder")?.value || ""
+      });
+      if (res && res.success === false) throw new Error(res.message || "Could not save the expense.");
+      this.toast(`${EXPENSE_LABEL[byId("eCategory")?.value] || "Expense"} ${peso2(amount)} added`);
+      ["eAmount", "eNote", "eOrder"].forEach(id => { const f = byId(id); if (f) f.value = ""; });
+      await this.loadExpenses(true);
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  },
+
+
+  async deleteExpense(id) {
+    const x = (this.expenses || []).find(e => String(e.id) === String(id));
+    if (!x) return;
+    const ok = await this.ask({
+      title: "Delete this expense?",
+      message: `${EXPENSE_LABEL[x.category] || x.category} ${peso2(x.amount)}${x.note ? ` (${x.note})` : ""} will be removed, and your net profit goes up by that amount.`,
+      okText: "Delete expense", danger: true
+    });
+    if (!ok) return;
+    try {
+      await this.request("POST", { action: "adminDeleteExpense", id });
+      this.toast("Expense deleted");
+      await this.loadExpenses(true);
+    } catch (error) {
+      this.setStatus(error.message, true);
+    }
+  }
+});
+
+
+/* =========================================================
+   NOTIFICATION BELL — accuracy fixes
+   • A "low stock" alert is one alert per level (low / sold out),
+     not a new one every time the number changes (3→2→1 no longer
+     re-alerts and re-pops-up each time).
+   • Once something is fixed (restocked, paid, approved) its
+     "seen" mark is cleared, so if it happens again it alerts again.
+   • Most urgent first: new orders, sold out, unpaid, low stock, reviews.
+   • Hidden products and the sizes of hidden products are not alerted.
+========================================================= */
+
+Object.assign(AdminApp.prototype, {
+
+  refreshNotifications(options = {}) {
+    if (!this.dom.notifList) return;
+
+    const list = [];
+    const alertAt = Number(this.settings?.lowStockAlertAt ?? 1);
+    const productMap = new Map((this.products || []).map(p => [p.id, p]));
+
+    (this.orders || []).forEach(o => {
+      if (o.status === "New") {
+        list.push({
+          id: `order-new:${o.orderId}`, type: "order", rank: 0, time: o.timestamp,
+          title: "New order",
+          body: `${o.fullname} · ${peso(o.total)} · ${(o.items || []).map(i => `${i.name} × ${i.qty}`).join(", ")}`,
+          action: { orderId: o.orderId }
+        });
+      }
+      if (o.status === "Completed" && ["Unpaid", "Partial"].includes(o.paymentStatus || "Unpaid")) {
+        const owed = Math.max(0, Number(o.total || 0) - Number(o.amountPaid || 0));
+        if (owed > 0) {
+          list.push({
+            id: `order-unpaid:${o.orderId}`, type: "payment", rank: 2, time: o.timestamp,
+            title: "Completed but not fully paid",
+            body: `${o.fullname} · ${peso(owed)} to collect · ${o.orderId}`,
+            action: { orderId: o.orderId }
+          });
+        }
+      }
+    });
+
+    (this.products || []).forEach(p => {
+      if (p.active === false || p.stock == null) return;
+      if (p.parentId && productMap.get(p.parentId)?.active === false) return;
+      const stock = Number(p.stock);
+      if (stock > alertAt) return;
+      const out = stock === 0;
+      list.push({
+        id: `stock:${p.id}:${out ? "out" : "low"}`, type: "stock", rank: out ? 1 : 3, time: null,
+        title: out ? "Sold out" : "Low stock",
+        body: out ? `${p.name} is sold out on the website.` : `${p.name} — only ${stock} left.`,
+        action: { view: "products", stock: out ? "out" : "low" }
+      });
+    });
+
+    const pending = (this.reviews || []).filter(r => !r.approved);
+    if (pending.length) {
+      const newest = pending.slice().sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+      list.push({
+        id: `reviews:${pending.length}:${newest?.id}`, type: "review", rank: 4, time: newest?.timestamp,
+        title: `${pending.length} review${pending.length === 1 ? "" : "s"} waiting for approval`,
+        body: newest ? `Latest: ${newest.name} on ${newest.scent || "a scent"} (${"★".repeat(Number(newest.rating) || 0)})` : "",
+        action: { view: "reviews", tab: "pending" }
+      });
+    }
+
+    const stamp = n => (n.time ? new Date(n.time).getTime() || 0 : 0);
+    list.sort((a, b) => a.rank - b.rank || stamp(b) - stamp(a));
+
+    // Forget "seen" marks for things that are no longer a problem (only for data that is loaded)
+    const now = new Set(list.map(n => n.id));
+    const canPrune = id =>
+      (id.startsWith("order-") && this.ordersLoaded) ||
+      (id.startsWith("stock:") && (this.products || []).length > 0) ||
+      (id.startsWith("reviews:") && this.initialLoadDone);
+    let pruned = false;
+    [...this.notifSeen].forEach(id => {
+      if (!now.has(id) && canPrune(id)) { this.notifSeen.delete(id); pruned = true; }
+    });
+    if (pruned) writeSeen(this.notifSeen);
+
+    // Pop up anything new that appeared after the first full load
+    const fresh = this.initialLoadDone && !options.summary
+      ? list.filter(n => !this.notifs.has(n.id) && !this.notifSeen.has(n.id))
+      : [];
+
+    this.notifs = new Map(list.slice(0, 50).map(n => [n.id, n]));
+    this.renderNotifications();
+
+    if (options.summary) {
+      const unread = [...this.notifs.keys()].filter(id => !this.notifSeen.has(id)).length;
+      if (unread) {
+        this.toast(`You have ${unread} new notification${unread === 1 ? "" : "s"}.`, "info", {
+          onClick: () => this.toggleNotifPanel(true)
+        });
+      }
+      return;
+    }
+
+    fresh.slice(0, 3).forEach(n => {
+      this.toast(n.body, "info", { title: n.title, onClick: () => this.runNotifAction(n), timeout: 6000 });
+    });
+    if (fresh.length) {
+      this.dom.notifBtn?.classList.remove("ring");
+      void this.dom.notifBtn?.offsetWidth;
+      this.dom.notifBtn?.classList.add("ring");
+    }
   }
 });
 

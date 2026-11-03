@@ -255,6 +255,19 @@ function restockFromRow(r) {
   };
 }
 
+function expenseFromRow(r) {
+  return {
+    id: r.id,
+    spentOn: r.spent_on,
+    category: r.category,
+    amount: Number(r.amount),
+    note: r.note || "",
+    orderId: r.order_id || "",
+    createdBy: r.created_by,
+    createdAt: r.created_at
+  };
+}
+
 // "2026-10-31" (date input) → end of that day in Manila; "" → null
 function manilaDateToISO(value, endOfDay) {
   const text = String(value || "").trim();
@@ -563,6 +576,28 @@ const actions = {
     return must(await db.rpc("admin_delete_restock", { p_id: toInt(p.id, 0) }));
   },
 
+  /* ----- Expenses (packaging, ads, shipping, other) ----- */
+
+  async adminExpenses(db) {
+    const rows = must(await db.from("expenses").select("*")
+      .order("spent_on", { ascending: false }).order("id", { ascending: false }).limit(2000));
+    return ok({ expenses: rows.map(expenseFromRow) });
+  },
+
+  async adminAddExpense(db, p) {
+    return must(await db.rpc("admin_add_expense", {
+      p_date: /^\d{4}-\d{2}-\d{2}$/.test(String(p.date || "")) ? p.date : null,
+      p_category: String(p.category || ""),
+      p_amount: toNum(p.amount, 0),
+      p_note: String(p.note || ""),
+      p_order_id: String(p.orderId || "")
+    }));
+  },
+
+  async adminDeleteExpense(db, p) {
+    return must(await db.rpc("admin_delete_expense", { p_id: toInt(p.id, 0) }));
+  },
+
   async adminLogin(db, p) {
     const email = String(p.identifier || p.email || "").trim();
     const { error } = await db.auth.signInWithPassword({ email, password: String(p.password || "") });
@@ -794,8 +829,9 @@ const actions = {
 
     // Added later — don't fail the backup if the table isn't there yet
     const subscribers = await all("subscribers", "id").catch(() => []);
+    const expenses = await all("expenses", "id").catch(() => []);
 
-    return ok({ orders, products, promotions, reviews, audit, settings, vouchers, restocks, subscribers });
+    return ok({ orders, products, promotions, reviews, audit, settings, vouchers, restocks, subscribers, expenses });
   },
 
   async adminAudit(db) {

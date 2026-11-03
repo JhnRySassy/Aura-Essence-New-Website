@@ -898,6 +898,38 @@
               </table>
             </div>
           </div>
+          <div class="panel" id="expensesPanel">
+            <div class="panel-head">
+              <h3>Expenses</h3>
+              <span id="expenseTotalLabel">Packaging, ads, shipping and more</span>
+            </div>
+            <div class="expense-cats" id="expenseCats"></div>
+            <form id="expenseForm" autocomplete="off">
+              <div class="form-grid">
+                <label>Date<input id="eDate" type="date" required /></label>
+                <label>Category
+                  <select id="eCategory" required>
+                    <option value="packaging">Packaging</option>
+                    <option value="ads">Ads / marketing</option>
+                    <option value="shipping">Shipping</option>
+                    <option value="other">Other</option>
+                  </select>
+                </label>
+                <label>Amount (₱)<input id="eAmount" type="number" min="0.01" step="0.01" inputmode="decimal" required placeholder="e.g. 350" /></label>
+                <label>Order ID <small class="muted">(optional)</small><input id="eOrder" maxlength="60" placeholder="e.g. AE-1001" /></label>
+                <label class="full">Note <small class="muted">(optional)</small><input id="eNote" maxlength="300" placeholder="e.g. 50 gift bags, Facebook ads boost, J&amp;T shipping" /></label>
+              </div>
+              <div class="form-actions"><button class="btn primary" type="submit">Add expense</button></div>
+            </form>
+            <div class="table-wrap slim">
+              <table class="responsive">
+                <thead>
+                  <tr><th>Date</th><th>Category</th><th>Amount</th><th>Note</th><th></th></tr>
+                </thead>
+                <tbody id="expenseRows"></tbody>
+              </table>
+            </div>
+          </div>
           <div class="grid-2">
             <div class="panel">
               <div class="panel-head">
@@ -918,7 +950,8 @@
                       <th>Month</th>
                       <th>Orders</th>
                       <th>Sales</th>
-                      <th>Profit</th>
+                      <th>Expenses</th>
+                      <th>Net profit</th>
                     </tr>
                   </thead>
                   <tbody id="monthlyRows"></tbody>
@@ -970,6 +1003,7 @@
               <option value="promotion">Promotions</option>
               <option value="voucher">Vouchers</option>
               <option value="stock">Restocks</option>
+              <option value="expense">Expenses</option>
               <option value="review">Reviews</option>
               <option value="homepage settings">Settings</option>
             </select>

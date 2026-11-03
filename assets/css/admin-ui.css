@@ -1471,3 +1471,30 @@ kbd {
     width: 100%;
   }
 }
+
+/* ---------- Expenses (Profit & Reports) ---------- */
+.expense-cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 16px;
+}
+.exp-chip {
+  display: grid;
+  gap: 2px;
+  min-width: 120px;
+  padding: 9px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+}
+.exp-chip small {
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.exp-chip b { font-size: 15px; font-weight: 600; }
+#expenseForm { margin-bottom: 16px; }
+#expenseForm .form-grid { align-items: end; }
+#expenseForm label small { display: inline; margin-left: 6px; }

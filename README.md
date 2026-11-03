@@ -218,6 +218,24 @@ Run `supabase/add-sizes.sql` once in Supabase → SQL Editor (safe to re-run), t
 - To delete a scent that has a 20ml, delete the 20ml first.
 - Promos count bottles regardless of size (see "Promotions" note in the project chat): a "2 bottles for ₱X" promo only applies when ₱X is lower than the cart's normal total.
 
+## Expenses & net profit
+
+Run `supabase/add-expenses.sql` once in Supabase → SQL Editor (safe to re-run), then push the updated files.
+
+- **Admin → Profit & Reports → Expenses:** add packaging, ads / marketing, shipping or other costs (date, amount, optional note and order ID). Delete a wrong entry with **Delete**.
+- **Net profit = sales − cost of bottles sold − expenses.** Restocks are not subtracted again: the cost of the bottles you bought is already counted when they are sold.
+- The report cards, the monthly summary, the Excel report (new "Expenses" sheet) and the PDF report all include expenses. Every add/delete is written to the Audit Log.
+- If the Expenses table says it is "not set up yet", the SQL file has not been run.
+
+## Notification bell
+
+The bell is built from what needs attention right now: new orders, sold-out and low-stock products, completed-but-unpaid orders and reviews waiting for approval.
+
+- Low stock and sold out are separate alerts, shown once each (no new alert every time the number changes).
+- When something is fixed (restocked, paid, approved) its "seen" mark is cleared, so it alerts again if it happens again.
+- Most urgent first: new orders, sold out, unpaid, low stock, reviews. Hidden products (and their 20ml) are not alerted.
+- "Seen" is remembered per browser/device.
+
 ## Day-to-day
 - **Add staff admin:** create the user (step 2.1), then run the `insert into public.admins …` query.
 - **Remove staff admin:** `delete from public.admins where email = 'them@example.com';`
