@@ -320,3 +320,7 @@
   .fd-photo .fd-img { transition: transform 1.4s var(--ease); }
   .fd-photo:hover .fd-img { transform: scale(1.045); }
 }
+
+
+/* card: first 3 profiles instead of the description (shorter card) */
+html body .pcard .pprofiles { margin: 0; font-size: 13.5px; letter-spacing: .06em; color: var(--parchment-dim); display: block; -webkit-line-clamp: unset; }

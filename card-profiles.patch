@@ -1,0 +1,47 @@
+diff --git a/assets/js/app.js b/assets/js/app.js
+index 75635ce..040bf2e 100644
+--- a/assets/js/app.js
++++ b/assets/js/app.js
+@@ -1059,6 +1059,19 @@ function shopSorter() {
+ // PRODUCT CAROUSEL
+ // ============================================================
+ 
++// First 3 profiles of a scent, e.g. "Floral • Lavender • Vanilla" (shorter than a description)
++function cardProfilesText(meta) {
++  const raw = Array.isArray(meta.profiles)
++    ? meta.profiles
++    : typeof meta.profiles === "string" ? meta.profiles.split(",") : [];
++  return raw
++    .map((x) => String(x).trim())
++    .filter(Boolean)
++    .slice(0, 3)
++    .map((x) => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase())
++    .join(" • ");
++}
++
+ function buildProductCard(p) {
+   const card =
+     document.createElement(
+@@ -1150,8 +1163,8 @@ function buildProductCard(p) {
+       <h4>
+         ${name}
+       </h4>
+-      <p>
+-        ${escapeHTML(p.desc || "")}
++      <p class="pprofiles">
++        ${escapeHTML(cardProfilesText(meta) || p.desc || "")}
+       </p>
+       <div class="product-rating">${ratingText}</div>
+       ${sizeChipsHTML(family, sel)}
+diff --git a/assets/css/redesign.css b/assets/css/redesign.css
+index ac561ba..e364621 100644
+--- a/assets/css/redesign.css
++++ b/assets/css/redesign.css
+@@ -320,3 +320,7 @@
+   .fd-photo .fd-img { transition: transform 1.4s var(--ease); }
+   .fd-photo:hover .fd-img { transform: scale(1.045); }
+ }
++
++
++/* card: first 3 profiles instead of the description (shorter card) */
++html body .pcard .pprofiles { margin: 0; font-size: 13.5px; letter-spacing: .06em; color: var(--parchment-dim); display: block; -webkit-line-clamp: unset; }

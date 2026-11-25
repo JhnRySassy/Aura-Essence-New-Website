@@ -1059,6 +1059,19 @@ function shopSorter() {
 // PRODUCT CAROUSEL
 // ============================================================
 
+// First 3 profiles of a scent, e.g. "Floral • Lavender • Vanilla" (shorter than a description)
+function cardProfilesText(meta) {
+  const raw = Array.isArray(meta.profiles)
+    ? meta.profiles
+    : typeof meta.profiles === "string" ? meta.profiles.split(",") : [];
+  return raw
+    .map((x) => String(x).trim())
+    .filter(Boolean)
+    .slice(0, 3)
+    .map((x) => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase())
+    .join(" • ");
+}
+
 function buildProductCard(p) {
   const card =
     document.createElement(
@@ -1150,8 +1163,8 @@ function buildProductCard(p) {
       <h4>
         ${name}
       </h4>
-      <p>
-        ${escapeHTML(p.desc || "")}
+      <p class="pprofiles">
+        ${escapeHTML(cardProfilesText(meta) || p.desc || "")}
       </p>
       <div class="product-rating">${ratingText}</div>
       ${sizeChipsHTML(family, sel)}
